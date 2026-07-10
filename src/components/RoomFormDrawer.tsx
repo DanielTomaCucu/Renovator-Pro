@@ -3,17 +3,21 @@
 import { useState } from "react";
 import Drawer from "./Drawer";
 import { Field, PrimaryButton, inputCls } from "./forms";
-import { RoomType } from "@/lib/types";
-import { useStore } from "@/lib/store";
+import { RoomType } from "@/shared/types";
+import { useStore } from "@/shared/store";
 
-const roomTypes: { type: RoomType; icon: string }[] = [
-  { type: "Dormitor", icon: "🛏️" },
-  { type: "Baie", icon: "🛁" },
-  { type: "Living", icon: "🛋️" },
-  { type: "Bucătărie", icon: "🍳" },
-  { type: "Terasă", icon: "🌿" },
-  { type: "Balcon", icon: "🪟" },
-];
+// TODO (backlog CLAUDE.md #2): înlocuit cu ROOM_TYPE_ICONS (Material Symbols)
+// din "@/shared/icons" când fontul Material Symbols e încărcat în layout.tsx.
+const ROOM_TYPE_EMOJI: Record<RoomType, string> = {
+  [RoomType.Dormitor]: "🛏️",
+  [RoomType.Baie]: "🛁",
+  [RoomType.Living]: "🛋️",
+  [RoomType.Bucatarie]: "🍳",
+  [RoomType.Terasa]: "🌿",
+  [RoomType.Balcon]: "🪟",
+};
+
+const roomTypes = Object.values(RoomType);
 
 export default function RoomFormDrawer({
   open,
@@ -23,7 +27,7 @@ export default function RoomFormDrawer({
   onClose: () => void;
 }) {
   const { addRoom } = useStore();
-  const [type, setType] = useState<RoomType>("Dormitor");
+  const [type, setType] = useState<RoomType>(RoomType.Dormitor);
   const [name, setName] = useState("");
   const [budget, setBudget] = useState(0);
 
@@ -34,7 +38,7 @@ export default function RoomFormDrawer({
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setType("Dormitor");
+      setType(RoomType.Dormitor);
       setName("");
       setBudget(0);
     }
@@ -53,19 +57,19 @@ export default function RoomFormDrawer({
           <div className="grid grid-cols-3 gap-2">
             {roomTypes.map((rt) => (
               <button
-                key={rt.type}
+                key={rt}
                 type="button"
-                onClick={() => setType(rt.type)}
+                onClick={() => setType(rt)}
                 className={`flex flex-col items-center gap-1 rounded-md border px-2 py-3 text-xs font-medium ${
-                  type === rt.type
+                  type === rt
                     ? "border-primary bg-surface-low"
                     : "border-line hover:bg-surface-low"
                 }`}
               >
                 <span className="text-lg" aria-hidden>
-                  {rt.icon}
+                  {ROOM_TYPE_EMOJI[rt]}
                 </span>
-                {rt.type}
+                {rt}
               </button>
             ))}
           </div>

@@ -3,22 +3,11 @@
 import { useState } from "react";
 import Drawer from "./Drawer";
 import { Field, PrimaryButton, inputCls } from "./forms";
-import { Item, ItemStatus, MaterialType } from "@/lib/types";
-import { useStore } from "@/lib/store";
+import { Item, ItemStatus, MaterialType } from "@/shared/types";
+import { useStore } from "@/shared/store";
 
-const materialTypes: MaterialType[] = [
-  "Gresie",
-  "Faianță",
-  "Parchet",
-  "Vopsea",
-  "Sanitare",
-  "Mobilă",
-  "Electrocasnice",
-  "Corpuri de iluminat",
-  "Altele",
-];
-
-const statuses: ItemStatus[] = ["În așteptare", "Planificat", "Cumpărat"];
+const materialTypes = Object.values(MaterialType);
+const statuses = Object.values(ItemStatus);
 
 export default function ItemFormDrawer({
   open,
@@ -36,8 +25,8 @@ export default function ItemFormDrawer({
 
   const [name, setName] = useState("");
   const [source, setSource] = useState("");
-  const [status, setStatus] = useState<ItemStatus>("În așteptare");
-  const [materialType, setMaterialType] = useState<MaterialType>("Altele");
+  const [status, setStatus] = useState<ItemStatus>(ItemStatus.InAsteptare);
+  const [materialType, setMaterialType] = useState<MaterialType>(MaterialType.Altele);
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [productUrl, setProductUrl] = useState("");
@@ -53,8 +42,8 @@ export default function ItemFormDrawer({
     if (open) {
       setName(item?.name ?? "");
       setSource(item?.source ?? "");
-      setStatus(item?.status ?? "În așteptare");
-      setMaterialType(item?.materialType ?? "Altele");
+      setStatus(item?.status ?? ItemStatus.InAsteptare);
+      setMaterialType(item?.materialType ?? MaterialType.Altele);
       setQuantity(item?.quantity ?? 1);
       setUnitPrice(item?.unitPrice ?? 0);
       setProductUrl(item?.productUrl ?? "");

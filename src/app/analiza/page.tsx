@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import StatCard from "@/components/StatCard";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/shared/store";
 import {
   boughtCount,
   budgetRemaining,
@@ -12,7 +12,8 @@ import {
   formatMoney,
   totalEstimated,
   totalSpent,
-} from "@/lib/functions";
+} from "@/shared/functions";
+import { ItemStatus } from "@/shared/types";
 
 const PIE_COLORS = ["#0ea5e9", "#f97316", "#8b5cf6", "#10b981", "#64748b"];
 
@@ -145,7 +146,7 @@ export default function AnalizaPage() {
           <p className="mt-2 text-sm text-sky-900">
             Elementele &bdquo;În așteptare&rdquo; însumează{" "}
             {formatMoney(
-              totalEstimated(items.filter((i) => i.status === "În așteptare"))
+              totalEstimated(items.filter((i) => i.status === ItemStatus.InAsteptare))
             )}
             . Compară prețurile între surse înainte de achiziție.
           </p>

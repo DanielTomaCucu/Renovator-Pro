@@ -1,9 +1,9 @@
-import { ItemStatus } from "@/lib/types";
+import { ItemStatus } from "@/shared/types";
 
 const styles: Record<ItemStatus, string> = {
-  Cumpărat: "bg-emerald-100 text-emerald-700",
-  "În așteptare": "bg-amber-100 text-amber-700",
-  Planificat: "bg-sky-100 text-sky-700",
+  [ItemStatus.Cumparat]: "bg-emerald-100 text-emerald-700",
+  [ItemStatus.InAsteptare]: "bg-amber-100 text-amber-700",
+  [ItemStatus.Planificat]: "bg-sky-100 text-sky-700",
 };
 
 export default function StatusChip({ status }: { status: ItemStatus }) {

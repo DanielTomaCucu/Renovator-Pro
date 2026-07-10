@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Hanken_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { StoreProvider } from "@/lib/store";
+import { StoreProvider } from "@/shared/store";
 import Sidebar from "@/components/Sidebar";
 
 const inter = Inter({
