@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Drawer from "./Drawer";
 import { Field, PrimaryButton, inputCls } from "./forms";
 import { Item, ItemStatus, MaterialType } from "@/lib/types";
@@ -44,18 +44,24 @@ export default function ItemFormDrawer({
   const [imageUrl, setImageUrl] = useState("");
   const [room, setRoom] = useState(roomId ?? "");
 
-  useEffect(() => {
-    if (!open) return;
-    setName(item?.name ?? "");
-    setSource(item?.source ?? "");
-    setStatus(item?.status ?? "În așteptare");
-    setMaterialType(item?.materialType ?? "Altele");
-    setQuantity(item?.quantity ?? 1);
-    setUnitPrice(item?.unitPrice ?? 0);
-    setProductUrl(item?.productUrl ?? "");
-    setImageUrl(item?.imageUrl ?? "");
-    setRoom(item?.roomId ?? roomId ?? rooms[0]?.id ?? "");
-  }, [open, item, roomId, rooms]);
+  // Resetează/populează formularul de fiecare dată când drawerul se deschide.
+  // Pattern React: "adjusting state during render" (nu useEffect) —
+  // evită randări în cascadă. Vezi https://react.dev/learn/you-might-not-need-an-effect
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setName(item?.name ?? "");
+      setSource(item?.source ?? "");
+      setStatus(item?.status ?? "În așteptare");
+      setMaterialType(item?.materialType ?? "Altele");
+      setQuantity(item?.quantity ?? 1);
+      setUnitPrice(item?.unitPrice ?? 0);
+      setProductUrl(item?.productUrl ?? "");
+      setImageUrl(item?.imageUrl ?? "");
+      setRoom(item?.roomId ?? roomId ?? rooms[0]?.id ?? "");
+    }
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();

@@ -6,7 +6,16 @@ import StatusChip from "@/components/StatusChip";
 import ItemFormDrawer from "@/components/ItemFormDrawer";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { formatMoney, itemTotal, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import {
+  boughtCount,
+  formatMoney,
+  itemTotal,
+  itemsForRoom,
+  purchaseProgress,
+  roomSpent,
+  totalSpent,
+} from "@/lib/functions";
 import { Item } from "@/lib/types";
 
 export default function ElementePage() {
@@ -27,15 +36,9 @@ export default function ElementePage() {
   const [qaRoom, setQaRoom] = useState(rooms[0]?.id ?? "");
   const [qaPrice, setQaPrice] = useState("");
 
-  const spent = useMemo(
-    () =>
-      items
-        .filter((i) => i.status === "Cumpărat")
-        .reduce((s, i) => s + itemTotal(i), 0),
-    [items]
-  );
-  const bought = items.filter((i) => i.status === "Cumpărat").length;
-  const progress = items.length ? Math.round((bought / items.length) * 100) : 0;
+  const spent = useMemo(() => totalSpent(items), [items]);
+  const bought = boughtCount(items);
+  const progress = purchaseProgress(items);
 
   function quickAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -144,10 +147,8 @@ export default function ElementePage() {
       {/* Camere */}
       <div className="mt-8 space-y-6">
         {rooms.map((room) => {
-          const roomItems = items.filter((i) => i.roomId === room.id);
-          const roomSpent = roomItems
-            .filter((i) => i.status === "Cumpărat")
-            .reduce((s, i) => s + itemTotal(i), 0);
+          const roomItems = itemsForRoom(items, room.id);
+          const spentInRoom = roomSpent(items, room.id);
           return (
             <section
               key={room.id}
@@ -163,7 +164,7 @@ export default function ElementePage() {
                       Buget utilizat
                     </span>
                     <span className="font-mono">
-                      {formatMoney(roomSpent)} /{" "}
+                      {formatMoney(spentInRoom)} /{" "}
                       {formatMoney(room.allocatedBudget)}
                     </span>
                   </p>

@@ -2,61 +2,39 @@
 
 import { useMemo } from "react";
 import StatCard from "@/components/StatCard";
-import { formatMoney, itemTotal, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import {
+  boughtCount,
+  budgetRemaining,
+  costPerCategory,
+  costPerRoom,
+  donutSegments,
+  formatMoney,
+  totalEstimated,
+  totalSpent,
+} from "@/lib/functions";
 
 const PIE_COLORS = ["#0ea5e9", "#f97316", "#8b5cf6", "#10b981", "#64748b"];
 
 export default function AnalizaPage() {
   const { project, rooms, items } = useStore();
 
-  const totalEstimated = useMemo(
-    () => items.reduce((s, i) => s + itemTotal(i), 0),
-    [items]
-  );
-  const spent = useMemo(
+  const estimated = useMemo(() => totalEstimated(items), [items]);
+  const spent = useMemo(() => totalSpent(items), [items]);
+  const remaining = budgetRemaining(project.totalBudget, items);
+  const bought = boughtCount(items);
+
+  const perRoom = useMemo(() => costPerRoom(rooms, items), [rooms, items]);
+  const perCategory = useMemo(() => costPerCategory(items), [items]);
+
+  const segments = useMemo(
     () =>
-      items
-        .filter((i) => i.status === "Cumpărat")
-        .reduce((s, i) => s + itemTotal(i), 0),
-    [items]
+      donutSegments(perRoom).map((s, idx) => ({
+        ...s,
+        color: PIE_COLORS[idx % PIE_COLORS.length],
+      })),
+    [perRoom]
   );
-  const remaining = project.totalBudget - spent;
-  const bought = items.filter((i) => i.status === "Cumpărat").length;
-
-  const perRoom = useMemo(
-    () =>
-      rooms
-        .map((r) => ({
-          name: r.name,
-          total: items
-            .filter((i) => i.roomId === r.id)
-            .reduce((s, i) => s + itemTotal(i), 0),
-        }))
-        .filter((r) => r.total > 0)
-        .sort((a, b) => b.total - a.total),
-    [rooms, items]
-  );
-
-  const perCategory = useMemo(() => {
-    const map = new Map<string, { total: number; spent: number }>();
-    for (const i of items) {
-      const e = map.get(i.materialType) ?? { total: 0, spent: 0 };
-      e.total += itemTotal(i);
-      if (i.status === "Cumpărat") e.spent += itemTotal(i);
-      map.set(i.materialType, e);
-    }
-    return [...map.entries()].sort((a, b) => b[1].total - a[1].total);
-  }, [items]);
-
-  // Pie chart segments
-  const pieTotal = perRoom.reduce((s, r) => s + r.total, 0);
-  let acc = 0;
-  const segments = perRoom.map((r, idx) => {
-    const start = acc / pieTotal;
-    acc += r.total;
-    const end = acc / pieTotal;
-    return { ...r, start, end, color: PIE_COLORS[idx % PIE_COLORS.length] };
-  });
 
   const overBudget = spent > project.totalBudget;
 
@@ -165,11 +143,9 @@ export default function AnalizaPage() {
             💡 Optimizare recomandată
           </p>
           <p className="mt-2 text-sm text-sky-900">
-            Elementele „În așteptare" însumează{" "}
+            Elementele &bdquo;În așteptare&rdquo; însumează{" "}
             {formatMoney(
-              items
-                .filter((i) => i.status === "În așteptare")
-                .reduce((s, i) => s + itemTotal(i), 0)
+              totalEstimated(items.filter((i) => i.status === "În așteptare"))
             )}
             . Compară prețurile între surse înainte de achiziție.
           </p>
@@ -201,7 +177,7 @@ export default function AnalizaPage() {
             📈 Status proiect
           </p>
           <p className="mt-2 text-sm">
-            Total estimat al proiectului: {formatMoney(totalEstimated)} —{" "}
+            Total estimat al proiectului: {formatMoney(estimated)} —{" "}
             {items.length} elemente în {rooms.length} camere.
           </p>
         </div>

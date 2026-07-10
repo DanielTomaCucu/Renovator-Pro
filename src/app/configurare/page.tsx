@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
-import { formatMoney, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import { formatMoney } from "@/lib/functions";
 
 export default function ConfigurarePage() {
   const { project, rooms, updateRoom } = useStore();

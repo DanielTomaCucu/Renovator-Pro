@@ -81,13 +81,3 @@ export function useStore() {
   if (!ctx) throw new Error("useStore must be used within StoreProvider");
   return ctx;
 }
-
-export const itemTotal = (i: Item) => i.quantity * i.unitPrice;
-
-export function formatMoney(value: number, currency: "EUR" | "RON" = "EUR") {
-  return new Intl.NumberFormat("ro-RO", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(value);
-}

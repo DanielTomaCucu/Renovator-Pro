@@ -20,16 +20,29 @@ Aplicație web de **management al bugetului pentru renovări de locuințe** (pro
 
 ```
 src/
-  lib/types.ts        — modelul de date (Project, Room, Item)
+  lib/types.ts        — modelul de date (interfețe: Project, Room, Item, enums)
   lib/mock-data.ts    — date de test
-  lib/store.tsx       — StoreProvider (React context, CRUD in-memory) + formatMoney/itemTotal
+  lib/functions.ts    — TOATĂ logica de business (vezi secțiunea dedicată mai jos)
+  lib/store.tsx       — StoreProvider (React context, DOAR CRUD in-memory, fără calcule)
   components/         — Sidebar, StatCard, StatusChip, Drawer, ItemFormDrawer, RoomFormDrawer, ConfirmDialog, forms
   app/
     elemente/         — Elemente de Cumpărat (pagina principală)
     centralizator/    — Tabel Centralizator Costuri
     analiza/          — Analiză Bugetară (dashboard)
     configurare/      — Configurare Apartament
+docs/
+  progress.md         — jurnal cronologic de schimbări (actualizează-l după fiecare sesiune de lucru)
+  api-contract.md     — contractul API REST (viitor backend Spring Boot) — sursa unică de adevăr pt. shape-urile de request/response
 ```
+
+## Documentație vie — citește și scrie în ea
+
+Pe lângă acest fișier, proiectul ține evidența în `docs/`:
+
+- **`docs/progress.md`** — jurnal de schimbări. La finalul oricărei sesiuni de lucru cu impact real pe cod (feature nou, refactor, fix), adaugă o intrare nouă (dată + ce s-a schimbat + de ce + fișiere atinse). Nu rescrie istoricul — doar adaugi la final. E memoria pe termen lung a proiectului: dacă o sesiune viitoare (a ta sau a userului) întreabă „ce s-a făcut până acum", răspunsul e acolo, nu trebuie reconstruit din `git log`.
+- **`docs/api-contract.md`** — contractul de API pentru integrarea cu backend-ul Spring Boot (nu există încă, dar interfața client (`RenovationStore`) e deja scrisă ca să mapeze 1:1 pe el). Orice decizie despre shape-ul unui endpoint se scrie AICI înainte de a fi implementată, ca frontend-ul și backend-ul să nu diverge.
+
+**Regulă:** dacă adaugi/ștergi/modifici o funcție de business, un endpoint sau o pagină, actualizează fișierul relevant din `docs/` în aceeași sesiune, nu „mai târziu".
 
 ## Design system (obligatoriu de respectat)
 
@@ -76,21 +89,47 @@ Design-urile Stitch folosesc **Material Symbols Outlined**, NU emoji. Implementa
 ## Modelul de date & logica de business
 
 ### Entități (`src/lib/types.ts`)
+Toate tipurile de date au **interfață/type dedicat** aici — niciodată obiecte `any` sau inline shapes în componente.
 - **Project**: titlu, buget total, monedă (EUR/RON).
 - **Room** (cameră): tip (Dormitor/Baie/Living/Bucătărie/Terasă/Balcon), nume liber, buget alocat. Ștergerea unei camere șterge și elementele ei (cascade — deja implementat în store).
 - **Item** (element de cumpărat): nume, tip material (Gresie/Faianță/Parchet/Vopsea/Sanitare/Mobilă/Electrocasnice/Corpuri de iluminat/Altele), sursă/magazin, status, cantitate, preț unitar, link produs (opțional), URL imagine (opțional), FK cameră.
 
-### Reguli de calcul (nu le dubla — folosește helper-ele din `store.tsx`)
-- `total element = cantitate × preț unitar` (`itemTotal`)
-- `total cheltuit = Σ totaluri elemente cu status "Cumpărat"` — **doar Cumpărat contează la cheltuit**
-- `total estimat = Σ toate elementele`, indiferent de status
-- `progres achiziții (%) = elemente Cumpărat / total elemente`
-- `buget rămas = buget total proiect − total cheltuit`; dacă e negativ → alertă cu `tertiary` (orange)
-- subtotal per cameră; buget utilizat cameră vs. buget alocat cameră (depășire → orange)
-- Formatare bani: `formatMoney()` — Intl ro-RO, mereu 2 zecimale.
-
 ### Statusuri element
 `În așteptare` (default la creare) → `Planificat` → `Cumpărat`. Sunt libere (dropdown), nu un workflow strict.
+
+## ⚠️ Regula de aur: unde trăiește logica de business
+
+**Toată logica de business (calcule, agregări, transformări, reguli, formatare) trăiește în `src/lib/functions.ts` — NICIODATĂ inline într-o pagină sau componentă.**
+
+De ce: aplicația asta va exista în minim 3 locuri (web Next.js, backend Spring Boot, mobil Flutter). Dacă regula "doar elementele Cumpărate contează la total cheltuit" e scrisă în interiorul unui `.tsx`, prima pagină care are nevoie de ea o va reimplementa ușor diferit, iar cele trei implementări vor diverge silențios. Fiecare regulă de business scrisă o singură dată, într-un singur loc, e singurul mod de a păstra aplicația coerentă pe termen lung.
+
+### Reguli concrete de organizare
+
+1. **O funcție = un fapt de business, testabil izolat, fără React.** `functions.ts` conține doar funcții pure (input → output, fără hooks, fără `useState`, fără efecte secundare). Dacă o logică are nevoie de React (ex: `useMemo`), memoizarea rămâne în pagină, dar *calculul* din interior e apelul unei funcții din `functions.ts`.
+2. **Dacă un calcul e folosit în ≥2 pagini/componente → OBLIGATORIU în `functions.ts`.** Nu-l duplica "doar de data asta". Exemple deja extrase: `itemTotal`, `totalEstimated`, `totalSpent`, `boughtCount`, `purchaseProgress`, `budgetRemaining`, `itemsForRoom`, `roomSubtotal`, `roomSpent`, `costPerRoom`, `costPerCategory`, `donutSegments`, `formatMoney`.
+3. **Fișiere multiple, dacă domeniul crește.** Cât timp aplicația are un singur domeniu (buget renovare), totul stă în `src/lib/functions.ts`. Dacă apare un domeniu nou și distinct (ex: autentificare, export PDF cu logică complexă, integrare valutară live), creează un fișier separat (`src/lib/auth-functions.ts`, `src/lib/export-functions.ts` etc.) — NU îngrămădi tot într-un singur fișier gigant. Fiecare fișier nou de acest tip trebuie documentat în `docs/progress.md` (ce conține, de ce e separat) și listat în tabelul de mai jos.
+4. **`store.tsx` rămâne DOAR stare + CRUD** (add/update/delete pe `rooms`/`items`). Store-ul nu face calcule — apelează, cel mult, funcții din `functions.ts` dacă are nevoie de o valoare derivată pentru validare. Componentele importă calculele direct din `functions.ts`, nu din store.
+5. **Fiecare funcție are un comentariu de o linie deasupra** care spune ce calculează și, dacă regula nu e evidentă din nume, *de ce* (ex: „doar Cumpărat contează la cheltuit”). Nu documentații lungi — o linie e suficientă dacă numele funcției e clar.
+6. **La adăugarea unei funcții noi:** adaug-o în `functions.ts` (sau fișierul de domeniu potrivit), exportă-o, și adaugă o linie în tabelul „Registru de funcții” din `docs/progress.md` (nume, ce face, unde e folosită).
+7. **La ștergerea/redenumirea unei funcții:** caută TOATE apelurile ei (`grep -rn "numeFunctie" src/`) înainte de a o șterge, actualizează fiecare apel, și șterge/actualizează rândul corespunzător din registrul de funcții din `docs/progress.md`. Nu lăsa funcții moarte neexportate „pentru orice eventualitate”.
+
+### Fișier generic & extensibil, production-ready
+- Funcțiile lucrează pe interfețele din `types.ts`, nu pe forme ad-hoc — orice extindere a modelului de date (ex: adaugi un câmp nou pe `Item`) nu trebuie să spargă funcțiile existente.
+- Funcțiile sunt pure și fără side-effects → ușor de mutat 1:1 în backend-ul Spring Boot (aceeași regulă de business, doar tradusă în Java) sau în Flutter (Dart), fără ambiguitate despre ce trebuie portat.
+- Evită parametri opționali cu comportament ascuns; dacă o funcție are nevoie de context suplimentar, primește-l explicit ca parametru.
+
+### Reguli de calcul actuale (implementate în `functions.ts`)
+- `total element = cantitate × preț unitar` (`itemTotal`)
+- `total cheltuit = Σ totaluri elemente cu status "Cumpărat"` — **doar Cumpărat contează la cheltuit** (`totalSpent`)
+- `total estimat = Σ toate elementele`, indiferent de status (`totalEstimated`)
+- `progres achiziții (%) = elemente Cumpărat / total elemente` (`purchaseProgress`)
+- `buget rămas = buget total proiect − total cheltuit`; dacă e negativ → alertă cu `tertiary` (orange) (`budgetRemaining`)
+- subtotal per cameră (`roomSubtotal`); cheltuit per cameră (`roomSpent`); buget utilizat cameră vs. buget alocat cameră (depășire → orange)
+- distribuție cost pe cameră pentru donut chart (`costPerRoom` + `donutSegments`)
+- agregare cost pe categorie de material (`costPerCategory`)
+- Formatare bani: `formatMoney()` — Intl ro-RO, mereu 2 zecimale. Folosește-o pentru ORICE sumă afișată, niciodată `.toFixed()` sau formatare manuală.
+
+Detaliul complet, la zi, al fiecărei funcții (semnătură + locuri de utilizare) e în `docs/progress.md`, secțiunea „Registru de funcții” — actualizeaz-o de fiecare dată când modifici `functions.ts`.
 
 ## Pagini & funcționalități (referință Stitch)
 
@@ -116,8 +155,12 @@ Design-urile Stitch folosesc **Material Symbols Outlined**, NU emoji. Implementa
 
 ## Convenții de cod
 
-- Componente client (`"use client"`) doar unde e nevoie de stare/evenimente; pagini rămân subțiri, logica de calcul în `useMemo` sau helpers din `lib/`.
+- Componente client (`"use client"`) doar unde e nevoie de stare/evenimente; pagini rămân subțiri — **fac fetch/orchestrare + randare, nu calcule**. Orice calcul vine dintr-un import din `lib/functions.ts`, eventual înfășurat în `useMemo` dacă e costisitor.
+- **Zero duplicare de logică.** Înainte să scrii un calcul nou, verifică `docs/progress.md` (Registrul de funcții) sau caută în `src/lib/*.ts` — dacă există deja ceva similar, extinde-l sau reutilizează-l în loc să rescrii.
+- Toate tipurile de date noi (props complexe, shape-uri de răspuns API etc.) primesc o `interface`/`type` explicit în `types.ts` sau lângă funcția care le folosește — nu `any`, nu obiecte inline nedeclarate.
 - Toate textele UI în **română** (diacritice corecte). Etichetele de secțiune: uppercase, 11–12px, bold, `tracking-wide`, `text-muted`.
 - Folosește clasele de token (`bg-surface`, `border-line`, `text-muted`), NU culori hardcodate.
 - State-ul global trece exclusiv prin `useStore()`; nu crea alt context și nu folosi localStorage fără să fie cerut.
 - Accesibilitate: butoanele icon-only primesc `aria-label`.
+- React 19: nu folosi `useEffect` ca să sincronizezi state cu props/schimbări (ex: reset de formular la deschiderea unui drawer) — e anti-pattern și dă eroare de lint (`react-hooks/set-state-in-effect`). Folosește pattern-ul oficial „adjusting state during render" (compară cu o valoare anterioară ținută în `useState`, vezi `ItemFormDrawer.tsx`/`RoomFormDrawer.tsx` pentru exemplu).
+- Verifică mereu cu `npm run lint` și `npx tsc --noEmit` înainte să consideri o schimbare încheiată.

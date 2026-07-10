@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Drawer from "./Drawer";
 import { Field, PrimaryButton, inputCls } from "./forms";
 import { RoomType } from "@/lib/types";
@@ -27,12 +27,18 @@ export default function RoomFormDrawer({
   const [name, setName] = useState("");
   const [budget, setBudget] = useState(0);
 
-  useEffect(() => {
-    if (!open) return;
-    setType("Dormitor");
-    setName("");
-    setBudget(0);
-  }, [open]);
+  // Resetează formularul de fiecare dată când drawerul se deschide.
+  // Pattern React: "adjusting state during render" (nu useEffect) —
+  // evită randări în cascadă. Vezi https://react.dev/learn/you-might-not-need-an-effect
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setType("Dormitor");
+      setName("");
+      setBudget(0);
+    }
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();

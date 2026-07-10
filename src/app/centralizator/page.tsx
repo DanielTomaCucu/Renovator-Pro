@@ -3,28 +3,23 @@
 import { useMemo } from "react";
 import StatCard from "@/components/StatCard";
 import StatusChip from "@/components/StatusChip";
-import { formatMoney, itemTotal, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
+import {
+  formatMoney,
+  itemTotal,
+  itemsForRoom,
+  purchaseProgress,
+  roomSubtotal,
+  totalEstimated,
+  totalSpent,
+} from "@/lib/functions";
 
 export default function CentralizatorPage() {
   const { project, rooms, items } = useStore();
 
-  const totalEstimated = useMemo(
-    () => items.reduce((s, i) => s + itemTotal(i), 0),
-    [items]
-  );
-  const spent = useMemo(
-    () =>
-      items
-        .filter((i) => i.status === "Cumpărat")
-        .reduce((s, i) => s + itemTotal(i), 0),
-    [items]
-  );
-  const progress = items.length
-    ? Math.round(
-        (items.filter((i) => i.status === "Cumpărat").length / items.length) *
-          100
-      )
-    : 0;
+  const estimated = useMemo(() => totalEstimated(items), [items]);
+  const spent = useMemo(() => totalSpent(items), [items]);
+  const progress = purchaseProgress(items);
 
   return (
     <div className="px-6 py-6 lg:px-10 max-w-7xl">
@@ -43,7 +38,7 @@ export default function CentralizatorPage() {
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Total estimat proiect"
-          value={formatMoney(totalEstimated)}
+          value={formatMoney(estimated)}
         />
         <StatCard
           label="Total cheltuit la zi"
@@ -55,8 +50,8 @@ export default function CentralizatorPage() {
 
       <div className="mt-8 space-y-6">
         {rooms.map((room) => {
-          const roomItems = items.filter((i) => i.roomId === room.id);
-          const subtotal = roomItems.reduce((s, i) => s + itemTotal(i), 0);
+          const roomItems = itemsForRoom(items, room.id);
+          const subtotal = roomSubtotal(items, room.id);
           if (roomItems.length === 0) return null;
           return (
             <section
@@ -128,7 +123,7 @@ export default function CentralizatorPage() {
           Rezumat financiar — Total general estimat
         </p>
         <p className="font-mono text-2xl font-bold">
-          {formatMoney(totalEstimated, project.currency)}
+          {formatMoney(estimated, project.currency)}
         </p>
       </div>
     </div>
