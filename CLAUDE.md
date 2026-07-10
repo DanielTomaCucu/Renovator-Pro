@@ -74,10 +74,100 @@ Status chips: Cumpărat = emerald, În așteptare = amber, Planificat = sky — 
 - Colțuri strânse: elemente mici 4px (`rounded`), carduri/inputs 8px (`rounded-lg` max). **Fără forme „bubble"** — excepție doar status pills (capsule).
 
 ### Iconițe — IMPORTANT
-Design-urile Stitch folosesc **Material Symbols Outlined**, NU emoji. Implementarea actuală folosește emoji ca placeholder — **de înlocuit**. La orice lucru pe UI:
-1. Adaugă `material-symbols` (npm) sau font-ul Google `Material Symbols Outlined`.
-2. Iconițe folosite în design: `home`/`apartment` (configurare), `shopping_cart` (elemente), `table_rows`/`receipt_long` (centralizator), `bar_chart`/`monitoring` (analiză), `add`, `edit`, `delete`, `close`, `search`, `print`, `share`, `picture_as_pdf`, `bed` (dormitor), `bathtub` (baie), `weekend` (living), `kitchen`/`skillet` (bucătărie), `deck` (terasă), `balcony` (balcon), `bolt` (adăugare rapidă), `visibility` (detalii).
-3. Stil: outlined, weight ~400, dimensiune 20–24px, culoare `text-muted` pe acțiuni secundare.
+Design-urile Stitch folosesc **Material Symbols Outlined** (Google), NU emoji. Implementarea actuală
+folosește emoji ca placeholder — **de înlocuit**. Lista de mai jos e extrasă direct din codul HTML
+generat de Stitch (nu ghicită), deci sunt numele exacte de folosit.
+
+**Setup:**
+```html
+<!-- în <head>, sau importat ca font local -->
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+/>
+```
+sau pachetul npm `material-symbols` (self-hosted, recomandat pt. producție — evită request extern către Google Fonts).
+
+Utilizare (span cu clasa `material-symbols-outlined`, numele iconiței ca text):
+```html
+<span class="material-symbols-outlined">bolt</span>
+```
+
+**Stil:** outlined, weight ~400, dimensiune 20–24px, culoare `text-muted` pe acțiuni secundare, `text-white`/`primary` pe acțiuni pe fundal întunecat.
+
+#### Navigare sidebar (`Sidebar.tsx`)
+| Iconiță | Secțiune |
+|---|---|
+| `home_work` | Configurare Apartament |
+| `shopping_cart` | Elemente de Cumpărat |
+| `table_chart` | Tabel Centralizator |
+| `leaderboard` | Grafice / Analiză Bugetară |
+| `auto_awesome` | Galerie Inspirație (neimplementată încă) |
+| `settings` | Setări |
+| `keyboard_double_arrow_left` | Restrânge meniu (sidebar colapsabil) |
+| `search` | Căutare (header) |
+| `account_circle` | Profil utilizator |
+
+#### Tipuri de cameră (grid din `RoomFormDrawer.tsx`)
+| Iconiță | Tip cameră |
+|---|---|
+| `bed` | Dormitor |
+| `shower` | Baie |
+| `chair` | Living |
+| `kitchen` | Bucătărie |
+| `deck` | Terasă |
+| `balcony` | Balcon |
+
+#### Acțiuni CRUD & formulare
+| Iconiță | Utilizare |
+|---|---|
+| `add` | Adaugă Cameră (buton generic de adăugare) |
+| `add_home` | Adaugă Cameră Nouă (titlu drawer) |
+| `add_shopping_cart` | Adaugă Element Nou (titlu drawer) |
+| `edit_square` | Editează Element (titlu drawer) |
+| `edit` | Editare inline (rând tabel) |
+| `delete` | Ștergere (rând tabel, cameră) |
+| `close` | Închide modal/drawer |
+| `warning` | Confirmare Ștergere (titlu dialog) |
+| `bolt` | Adăugare Rapidă (secțiune) |
+| `expand_more` | Dropdown/select |
+| `visibility` | Vizualizare detalii element |
+
+#### Status elemente
+| Iconiță | Status |
+|---|---|
+| `check_circle` | Cumpărat |
+| `calendar_today` | Planificat |
+
+#### Export & document
+| Iconiță | Utilizare |
+|---|---|
+| `picture_as_pdf` | Export PDF |
+| `print` | Imprimă Raport |
+
+#### Pagina Analiză Bugetară (`/analiza`)
+| Iconiță | Utilizare |
+|---|---|
+| `pie_chart` | Cost per Cameră (donut chart) |
+| `bar_chart` | Stadiul Achizițiilor pe Categorii |
+| `timeline` | Evoluția Cheltuielilor (grafic linie, de implementat) |
+| `tips_and_updates` | Card recomandare „Optimizare recomandată" |
+| `error_outline` | Card alertă „Atenție: depășire buget" |
+| `task_alt` | Card „Status proiect” (pozitiv/pe traiectorie) |
+| `trending_down` | Economii identificate |
+| `update` | Termen scadent / actualizare status |
+| `dashboard` | Overview general |
+
+**Notă:** iconițele de mai sus au fost confirmate direct din HTML-ul a 6+ ecrane Stitch (desktop + mobil,
+inclusiv variantele „Meniu Restrâns”, „Premium Black Theme”, „Volet Adăugare Cameră”). Dacă la implementare
+apare o secțiune nouă (ex: Galerie Inspirație) fără iconiță confirmată încă, preia ecranul din Stitch cu
+`get_screen` și extrage `class="material-symbols-outlined"` din HTML înainte de a ghici — Stitch e sursa
+de adevăr pentru iconografie, nu presupuneri.
+
+**Toate numele de iconițe de mai sus sunt deja centralizate în `src/lib/icons.ts`** (`NAV_ICONS`,
+`ROOM_TYPE_ICONS`, `ACTION_ICONS`, `STATUS_ICONS`, `DOCUMENT_ICONS`, `ANALYTICS_ICONS`). La înlocuirea
+emoji-urilor cu Material Symbols (backlog item 2), importă din acest fișier — nu scrie string-uri de
+iconiță direct în JSX, ca să rămână un singur loc de adevăr (aceeași regulă ca la `functions.ts`).
 
 ### Responsive design (obligatoriu la fiecare pagină)
 - **Desktop (≥768px):** sidebar stânga 256px (colapsabil — de implementat), conținut max `max-w-7xl`, grid 12 coloane conceptual, gutter 24px.

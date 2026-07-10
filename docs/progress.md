@@ -51,3 +51,13 @@ Actualizează acest tabel de fiecare dată când adaugi, ștergi sau redenumeșt
 - Creat `docs/progress.md` (acest fișier) și `docs/api-contract.md`.
 
 **Fișiere atinse:** `src/lib/functions.ts` (nou), `src/lib/store.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/analiza/page.tsx`, `src/app/configurare/page.tsx`, `src/components/ItemFormDrawer.tsx`, `src/components/RoomFormDrawer.tsx`, `CLAUDE.md`.
+
+### 2026-07-10 — Extragere iconițe reale din Stitch + `icons.ts`
+**De ce:** iconițele listate inițial în `CLAUDE.md` (secțiunea Iconițe) erau presupuneri, nu extrase din design. Userul a cerut extragerea reală din HTML-ul generat de Stitch, ca referință de folosit la implementare.
+
+- Descărcat HTML-ul a 6+ ecrane Stitch (desktop + mobil: Elemente de Cumpărat, Tabel Centralizator, Analiză Bugetară — variante Meniu Restrâns / Premium Black Theme, Volet Adăugare Cameră) și extras toate ocurențele `material-symbols-outlined`.
+- Actualizat `CLAUDE.md` → secțiunea „Iconițe” cu tabele complete, verificate, grupate pe: navigare sidebar, tipuri de cameră, acțiuni CRUD & formulare, status elemente, export/document, pagina Analiză. Adăugat și snippet de setup (Google Fonts link / pachet npm `material-symbols`).
+- Creat `src/lib/icons.ts` — mapare centralizată nume-Material-Symbol (`NAV_ICONS`, `ROOM_TYPE_ICONS`, `ACTION_ICONS`, `STATUS_ICONS`, `DOCUMENT_ICONS`, `ANALYTICS_ICONS`), ca implementarea viitoare (backlog item 2: „Înlocuire emoji cu Material Symbols”) să importe din acest fișier, nu să hardcodeze string-uri de iconiță în JSX.
+- **Nu s-a schimbat încă UI-ul** — emoji-urile din componente rămân placeholder până la implementarea efectivă a înlocuirii (task separat, backlog item 2). Acest pas a produs doar referința + fișierul de mapare.
+
+**Fișiere atinse:** `CLAUDE.md`, `src/lib/icons.ts` (nou).
