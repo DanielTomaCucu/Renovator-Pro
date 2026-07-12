@@ -22,6 +22,7 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `roomSubtotal(items, roomId)` | `shared/functions/items.ts` | total estimat al unei camere | `elemente`, `centralizator`, intern în `charts.ts` (costPerRoom) |
 | `roomSpent(items, roomId)` | `shared/functions/items.ts` | cheltuit efectiv într-o cameră | `elemente` |
 | `budgetRemaining(totalBudget, items)` | `shared/functions/budget.ts` | buget total − cheltuit | `analiza` |
+| `budgetEfficiency(estimated, spent)` | `shared/functions/budget.ts` | % din estimat efectiv cheltuit (0 dacă nu există estimat) | `centralizator` |
 | `costPerRoom(rooms, items)` | `shared/functions/charts.ts` | distribuție cost pe cameră, sortată desc, fără camere goale | `analiza` (donut chart) |
 | `costPerCategory(items)` | `shared/functions/charts.ts` | agregare {total, spent} per `MaterialType`, sortată desc | `analiza` (progress bars) |
 | `donutSegments(data)` | `shared/functions/charts.ts` | transformă `{name, total}[]` în `DonutSegment[]` cumulative (start/end 0–1) pt. SVG donut | `analiza` |
@@ -222,5 +223,44 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 - Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat la 375px (mobil): header-ele de cameră rămân pe un rând cu scroll orizontal vizibil, tabelele idem, zero wrap pe 2 rânduri nicăieri, zero erori în consolă.
 
 **Fișiere atinse:** `src/app/elemente/page.tsx`, `src/components/StatusChip.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/elemente`: dimensiune uniformă iconițe de buton + fix axă `opsz`
+**De ce:** userul a semnalat că iconițele de pe butoane (Salvează, edit/delete din tabel) sunt disproporționat de mari față de textul din jur.
+
+- Cauza reală: `.material-symbols-outlined` avea `opsz` (optical size) fixat la 24 global — la randare sub 20px, traseul glifei rămâne desenat pt. 24px, deci apare gros/mare indiferent de `font-size`.
+- `globals.css`: `opsz` global coborât la 20; adăugată clasa nouă `.icon-btn` (font-size 13px, `opsz` 14) — standardul pt. toate iconițele din butoane (edit/delete/adaugă/salvează).
+- Aplicat `.icon-btn` pe toate iconițele de buton din `elemente/page.tsx` și pe iconița delete din `RoomTechnicalCard.tsx`; ordinea butoanelor din header-ul de secțiune cameră schimbată (Șterge înaintea lui Adaugă).
+- `StatusChip.tsx`: iconița de status redusă la 10/12px cu `opsz` ajustat inline (nu folosește `.icon-btn`, are nevoie de mărime proprie, mai mică).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Verificat vizual.
+
+**Fișiere atinse:** `src/app/globals.css`, `src/app/elemente/page.tsx`, `src/app/configurare/RoomTechnicalCard.tsx`, `src/components/StatusChip.tsx`, `CLAUDE.md`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/centralizator` rescris pixel-apropiat de Stitch („Tabel Centralizator - Meniu Restrâns Premium")
+**De ce:** userul a cerut ca pagina Centralizator Costuri să semene cât mai fidel cu ecranul Stitch dedicat.
+
+- Descărcat HTML-ul sursă al ecranului (proiect Stitch `14594146001803528847`) și rescris `centralizator/page.tsx`: 3 stat cards cu bară colorată pe margine stângă (estimat/cheltuit/eficiență), donut SVG de eficiență bugetară, tabel cu secțiuni per cameră **colapsabile** (click pe header, `expand_more` rotit), toggle „Afișează Subtotaluri" (checkbox), badge-uri de tip material colorate per categorie, iconițe de status (`check_circle`/`schedule`) în loc de `StatusChip` (design-ul specific acestui ecran folosește iconițe simple, nu pastile), footer negru cu „TOTAL GENERAL ESTIMAT", card de acțiuni cu butoanele „Imprimă Raport" + „Partajează Detalii" (vizual, fără funcționalitate reală de partajare — nu există backend).
+- Adăugată funcția nouă `budgetEfficiency(estimated, spent)` în `shared/functions/budget.ts` (% din estimat efectiv cheltuit) — designul calculează „Eficiență Bugetară" ca spent/estimated, diferit de `purchaseProgress` (raport pe număr de elemente) folosit greșit anterior pe această pagină.
+- `icons.ts`: adăugat `DOCUMENT_ICONS.share` și un grup nou `CENTRALIZATOR_ICONS` (payments, account_balance_wallet, monitoring, analytics, schedule) — toate numele de iconițe noi centralizate, nu hardcodate în JSX.
+- **Omis intenționat față de design:** coloana „U.M." (unitate de măsură) — `Item` nu are un câmp de unitate de măsură în model, iar adăugarea lui ar fi fost o schimbare de schemă de date nerelaționată cu cererea de stilizare; blocul de echivalent valutar RON→EUR din design a fost omis, pentru că proiectul nu are curs valutar real (backlog item 6, neimplementat) și moneda proiectului e deja EUR.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual: carduri, donut, colaps/expand secțiuni, toggle subtotaluri — toate funcționale.
+
+**Fișiere atinse:** `src/app/centralizator/page.tsx` (rescris), `src/shared/functions/budget.ts`, `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza` rescris pixel-apropiat de Stitch („Analiză Bugetară - Meniu Restrâns Premium v2")
+**De ce:** userul a cerut ca pagina Analiză Bugetară să semene cât mai fidel cu ecranul Stitch dedicat.
+
+- Descărcat HTML-ul sursă al ecranului (proiect Stitch `14594146001803528847`) și rescris `analiza/page.tsx`: 4 stat cards cu progress bars (Cheltuieli/Achiziții), bento grid cu grafic linie „Evoluția Cheltuielilor" (col-span-8) + donut „Cost per Cameră" cu paletă pastel și callout „Top Room" în centru (col-span-4), secțiune „Stadiul Achizițiilor pe Categorii" convertită din listă în grid de carduri cu progress bar, 3 carduri de recomandări restilizate (icon box cu bordură, culoare per tip: secondary/tertiary sau emerald/emerald).
+- **`PageHeader.tsx`** (shared): adăugat prop opțional `actions?: React.ReactNode` — slot generic lângă căutare, folosit aici pt. butonul „Export PDF" (vizual, fără export real cablat — backlog item 5, neimplementat). Celelalte pagini nu sunt afectate (prop opțional, fără valoare implicită vizibilă).
+- **Grafic „Evoluția Cheltuielilor":** randat ca SVG static (path fix, aceleași luni Ian–Iul ca în design) — **nu există date lunare reale** în modelul `Item` (backlog item 4, neimplementat), deci graficul e intenționat decorativ/placeholder, la fel ca în mockup-ul Stitch original.
+- Card „Total Alocat": eliminat textul static „+12% față de plan" din design (nu are echivalent calculabil din date reale), înlocuit cu eticheta „Buget de referință" (consecvent cu tratamentul din `/centralizator`).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual: cardurile de sumar, donut, cardurile de categorie (fix inițial: suma și procentul se suprapuneau pe carduri înguste — rezolvat cu `flex-wrap` + `font-mono`), cardurile de recomandări.
+
+**Fișiere atinse:** `src/app/analiza/page.tsx` (rescris), `src/components/PageHeader.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.

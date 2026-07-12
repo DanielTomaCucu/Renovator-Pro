@@ -137,7 +137,7 @@ export default function ElementePage() {
                 type="submit"
                 className="flex h-10 items-center justify-center gap-2 self-end rounded-lg bg-secondary px-6 text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
               >
-                <span className="material-symbols-outlined text-sm">
+                <span className="material-symbols-outlined icon-btn">
                   {ACTION_ICONS.save}
                 </span>
                 Salvează
@@ -174,21 +174,21 @@ export default function ElementePage() {
                         </span>
                       </div>
                       <button
-                        onClick={() => setItemDrawer({ open: true, roomId: room.id })}
-                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
-                      >
-                        Adaugă
-                      </button>
-                      <button
                         onClick={() =>
                           setDeleteTarget({ kind: "room", id: room.id, name: room.name })
                         }
                         className="rounded p-1 text-muted hover:text-tertiary"
                         aria-label={`Șterge camera ${room.name}`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">
+                        <span className="material-symbols-outlined icon-btn">
                           {ACTION_ICONS.delete}
                         </span>
+                      </button>
+                      <button
+                        onClick={() => setItemDrawer({ open: true, roomId: room.id })}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
+                      >
+                        Adaugă
                       </button>
                     </div>
                   </div>
@@ -266,7 +266,7 @@ export default function ElementePage() {
                                   className="text-muted transition-colors hover:text-primary"
                                   aria-label={`Editează ${item.name}`}
                                 >
-                                  <span className="material-symbols-outlined text-lg">
+                                  <span className="material-symbols-outlined icon-btn">
                                     {ACTION_ICONS.editInline}
                                   </span>
                                 </button>
@@ -281,7 +281,7 @@ export default function ElementePage() {
                                   className="text-muted transition-colors hover:text-tertiary"
                                   aria-label={`Șterge ${item.name}`}
                                 >
-                                  <span className="material-symbols-outlined text-lg">
+                                  <span className="material-symbols-outlined icon-btn">
                                     {ACTION_ICONS.delete}
                                   </span>
                                 </button>

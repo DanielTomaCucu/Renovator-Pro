@@ -60,6 +60,7 @@ export const STATUS_ICONS: Record<ItemStatus, string> = {
 export const DOCUMENT_ICONS = {
   exportPdf: "picture_as_pdf",
   print: "print",
+  share: "share",
 } as const;
 
 export const ANALYTICS_ICONS = {
@@ -72,6 +73,16 @@ export const ANALYTICS_ICONS = {
   economii: "trending_down",
   actualizare: "update",
   overview: "dashboard",
+} as const;
+
+/** Iconițe pentru pagina „Tabel Centralizator" (ecran Stitch „Tabel Centralizator - Meniu Restrâns Premium"). */
+export const CENTRALIZATOR_ICONS = {
+  totalEstimat: "payments",
+  totalCheltuit: "account_balance_wallet",
+  eficientaBugetara: "monitoring",
+  eficientaBugetaraBadge: "analytics",
+  tabelDetaliat: "analytics",
+  statusInAsteptare: "schedule",
 } as const;
 
 /**
