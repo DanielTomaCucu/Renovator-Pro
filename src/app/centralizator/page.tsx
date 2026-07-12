@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import StatCard from "@/components/StatCard";
 import StatusChip from "@/components/StatusChip";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/shared/store";
 import {
   formatMoney,
   itemTotal,
@@ -12,7 +12,7 @@ import {
   roomSubtotal,
   totalEstimated,
   totalSpent,
-} from "@/lib/functions";
+} from "@/shared/functions";
 
 export default function CentralizatorPage() {
   const { project, rooms, items } = useStore();

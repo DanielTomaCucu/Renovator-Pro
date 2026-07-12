@@ -8,7 +8,7 @@
  * singur loc de adevăr — restul aplicației importă din acest fișier, nu hardcodează.
  */
 
-import { RoomType } from "./types";
+import { ItemStatus, RoomType } from "./types";
 
 export const NAV_ICONS = {
   configurare: "home_work",
@@ -23,12 +23,12 @@ export const NAV_ICONS = {
 } as const;
 
 export const ROOM_TYPE_ICONS: Record<RoomType, string> = {
-  Dormitor: "bed",
-  Baie: "shower",
-  Living: "chair",
-  Bucătărie: "kitchen",
-  Terasă: "deck",
-  Balcon: "balcony",
+  [RoomType.Dormitor]: "bed",
+  [RoomType.Baie]: "shower",
+  [RoomType.Living]: "chair",
+  [RoomType.Bucatarie]: "kitchen",
+  [RoomType.Terasa]: "deck",
+  [RoomType.Balcon]: "balcony",
 };
 
 export const ACTION_ICONS = {
@@ -45,11 +45,11 @@ export const ACTION_ICONS = {
   viewDetails: "visibility",
 } as const;
 
-export const STATUS_ICONS = {
-  Cumpărat: "check_circle",
-  Planificat: "calendar_today",
-  "În așteptare": "calendar_today",
-} as const;
+export const STATUS_ICONS: Record<ItemStatus, string> = {
+  [ItemStatus.Cumparat]: "check_circle",
+  [ItemStatus.Planificat]: "calendar_today",
+  [ItemStatus.InAsteptare]: "calendar_today",
+};
 
 export const DOCUMENT_ICONS = {
   exportPdf: "picture_as_pdf",

@@ -8,20 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Item, Project, Room } from "./types";
+import { Item, Project, RenovationStore, Room } from "./types";
 import { mockItems, mockProject, mockRooms } from "./mock-data";
-
-interface RenovationStore {
-  project: Project;
-  rooms: Room[];
-  items: Item[];
-  addRoom: (room: Omit<Room, "id">) => void;
-  updateRoom: (id: string, patch: Partial<Room>) => void;
-  deleteRoom: (id: string) => void;
-  addItem: (item: Omit<Item, "id">) => void;
-  updateItem: (id: string, patch: Partial<Item>) => void;
-  deleteItem: (id: string) => void;
-}
 
 const StoreContext = createContext<RenovationStore | null>(null);
 

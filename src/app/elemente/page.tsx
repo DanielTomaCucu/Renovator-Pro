@@ -6,7 +6,7 @@ import StatusChip from "@/components/StatusChip";
 import ItemFormDrawer from "@/components/ItemFormDrawer";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { useStore } from "@/lib/store";
+import { useStore } from "@/shared/store";
 import {
   boughtCount,
   formatMoney,
@@ -15,21 +15,17 @@ import {
   purchaseProgress,
   roomSpent,
   totalSpent,
-} from "@/lib/functions";
-import { Item } from "@/lib/types";
+} from "@/shared/functions";
+import { ItemStatus, MaterialType } from "@/shared/types";
+import { DeleteTarget } from "./DeleteTarget";
+import { ItemDrawerState } from "./ItemDrawerState";
 
 export default function ElementePage() {
   const { project, rooms, items, addItem, deleteItem, deleteRoom } = useStore();
 
-  const [itemDrawer, setItemDrawer] = useState<{
-    open: boolean;
-    roomId?: string;
-    item?: Item | null;
-  }>({ open: false });
+  const [itemDrawer, setItemDrawer] = useState<ItemDrawerState>({ open: false });
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<
-    { kind: "item" | "room"; id: string; name: string } | null
-  >(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   // Quick add
   const [qaName, setQaName] = useState("");
@@ -46,9 +42,9 @@ export default function ElementePage() {
     addItem({
       name: qaName,
       roomId: qaRoom,
-      materialType: "Altele",
+      materialType: MaterialType.Altele,
       source: "",
-      status: "În așteptare",
+      status: ItemStatus.InAsteptare,
       quantity: 1,
       unitPrice: Number(qaPrice) || 0,
     });

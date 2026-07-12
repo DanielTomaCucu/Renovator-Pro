@@ -3,27 +3,53 @@
 > Reguli de întreținere a acestui fișier: vezi `CLAUDE.md` → secțiunea „Documentație vie”.
 > Adaugi la final, nu rescrii istoricul. O intrare = o sesiune de lucru cu impact real pe cod.
 
-## Registru de funcții (`src/lib/functions.ts`)
+## Registru de funcții
 
-Actualizează acest tabel de fiecare dată când adaugi, ștergi sau redenumești o funcție din `functions.ts`
-(sau dintr-un alt fișier de domeniu, ex. `auth-functions.ts`). La ștergere: rulează
-`grep -rn "numeFunctie" src/` înainte, actualizează toate apelurile, apoi șterge rândul.
+Actualizează acest tabel de fiecare dată când adaugi, ștergi sau redenumești o funcție (locală de pagină
+SAU din `src/shared/functions/`). La ștergere: rulează `grep -rn "numeFunctie" src/` înainte, actualizează
+toate apelurile, apoi șterge rândul. Coloana „Locație” spune dacă e locală unei pagini (candidat la
+promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja partajată.
 
-| Funcție | Ce face | Folosită în |
+| Funcție | Fișier / Locație | Ce face | Folosită în |
+|---|---|---|---|
+| `formatMoney(value, currency?)` | `shared/functions/money.ts` | formatare Intl ro-RO, 2 zecimale, implicit `Currency.EUR` | peste tot unde se afișează bani |
+| `itemTotal(item)` | `shared/functions/items.ts` | cantitate × preț unitar | `elemente`, `centralizator`, `analiza`, intern în `items.ts`/`charts.ts` |
+| `totalEstimated(items)` | `shared/functions/items.ts` | suma tuturor elementelor, indiferent de status | `elemente`, `centralizator`, `analiza` |
+| `totalSpent(items)` | `shared/functions/items.ts` | suma elementelor cu status `ItemStatus.Cumparat` | `elemente`, `centralizator`, `analiza`, intern în `budget.ts` |
+| `boughtCount(items)` | `shared/functions/items.ts` | număr elemente `ItemStatus.Cumparat` | `elemente`, `analiza`, intern în `items.ts` (purchaseProgress) |
+| `purchaseProgress(items)` | `shared/functions/items.ts` | % achiziții finalizate (0 dacă listă goală) | `elemente`, `centralizator` |
+| `itemsForRoom(items, roomId)` | `shared/functions/items.ts` | filtrare elemente după cameră | `elemente`, `centralizator`, intern (roomSubtotal, roomSpent) |
+| `roomSubtotal(items, roomId)` | `shared/functions/items.ts` | total estimat al unei camere | `elemente`, `centralizator`, intern în `charts.ts` (costPerRoom) |
+| `roomSpent(items, roomId)` | `shared/functions/items.ts` | cheltuit efectiv într-o cameră | `elemente` |
+| `budgetRemaining(totalBudget, items)` | `shared/functions/budget.ts` | buget total − cheltuit | `analiza` |
+| `costPerRoom(rooms, items)` | `shared/functions/charts.ts` | distribuție cost pe cameră, sortată desc, fără camere goale | `analiza` (donut chart) |
+| `costPerCategory(items)` | `shared/functions/charts.ts` | agregare {total, spent} per `MaterialType`, sortată desc | `analiza` (progress bars) |
+| `donutSegments(data)` | `shared/functions/charts.ts` | transformă `{name, total}[]` în `DonutSegment[]` cumulative (start/end 0–1) pt. SVG donut | `analiza` |
+
+_Momentan nu există funcții locale de pagină — orice calcul existent e deja folosit în ≥2 locuri, deci
+toate au fost promovate direct în shared. Prima funcție cu adevărat locală va porni într-un fișier în
+folderul paginii respective (vezi CLAUDE.md → „Funcții și tipuri per pagină")._
+
+## Registru de tipuri (`src/shared/types/`, un fișier per tip)
+
+| Tip | Fișier | Fel |
 |---|---|---|
-| `itemTotal(item)` | cantitate × preț unitar | `elemente`, `centralizator`, `analiza`, `functions.ts` intern |
-| `totalEstimated(items)` | suma tuturor elementelor, indiferent de status | `elemente`, `centralizator`, `analiza` |
-| `totalSpent(items)` | suma elementelor cu status „Cumpărat" | `elemente`, `centralizator`, `analiza` |
-| `boughtCount(items)` | număr elemente „Cumpărat" | `elemente`, `analiza` |
-| `purchaseProgress(items)` | % achiziții finalizate (0 dacă listă goală) | `elemente`, `centralizator` |
-| `budgetRemaining(totalBudget, items)` | buget total − cheltuit | `analiza` |
-| `itemsForRoom(items, roomId)` | filtrare elemente după cameră | `elemente`, `centralizator` |
-| `roomSubtotal(items, roomId)` | total estimat al unei camere | `elemente`, `centralizator` |
-| `roomSpent(items, roomId)` | cheltuit efectiv într-o cameră | `elemente` |
-| `costPerRoom(rooms, items)` | distribuție cost pe cameră, sortată desc, fără camere goale | `analiza` (donut chart) |
-| `costPerCategory(items)` | agregare {total, spent} per tip material, sortată desc | `analiza` (progress bars) |
-| `donutSegments(data)` | transformă `{name, total}[]` în segmente cumulative (start/end 0–1) pt. SVG donut | `analiza` |
-| `formatMoney(value, currency?)` | formatare Intl ro-RO, 2 zecimale, implicit EUR | peste tot unde se afișează bani |
+| `RoomType` | `RoomType.ts` | enum |
+| `ItemStatus` | `ItemStatus.ts` | enum |
+| `MaterialType` | `MaterialType.ts` | enum |
+| `Currency` | `Currency.ts` | enum |
+| `Room` | `Room.ts` | interface |
+| `Item` | `Item.ts` | interface |
+| `Project` | `Project.ts` | interface |
+| `RenovationStore` | `RenovationStore.ts` | interface |
+| `DonutSegment` | `DonutSegment.ts` | interface |
+
+Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur loc):
+
+| Tip | Fișier | Pagină |
+|---|---|---|
+| `DeleteTarget` | `src/app/elemente/DeleteTarget.ts` | `/elemente` |
+| `ItemDrawerState` | `src/app/elemente/ItemDrawerState.ts` | `/elemente` |
 
 ## Jurnal cronologic
 
@@ -61,3 +87,23 @@ Actualizează acest tabel de fiecare dată când adaugi, ștergi sau redenumeșt
 - **Nu s-a schimbat încă UI-ul** — emoji-urile din componente rămân placeholder până la implementarea efectivă a înlocuirii (task separat, backlog item 2). Acest pas a produs doar referința + fișierul de mapare.
 
 **Fișiere atinse:** `CLAUDE.md`, `src/lib/icons.ts` (nou).
+
+### 2026-07-10 — Restructurare majoră: `shared/`, enums în loc de string-uri, tipuri per fișier, workflow de branch
+**De ce:** userul a cerut patru schimbări de convenție simultan: (1) niciun string brut unde poate exista un tip/interfață — statusuri, tipuri de cameră/material, monedă devin enums verificate de compilator; (2) un fișier separat per interfață/enum; (3) funcțiile de pagină pornesc local în folderul paginii și migrează în shared doar când sunt reutilizate, nu direct într-un fișier mare; (4) niciun push direct pe `main` — totul prin branch numerotat, pentru review.
+
+- **Enums noi** în `src/shared/types/`: `RoomType`, `ItemStatus`, `MaterialType`, `Currency` — chei fără diacritice (`RoomType.Bucatarie`), valori cu diacritice (`"Bucătărie"`). Înlocuiesc toate comparațiile/atribuirile cu string literal din `mock-data.ts`, `functions.ts` (acum `charts.ts`/`items.ts`), `StatusChip.tsx`, `ItemFormDrawer.tsx`, `RoomFormDrawer.tsx`, `analiza/page.tsx`.
+- **`src/lib/` șters complet**, înlocuit cu **`src/shared/`**:
+  - `shared/types/` — un fișier per interfață/enum: `RoomType.ts`, `ItemStatus.ts`, `MaterialType.ts`, `Currency.ts`, `Room.ts`, `Item.ts`, `Project.ts`, `RenovationStore.ts` (extras din `store.tsx`), `DonutSegment.ts` (extras din `charts.ts`), plus `index.ts` barrel.
+  - `shared/functions/` — fostul `functions.ts` unic, împărțit pe domeniu: `money.ts`, `items.ts`, `budget.ts`, `charts.ts`, plus `index.ts` barrel.
+  - `shared/store.tsx`, `shared/mock-data.ts`, `shared/icons.ts` — mutate 1:1, actualizate să folosească enums.
+- **Tipuri locale de pagină**: create `src/app/elemente/DeleteTarget.ts` și `ItemDrawerState.ts` — stare de UI specifică paginii Elemente, care înainte era un union type inline (`{ kind: "item" | "room"; ... } | null`) direct în `page.tsx`.
+- Toate importurile din `app/` și `components/` actualizate de la `@/lib/*` la `@/shared/*` (`grep -rln "@/lib" src/` → 0 rezultate după refactor).
+- `RoomFormDrawer.tsx`: am încercat inițial să folosesc clasa `material-symbols-outlined` direct (profitând de `ROOM_TYPE_ICONS` din `icons.ts`), dar fontul Material Symbols nu e încărcat încă în `layout.tsx` — ar fi afișat text literal („bed”) în loc de iconiță. Revenit la emoji, dar tipate pe enum (`ROOM_TYPE_EMOJI: Record<RoomType, string>`), cu TODO explicit spre `ROOM_TYPE_ICONS` când se face migrarea reală (backlog item 2).
+- Verificat: `npm run lint` → 0 erori, `npx tsc --noEmit` → 0 erori, testat vizual în browser toate cele 4 pagini + adăugare cameră (grid 6 tipuri din `RoomType` afișat corect) — zero erori console după curățare cache Turbopack.
+- **Workflow Git nou**: pornit branch `003-shared-structure-and-enums` din `main` înainte de orice modificare; push-ul acestei sesiuni merge pe branch, NU pe `main` — userul face review.
+- `CLAUDE.md` rescris substanțial: secțiune nouă „Workflow Git — OBLIGATORIU”, „Regula de aur #1” (enums, nu string-uri) cu explicație + listă completă de enums/interfețe, „Regula de aur #2” actualizată (funcții locale de pagină → migrare la a doua utilizare, nu direct în shared), structura de foldere actualizată complet.
+- `docs/progress.md`: Registrul de funcții extins cu coloană „Fișier/Locație”, adăugat Registru de tipuri nou (un rând per fișier din `shared/types/` + tipuri locale de pagină).
+
+**Fișiere atinse:** toate din `src/lib/*` (șterse) → `src/shared/**` (create: 9 fișiere types + index, 4 fișiere functions + index, store.tsx, mock-data.ts, icons.ts), `src/app/elemente/DeleteTarget.ts` (nou), `src/app/elemente/ItemDrawerState.ts` (nou), `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/analiza/page.tsx`, `src/app/configurare/page.tsx`, `src/app/layout.tsx`, `src/components/StatusChip.tsx`, `src/components/ItemFormDrawer.tsx`, `src/components/RoomFormDrawer.tsx`, `CLAUDE.md`, `docs/progress.md`.
+
+**Branch:** `003-shared-structure-and-enums` (nu pe `main` — în așteptarea review-ului userului).
