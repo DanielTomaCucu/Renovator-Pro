@@ -26,9 +26,16 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `costPerCategory(items)` | `shared/functions/charts.ts` | agregare {total, spent} per `MaterialType`, sortată desc | `analiza` (progress bars) |
 | `donutSegments(data)` | `shared/functions/charts.ts` | transformă `{name, total}[]` în `DonutSegment[]` cumulative (start/end 0–1) pt. SVG donut | `analiza` |
 
-_Momentan nu există funcții locale de pagină — orice calcul existent e deja folosit în ≥2 locuri, deci
-toate au fost promovate direct în shared. Prima funcție cu adevărat locală va porni într-un fișier în
-folderul paginii respective (vezi CLAUDE.md → „Funcții și tipuri per pagină")._
+### Funcții locale de pagină
+
+| Funcție | Fișier / Locație | Ce face | Folosită în |
+|---|---|---|---|
+| `hasFloorConfig(room)` | `app/configurare/dimensions.ts` | `true` dacă material + suprafață pardoseală sunt completate | `configurare`, intern în `dimensions.ts` |
+| `floorMaterialNeeded(room)` | `app/configurare/dimensions.ts` | necesar material pardoseală, +10% pierdere tăiere | `configurare` |
+| `baseboardLength(room)` | `app/configurare/dimensions.ts` | plintă = (perimetru − lățime ușă) + 5% pierdere | `configurare` |
+| `wallTilingArea(room)` | `app/configurare/dimensions.ts` | suprafață faianță pe pereții placați, minus golul ușii dacă e pe un perete placat, +10% pierdere | `configurare` |
+| `doorWallBaseboardLength(room)` | `app/configurare/dimensions.ts` | plintă specifică peretelui cu ușă (relevant doar cu placare pereți) | `configurare` |
+| `projectTechnicalSummary(rooms)` | `app/configurare/dimensions.ts` | suprafață utilă totală + % camere complet configurate | `configurare` (card „Sumar Proiect”, bara de progres) |
 
 ## Registru de tipuri (`src/shared/types/`, un fișier per tip)
 
@@ -38,7 +45,13 @@ folderul paginii respective (vezi CLAUDE.md → „Funcții și tipuri per pagin
 | `ItemStatus` | `ItemStatus.ts` | enum |
 | `MaterialType` | `MaterialType.ts` | enum |
 | `Currency` | `Currency.ts` | enum |
-| `Room` | `Room.ts` | interface |
+| `FlooringType` | `FlooringType.ts` | enum (Parchet Laminat / Gresie / Mochetă) |
+| `TileSize` | `TileSize.ts` | enum |
+| `InstallationType` | `InstallationType.ts` | enum |
+| `Wall` | `Wall.ts` | enum (N/E/S/V) |
+| `RoomDoor` | `RoomDoor.ts` | interface (width, height, wall) |
+| `WallTiling` | `WallTiling.ts` | interface (tiledWallsCount, tileHeight, wallLengths per `Wall`) |
+| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `door?: RoomDoor`, `wallTiling?: WallTiling`) |
 | `Item` | `Item.ts` | interface |
 | `Project` | `Project.ts` | interface |
 | `RenovationStore` | `RenovationStore.ts` | interface |
@@ -107,3 +120,107 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** toate din `src/lib/*` (șterse) → `src/shared/**` (create: 9 fișiere types + index, 4 fișiere functions + index, store.tsx, mock-data.ts, icons.ts), `src/app/elemente/DeleteTarget.ts` (nou), `src/app/elemente/ItemDrawerState.ts` (nou), `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/analiza/page.tsx`, `src/app/configurare/page.tsx`, `src/app/layout.tsx`, `src/components/StatusChip.tsx`, `src/components/ItemFormDrawer.tsx`, `src/components/RoomFormDrawer.tsx`, `CLAUDE.md`, `docs/progress.md`.
 
 **Branch:** `003-shared-structure-and-enums` (nu pe `main` — în așteptarea review-ului userului).
+
+### 2026-07-12 — Corectare `ROOM_TYPE_ICONS` după verificare directă în Stitch
+**De ce:** userul a semnalat că iconițele tipurilor de cameră din `src/shared/icons.ts` nu sunt corecte. Verificare: am descărcat HTML-ul a 12+ ecrane Stitch (proiect `14594146001803528847`) și am extras toate ocurențele `material-symbols-outlined`. Grid-ul de selecție tip cameră apare în două ecrane cu seturi diferite — cel vechi („Elemente de Cumpărat - cu Volet Adăugare Cameră Deschis") și cel din seria „Precision Blueprint" (ultima din listă, deci varianta finală de design system). Userul a confirmat explicit că Precision Blueprint e sursa de adevăr.
+
+- `ROOM_TYPE_ICONS` (`src/shared/icons.ts`) actualizat: `Dormitor` `bed`→`king_bed`, `Baie` `shower`→`bathtub`, `Bucatarie` `kitchen`→`soup_kitchen`. `Living` (`chair`), `Terasa` (`deck`), `Balcon` (`balcony`) rămân neschimbate — confirmate identice în ambele ecrane.
+- Restul mapărilor din `icons.ts` (`NAV_ICONS`, `ACTION_ICONS`, `STATUS_ICONS`, `DOCUMENT_ICONS`, `ANALYTICS_ICONS` — cu excepția `economii`/`actualizare`/`overview`, pentru care n-am găsit încă un ecran de referință) au fost verificate din nou direct în HTML și confirmate corecte, nemodificate.
+- `CLAUDE.md` → tabelul „Tipuri de cameră” actualizat cu aceleași valori.
+- **Fără impact vizual în UI**: `ROOM_TYPE_ICONS` nu e importat nicăieri încă (backlog item 2, migrare emoji → Material Symbols, netratată). `RoomFormDrawer.tsx` folosește în continuare `ROOM_TYPE_EMOJI` (placeholder emoji), neschimbat.
+
+**Fișiere atinse:** `src/shared/icons.ts`, `CLAUDE.md`, `docs/progress.md`.
+
+### 2026-07-12 — Implementare completă design „Configurare Apartament” (Stitch) + prima migrare reală la Material Symbols
+**De ce:** userul a cerut implementarea integrală a designului Stitch pentru pagina `/configurare` (ecranul „Configurare Apartament (Mobile)”, proiect `14594146001803528847`), nu doar o listă simplă de camere cu buget alocat.
+
+- **Model de date extins**: `Room` (`src/shared/types/Room.ts`) primește câmpuri tehnice opționale — `length`, `width`, `height`, `flooringType?: FlooringType`, `hasStandardDoorGap?: boolean`. Opționale intenționat: o cameră nouă n-are configurare tehnică până când userul o completează explicit.
+- **Enum nou**: `FlooringType` (`Parchet` | `Gresie`) în `src/shared/types/FlooringType.ts`.
+- **Funcții noi, locale paginii** (prima utilizare reală a regulii „local până la a 2-a folosire” — vezi Registrul de funcții de mai sus): `src/app/configurare/dimensions.ts` — `hasTechnicalSpecs`, `floorArea`, `perimeter`, `flooringLossArea`, `baseboardLength`, `wallArea`, `projectDimensionsSummary`, `estimatedMaterialCost`. Formulele de suprafață/perimetru sunt geometrie exactă; costul estimat de materiale folosește rate placeholder (120 RON/m² pardoseală, 45 RON/m² pereți) — nu vine din catalogul `Item`/`MaterialType`, e doar o estimare rapidă afișată în modalul de calcule, documentată explicit ca atare în cod.
+- **Prima migrare reală de la emoji la Material Symbols** (backlog item 2, dar scopată strict la pagina asta): font-ul Material Symbols Outlined e acum încărcat global în `src/app/layout.tsx` (`<link>` în `<head>`), plus regula CSS `.material-symbols-outlined` în `globals.css`. Restul aplicației (Sidebar, RoomFormDrawer, StatusChip) rămâne neatins — încă emoji, migrare completă e task separat.
+- **Iconițe noi** în `src/shared/icons.ts`: `FLOORING_TYPE_ICONS` (`texture`/`grid_view`) și `TECHNICAL_ICONS` (`projectEfficiency`, `doorGap`, `wallTile`, `emptySpecs`, `detailedCalc`) — extrase din HTML-ul ecranului Stitch.
+- **Componente noi** (`src/app/configurare/`): `RoomTechnicalCard.tsx` (card per cameră — stare goală cu CTA „Editează Acum” dacă nu are dimensiuni, altfel formular complet: 3 inputuri dimensiuni, selector tip pardoseală cu pierdere afișată live, 2 toggle-uri — „Gol Ușă Standard” funcțional, „Faianță Pereți” dezactivat intenționat ca în design, feature neimplementată), `CalculationModal.tsx` (modal cu toate rândurile de calcul + total estimat în RON), `MobileBottomNav.tsx` (navigare inferioară doar pe mobil, `md:hidden`, tab „Setări” dezactivat — nu există încă pagina).
+- **`page.tsx` rescris**: header sticky cu titlu + căutare + avatar, card „Sumar Proiect” (total mp/ml + eficiență materiale, recalculate live din `projectDimensionsSummary`), secțiunea de buget per cameră păstrată din varianta anterioară, listă de `RoomTechnicalCard`, buton flotant (+) pentru adăugare cameră (redeschide `RoomFormDrawer` existent, nu un component nou).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (după fix `display=swap` + `eslint-disable` documentat pt. `no-page-custom-font`, regulă gândită pt. Pages Router, fals-pozitiv în App Router). Testat vizual în browser: completare dimensiuni + selectare parchet → recalculare live corectă a cardului și a sumarului de proiect, toggle „Gol Ușă Standard” funcțional, modal de calcule detaliate afișează toate rândurile cu semnul/culoarea corectă, responsive mobil (375px) cu bottom nav vizibil și sidebar ascuns — zero erori în consolă.
+
+**Fișiere atinse:** `src/shared/types/FlooringType.ts` (nou), `src/shared/types/Room.ts`, `src/shared/types/index.ts`, `src/shared/icons.ts`, `src/app/layout.tsx`, `src/app/globals.css`, `src/app/configurare/dimensions.ts` (nou), `src/app/configurare/RoomTechnicalCard.tsx` (nou), `src/app/configurare/CalculationModal.tsx` (nou), `src/app/configurare/MobileBottomNav.tsx` (nou), `src/app/configurare/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic` (din `003-shared-structure-and-enums`, nu pe `main` — în așteptarea review-ului userului).
+
+> ⚠️ **Corectat în intrarea următoare**: implementarea de mai sus s-a bazat pe ecranul Stitch greșit (mobil,
+> „Configurare Apartament (Mobile)"). Userul a clarificat că sursa de adevăr pentru paginile aplicației e
+> varianta desktop. Modelul de date (`length`/`width`/`height`/`flooringType`/`hasStandardDoorGap`),
+> `dimensions.ts`, `RoomTechnicalCard.tsx`, `CalculationModal.tsx` și `MobileBottomNav.tsx` din intrarea de
+> mai sus au fost **înlocuite complet** — vezi jos. Las intrarea originală neștearsă (regula fișierului: nu
+> rescrie istoricul), dar codul descris acolo nu mai există în branch.
+
+### 2026-07-12 — Rescriere „Configurare Apartament” pe baza ecranului desktop corect + model tehnic complet
+**De ce:** userul a corectat sesiunea anterioară — trebuia folosit ecranul Stitch **desktop** „Configurare Tehnică - Layout Optimizat Rezultate" (titlu intern „Renovator Pro - Configurare Tehnică Apartament"), nu varianta mobilă folosită greșit înainte. Modelul tehnic din ecranul corect e mult mai bogat: material pardoseală cu 3 opțiuni, mărime plăci, tip montaj, configurare ușă (lățime/înălțime/perete), și — doar la camerele cu zonă umedă — placare detaliată pe 4 pereți (N/E/S/V) cu înălțime și lungimi individuale. Rezultatele (plintă, faianță, material pardoseală) sunt afișate cu formulă + calcul, nu doar valoarea finală.
+
+- **Model de date rescris** (`Room.ts`): șterse complet câmpurile din varianta mobilă greșită (`length`, `width`, `height`, `hasStandardDoorGap`). Adăugate: `floorMaterial?: FlooringType`, `floorArea?: number` (mp, input direct — nu calculat din lungime×lățime, ecranul desktop nu are aceste inputuri), `perimeter?: number` (ml — adăugare deliberată față de mockup: ecranul desktop nu are un input explicit de perimetru, dar fără el „Plintă” ar fi un număr decorativ, nu un calcul real; am preferat un calculator funcțional unei fidelități literale cu date fictive), `tileSize?: TileSize`, `installationType?: InstallationType`, `door?: RoomDoor`, `wallTiling?: WallTiling`.
+- **Enums/interfețe noi** în `src/shared/types/`: `FlooringType` (rescris: „Parchet Laminat" / „Gresie" / „Mochetă" — 3 opțiuni reale din `<select>`-ul Stitch, nu cele 2 ghicite greșit înainte), `TileSize` (4 praguri de dimensiune plăci), `InstallationType` (Drept/Diagonal/Herringbone), `Wall` (N/E/S/V), `RoomDoor` (width, height, wall), `WallTiling` (tiledWallsCount, tileHeight, wallLengths per `Wall`).
+- **Funcții de calcul rescrise** (`app/configurare/dimensions.ts`, tot locale paginii — vezi Registrul de funcții): `hasFloorConfig`, `floorMaterialNeeded` (+10% pierdere), `baseboardLength` ((perimetru − lățime ușă) + 5% pierdere), `wallTilingArea` (sumă pereți placați × înălțime, minus golul ușii dacă ușa e pe un perete placat, +10% pierdere), `doorWallBaseboardLength` (plinta specifică peretelui cu ușă), `projectTechnicalSummary` (suprafață utilă totală + % camere configurate). Toate formulele verificate manual pe datele mock (ex. Baie: faianță 3 pereți = 18.61 mp, plintă perete V = 1.52 ml — coincide exact cu exemplul din mockup Stitch).
+- **`RoomTechnicalCard.tsx` rescris complet**: card colapsabil (buton, nu `<details>` nativ, pentru control React) cu rând de sumar când e închis (mp, material, plintă), secțiune „1. Configurare Tehnică" (Pardoseală: material/suprafață/perimetru/mărime plăci/tip montaj; Configurare Detaliată Placări — opțională, activabilă per cameră cu buton „+ Adaugă placare pereți", 4 inputuri de lungime pe perete; Configurare Ușă: lățime/înălțime/perete), secțiune „Schiță & Rezultat" cu placeholder de schiță + panou „Calcule Detaliate" ce afișează fiecare rezultat cu formula și calculul explicit (ex. „Formulă: (Perimetru − lățime ușă) + 5% pierdere / Calcul: (9.30 − 0.80) × 1.05 = 8.93 ml"). Ștergere cameră prin `ConfirmDialog` existent (nu `window.confirm`).
+- **Șterse**: `CalculationModal.tsx` (rezultatele sunt acum inline în card, nu într-un modal separat — modelul desktop le arată direct în layout, nu ascunse după un click) și `MobileBottomNav.tsx` (userul a cerut explicit focus pe desktop; navigarea mobilă rămâne cea existentă din `Sidebar.tsx`, neatinsă).
+- **`page.tsx` rescris**: header cu tab-uri „Măsurători" (activ) / „Materiale" (inert, pagina nu există), căutare (decorativă, fără funcționalitate încă), card „Sumar Tehnic Global" (proiect curent, suprafață utilă totală, status derivat din progres — Neînceput/În Lucru/Finalizat, buget total, bară de progres calculată din `projectTechnicalSummary`), listă de `RoomTechnicalCard` + rândul de buget alocat per cameră (păstrat din implementarea originală, nu există pe ecranul tehnic dar e funcționalitate reală existentă în `Room.allocatedBudget`), stare goală „Adaugă Cameră Nouă" (dashed box, deschide `RoomFormDrawer` existent). **Nu am adăugat** butonul „Salvare Plan" din mockup — store-ul scrie deja instant la fiecare modificare (`updateRoom`), un buton de „salvare" separat ar fi minciună vizuală (nimic de salvat suplimentar).
+- **Fix iconiță**: `floorplan` (folosită inițial pentru placeholder-ul de schiță) nu există în setul Material Symbols — apărea ca tofu/glyph lipsă în browser. Înlocuită cu `design_services` (verificat vizual, se randează corect).
+- `mock-data.ts`: adăugat exemplu complet de configurare tehnică pe „Baie Principală" (cu placare 3 pereți, ca în mockup) și „Living & Dining" (doar pardoseală + ușă, fără placare) — restul camerelor rămân neconfigurate, pentru a arăta ambele stări (empty state + formular completat).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual în browser (desktop, 1057px+): toate cele 4 rezultate calculate corect (verificate manual), toggle placare pereți, ștergere cameră cu confirmare, buton „Adaugă Cameră Nouă" deschide drawer-ul existent — zero erori în consolă (după restart server, cache-ul Turbopack avea referințe stale către fișierele șterse).
+
+**Fișiere atinse:** `src/shared/types/FlooringType.ts` (rescris), `src/shared/types/TileSize.ts` (nou), `src/shared/types/InstallationType.ts` (nou), `src/shared/types/Wall.ts` (nou), `src/shared/types/RoomDoor.ts` (nou), `src/shared/types/WallTiling.ts` (nou), `src/shared/types/Room.ts` (rescris), `src/shared/types/index.ts`, `src/shared/icons.ts`, `src/shared/mock-data.ts`, `src/app/configurare/dimensions.ts` (rescris), `src/app/configurare/RoomTechnicalCard.tsx` (rescris), `src/app/configurare/CalculationModal.tsx` (șters), `src/app/configurare/MobileBottomNav.tsx` (șters), `src/app/configurare/page.tsx` (rescris), `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic` (continuare pe același branch — nu pe `main`).
+
+### 2026-07-12 — Sidebar global rescris după Stitch (expandat + colaps), restul paginilor neatins
+**De ce:** userul a cerut ca meniul principal (stânga, global pe toate paginile) să fie identic cu ecranele Stitch „Tabel Centralizator - Redesign Carduri Rezumat Premium" (stare expandată) și „Tabel Centralizator - Meniu Restrâns Premium" (stare colapsată) — explicit doar meniul, nu restul conținutului paginilor.
+
+- Descărcat HTML-ul ambelor ecrane și extras markup-ul exact al `<aside>`: expandat `w-72`/`p-6`, colaps `w-20`/`p-4`, logo pătrat `bg-primary` cu iconița `architecture` (FILL 1), 5 iteme de navigare (al 5-lea, „Galerie Inspirație", nou față de sidebar-ul vechi), buton „Adaugă Cameră", „Setări", buton de colaps cu iconița `menu_open` care se rotește 180°.
+- **`src/components/Sidebar.tsx` rescris complet**: stare de colaps prin `useState` (React, nu scriptul JS din mockup), lățime/padding animate cu `transition-all duration-300`. Etichetă activă pe ruta curentă cu fundal `bg-secondary/10 text-secondary` (echivalentul cel mai apropiat din paleta existentă pentru `secondary-fixed` din mockup, care nu există ca token în acest proiect).
+- **Decizii de scop, ca să nu introduc funcționalitate falsă:**
+  - „Galerie Inspirație" și „Setări" — pagini inexistente încă (confirmate în backlog `CLAUDE.md`) — randate ca iteme inerte (`opacity-50`, `cursor-not-allowed`, fără `href`), nu linkuri moarte.
+  - Butonul „Adaugă Cameră" din sidebar duce la `/configurare` (unde adăugarea de cameră chiar există), nu deschide un drawer global nou — a lifta `RoomFormDrawer` la nivel de layout ar fi o schimbare de arhitectură dincolo de „doar meniul", cerută explicit să rămână neatinsă.
+  - Eticheta pentru `/analiza` schimbată din „Analiză Bugetară" în „Grafice Buget", exact ca în mockup (fidelitate cerută explicit) — ruta rămâne aceeași.
+- **`icons.ts`**: adăugat `NAV_ICONS.logo` (`architecture`), `NAV_ICONS.sidebarAddRoom` (`add_circle`); corectat `NAV_ICONS.collapseSidebar` din `keyboard_double_arrow_left` (presupunere veche, niciodată verificată) în `menu_open` (confirmat din HTML-ul ambelor ecrane).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual pe `/configurare` și `/elemente`: stare expandată + colapsată, hover/active state, toggle funcțional, restul fiecărei pagini neschimbat, zero erori în consolă.
+
+**Fișiere atinse:** `src/components/Sidebar.tsx` (rescris), `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — Sidebar: ajustări de spacing (padding/margin) + `PageHeader` unificat pe toate paginile
+**De ce:** userul a semnalat că textul din sidebar iese din butoane (prea mare/bold, prea mult padding orizontal) — ajustat. Apoi a cerut header alb identic pe toate cele 4 pagini, cu titlul paginii + search, exact ca în ecranul Stitch „Tabel Centralizator - Meniu Restrâns Premium".
+
+- **Sidebar** (`src/components/Sidebar.tsx`): text iteme navigare `text-sm font-medium` (nu `font-bold`), padding orizontal redus (`px-4`→`px-3`), lățime `w-72`→`w-64`, padding container `p-6`→`p-4`, spațiu între iteme `space-y-1`→`space-y-0.5`. Adăugat separator (`border-b`) sub secțiunea de titlu „Renovator Pro" + `py-4` pe zona de navigare, pentru delimitare vizuală clară titlu/meniu.
+- **`PageHeader` nou** (`src/components/PageHeader.tsx`, folosit de la început în ≥2 pagini → direct shared, nu local): header alb (`bg-white`), sticky, `border-b`, titlu stânga + input de căutare dreapta cu iconiță (decorativ — nu există încă funcție de căutare cablată, la fel ca restul căutărilor din app). Markup extras exact din HTML-ul ecranului „Tabel Centralizator - Meniu Restrâns Premium".
+- Aplicat pe toate cele 4 pagini (`configurare`, `elemente`, `centralizator`, `analiza`), înlocuind fiecare `<h1>` inline: pe `configurare` a înlocuit un header custom mai vechi (cu tab-uri „Măsurători"/„Materiale" + avatar) — unificare explicit cerută de user, tab-urile/avatarul au fost scoase. Pe `elemente`/`centralizator`, butoanele de acțiune specifice paginii („+ Adaugă Cameră", „Imprimă Raport") au rămas funcționale, mutate sub header (aliniate dreapta) în loc să fie lângă titlu.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual toate cele 4 pagini + ambele stări sidebar (expandat/colaps) — header identic peste tot, restul conținutului fiecărei pagini neschimbat, zero erori reale în consolă (erorile inițial raportate de `read_console_messages` erau istoricul cache-ului Turbopack dintr-un tab vechi, reconfirmat curat într-un tab nou).
+
+**Fișiere atinse:** `src/components/Sidebar.tsx`, `src/components/PageHeader.tsx` (nou), `src/app/configurare/page.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/elemente` rescris după Stitch („Elemente de Cumpărat - Meniu Restrâns") + responsive real
+**De ce:** userul a semnalat că pagina `/elemente` nu semăna cu designul Stitch și nu era deloc responsive (câmpurile din Adăugare Rapidă aveau `min-w` fixe care produceau overflow orizontal pe ecrane înguste, tabelele nu aveau scroll orizontal).
+
+- Descărcat HTML-ul ecranului „Elemente de Cumpărat - Meniu Restrâns" (proiect Stitch `14594146001803528847`) și aliniat layout-ul: stat cards `rounded-xl shadow-sm`, widget „Adăugare Rapidă" cu iconiță `bolt`, câmpuri pe fundal `bg-white/10` peste `bg-primary`, buton „Salvează" cu iconiță `save`; carduri de cameră cu iconiță `ROOM_TYPE_ICONS`, tabel cu iconițe `unfold_more` decorative pe headerele sortabile (fără sortare reală cablată — pur vizual, ca în design), acțiuni editare/ștergere cu Material Symbols (`edit`/`delete`) în loc de emoji.
+- **`StatusChip.tsx`** (shared, afectează și `/centralizator`): adăugată iconița de status (`STATUS_ICONS`, deja existentă) lângă text, pentru fidelitate cu badge-urile din design.
+- **Responsive real**: eliminat toate `min-w-*` fixe din formularul de Adăugare Rapidă (cauza principală a overflow-ului), înlocuite cu `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`; fiecare tabel de cameră e acum învelit în `overflow-x-auto` (lipsea complet înainte); stat cards `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`; header-ul cardului de cameră (`flex flex-wrap`) se rearanjează pe ecrane înguste. Testat efectiv la 375px (mobil), 768px (tabletă) și desktop — zero overflow orizontal la nicio lățime.
+- Element cu `imageUrl` completat (câmp deja existent în `Item`) afișează acum o miniatură 8×8 în tabel, ca în design — nu s-a inventat date, doar afișat ce exista deja în model dar nu era randat.
+- `icons.ts`: adăugate `ACTION_ICONS.save`, `ACTION_ICONS.link`, `ACTION_ICONS.image`, `ACTION_ICONS.sortIndicator` (`unfold_more`).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual desktop + mobil (375px) + tabletă (768px) — sidebar dispare corect sub `md`, tabele cu scroll orizontal pe ecrane înguste, formular de adăugare rapidă complet responsive, zero erori în consolă.
+
+**Fișiere atinse:** `src/app/elemente/page.tsx` (rescris), `src/components/StatusChip.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/elemente`: tabele fără wrap pe 2 rânduri, status chip mai mic, header cameră alb + scroll
+**De ce:** userul a cerut, doar pentru `/elemente`: niciun conținut de tabel să nu se rupă pe 2 rânduri (scroll orizontal în loc de wrap), badge-urile de status mai mici și ne-bold, iar header-ul fiecărei secțiuni de cameră ("Baie Principală" etc.) responsive — scroll orizontal la nevoie, font mai mic, fundal alb în loc de albastru deschis.
+
+- **`StatusChip.tsx`** (shared): adăugat prop opțional `size?: "sm" | "md"` (implicit `"md"`, neschimbat pentru `/centralizator`). `size="sm"` → text `9px`/`font-medium` (nu bold) în loc de `11px`/`font-bold`, folosit doar în `/elemente`. Component rămâne shared, dar comportamentul implicit e neatins — schimbarea e opt-in per pagină.
+- **Header cameră** (`elemente/page.tsx`): `bg-surface-low` (albăstrui) → `bg-surface` (alb); text titlu `text-lg` → `text-sm`; întregul rând (icon + nume + buget + butoane) e acum într-un container `overflow-x-auto` cu `min-w-max whitespace-nowrap`, deci pe ecran îngust apare scroll orizontal în loc de wrap pe 2 rânduri.
+- **Celulele din tabel**: adăugat `whitespace-nowrap` pe toate coloanele (element, sursă, buc, preț, total, status) — tabelul (deja în `overflow-x-auto`) face acum scroll orizontal complet în loc să rupă text pe mai multe linii la orice lățime.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat la 375px (mobil): header-ele de cameră rămân pe un rând cu scroll orizontal vizibil, tabelele idem, zero wrap pe 2 rânduri nicăieri, zero erori în consolă.
+
+**Fișiere atinse:** `src/app/elemente/page.tsx`, `src/components/StatusChip.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.

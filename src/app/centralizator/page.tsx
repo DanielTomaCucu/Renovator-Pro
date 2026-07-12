@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import StatCard from "@/components/StatCard";
 import StatusChip from "@/components/StatusChip";
+import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/shared/store";
 import {
   formatMoney,
@@ -22,11 +23,11 @@ export default function CentralizatorPage() {
   const progress = purchaseProgress(items);
 
   return (
-    <div className="px-6 py-6 lg:px-10 max-w-7xl">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold">
-          Centralizator Costuri
-        </h1>
+    <div>
+      <PageHeader title="Centralizator Costuri" searchPlaceholder="Caută element sau lucrare..." />
+
+      <div className="px-6 py-6 lg:px-10 max-w-7xl">
+      <div className="flex items-center justify-end">
         <button
           onClick={() => window.print()}
           className="rounded-md border border-line bg-surface px-4 py-2.5 text-sm font-semibold hover:bg-surface-low"
@@ -125,6 +126,7 @@ export default function CentralizatorPage() {
         <p className="font-mono text-2xl font-bold">
           {formatMoney(estimated, project.currency)}
         </p>
+      </div>
       </div>
     </div>
   );

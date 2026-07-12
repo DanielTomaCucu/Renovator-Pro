@@ -8,25 +8,27 @@
  * singur loc de adevăr — restul aplicației importă din acest fișier, nu hardcodează.
  */
 
-import { ItemStatus, RoomType } from "./types";
+import { FlooringType, ItemStatus, RoomType } from "./types";
 
 export const NAV_ICONS = {
+  logo: "architecture",
   configurare: "home_work",
   elemente: "shopping_cart",
   centralizator: "table_chart",
   analiza: "leaderboard",
   galerie: "auto_awesome",
   setari: "settings",
-  collapseSidebar: "keyboard_double_arrow_left",
+  collapseSidebar: "menu_open",
+  sidebarAddRoom: "add_circle",
   search: "search",
   profil: "account_circle",
 } as const;
 
 export const ROOM_TYPE_ICONS: Record<RoomType, string> = {
-  [RoomType.Dormitor]: "bed",
-  [RoomType.Baie]: "shower",
+  [RoomType.Dormitor]: "king_bed",
+  [RoomType.Baie]: "bathtub",
   [RoomType.Living]: "chair",
-  [RoomType.Bucatarie]: "kitchen",
+  [RoomType.Bucatarie]: "soup_kitchen",
   [RoomType.Terasa]: "deck",
   [RoomType.Balcon]: "balcony",
 };
@@ -43,6 +45,10 @@ export const ACTION_ICONS = {
   quickAdd: "bolt",
   expandMore: "expand_more",
   viewDetails: "visibility",
+  save: "save",
+  link: "link",
+  image: "image",
+  sortIndicator: "unfold_more",
 } as const;
 
 export const STATUS_ICONS: Record<ItemStatus, string> = {
@@ -66,4 +72,25 @@ export const ANALYTICS_ICONS = {
   economii: "trending_down",
   actualizare: "update",
   overview: "dashboard",
+} as const;
+
+/**
+ * Iconițe pentru configurarea tehnică a camerei (ecran desktop „Configurare Tehnică Apartament",
+ * proiect Stitch 14594146001803528847, ecranul „Configurare Tehnică - Layout Optimizat Rezultate").
+ */
+export const FLOORING_TYPE_ICONS: Record<FlooringType, string> = {
+  [FlooringType.ParchetLaminat]: "texture",
+  [FlooringType.Gresie]: "grid_view",
+  [FlooringType.Mocheta]: "texture",
+};
+
+export const TECHNICAL_ICONS = {
+  projectEfficiency: "architecture",
+  floorAndWalls: "layers",
+  doorConfig: "door_front",
+  wallTilingConfig: "grid_view",
+  blueprintPlaceholder: "design_services",
+  calculatedResults: "calculate",
+  saveConfig: "save",
+  addRoomEmpty: "add_circle",
 } as const;

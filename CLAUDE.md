@@ -188,10 +188,10 @@ Utilizare (span cu clasa `material-symbols-outlined`, numele iconiței ca text):
 #### Tipuri de cameră (grid din `RoomFormDrawer.tsx`) — cheie = `RoomType`
 | Iconiță | Tip cameră |
 |---|---|
-| `bed` | `RoomType.Dormitor` |
-| `shower` | `RoomType.Baie` |
+| `king_bed` | `RoomType.Dormitor` |
+| `bathtub` | `RoomType.Baie` |
 | `chair` | `RoomType.Living` |
-| `kitchen` | `RoomType.Bucatarie` |
+| `soup_kitchen` | `RoomType.Bucatarie` |
 | `deck` | `RoomType.Terasa` |
 | `balcony` | `RoomType.Balcon` |
 
@@ -257,7 +257,7 @@ din acest fișier — nu scrie string-uri de iconiță direct în JSX.
 
 Entitățile din `src/shared/types/` (vezi și regula „un fișier per interfață/enum" mai sus):
 - **Project**: titlu, buget total, `currency: Currency` (EUR/RON).
-- **Room** (cameră): `type: RoomType`, nume liber, buget alocat. Ștergerea unei camere șterge și elementele ei (cascade — deja implementat în store).
+- **Room** (cameră): `type: RoomType`, nume liber, buget alocat. Ștergerea unei camere șterge și elementele ei (cascade — deja implementat în store). Câmpuri tehnice opționale, completate doar din pagina `/configurare` (o cameră nouă nu le are): `floorMaterial: FlooringType`, `floorArea` (mp), `perimeter` (ml), `tileSize: TileSize`, `installationType: InstallationType`, `door: RoomDoor` (width, height, wall), `wallTiling?: WallTiling` (tiledWallsCount, tileHeight, wallLengths per `Wall` — doar la camere cu zonă umedă, activat explicit).
 - **Item** (element de cumpărat): nume, `materialType: MaterialType`, sursă/magazin, `status: ItemStatus`, cantitate, preț unitar, link produs (opțional), URL imagine (opțional), FK cameră.
 
 ### Statusuri element
@@ -276,8 +276,12 @@ Vezi „Registru actual de funcții partajate” mai sus pentru lista completă.
    - Stat cards (total estimat, cheltuit la zi, eficiență), tabel complet grupat pe camere cu subtotaluri, banner negru „Total General Estimat", buton Imprimă Raport (window.print), echivalent EUR/RON (de adăugat), export PDF (de adăugat).
 3. **`/analiza` — Analiză Bugetară**
    - 4 KPI cards, donut chart cost per cameră (SVG custom, fără librărie), progress bars pe categorii de materiale, 3 carduri recomandări (optimizare / alertă buget / status proiect). De adăugat: grafic linie „Evoluția Cheltuielilor" (realizat vs estimat pe luni) și buton Export PDF.
-4. **`/configurare` — Configurare Apartament**
-   - Datele proiectului, lista camerelor cu editare buget alocat inline, adăugare cameră.
+4. **`/configurare` — Configurare Apartament** (referință: ecranul desktop Stitch „Configurare Tehnică - Layout Optimizat Rezultate")
+   - Card „Sumar Tehnic Global" (proiect curent, suprafață utilă totală, status derivat din progres, buget total, bară de progres).
+   - Listă de carduri colapsabile per cameră (`RoomTechnicalCard`): configurare pardoseală (material/suprafață/perimetru/mărime plăci/montaj), placare pereți opțională pe 4 pereți N/E/S/V (doar la camere cu zonă umedă), configurare ușă (lățime/înălțime/perete), panou „Calcule Detaliate" cu formulă + calcul explicit pentru fiecare rezultat (material pardoseală, plintă, faianță, plintă perete ușă).
+   - Rând de buget alocat per cameră (funcționalitate existentă, păstrată din varianta inițială a paginii).
+   - Stare goală „Adaugă Cameră Nouă" → deschide `RoomFormDrawer` existent. Ștergere cameră prin `ConfirmDialog`.
+   - Funcțiile de calcul: `src/app/configurare/dimensions.ts` (locale paginii — vezi Registrul de funcții din `docs/progress.md`).
 
 ### Backlog (în ordinea priorității)
 1. Bottom navigation + bottom sheets pentru mobile
