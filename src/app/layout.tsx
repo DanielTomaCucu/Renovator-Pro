@@ -34,6 +34,13 @@ export default function RootLayout({
       lang="ro"
       className={`${inter.variable} ${hanken.variable} ${jetbrains.variable} h-full antialiased`}
     >
+      <head>
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- regulă gândită pt. Pages Router; în App Router link-ul din layout rădăcină e corect și global. */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+        />
+      </head>
       <body className="min-h-full">
         <StoreProvider>
           <div className="flex min-h-screen">

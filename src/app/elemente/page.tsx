@@ -6,6 +6,7 @@ import StatusChip from "@/components/StatusChip";
 import ItemFormDrawer from "@/components/ItemFormDrawer";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/shared/store";
 import {
   boughtCount,
@@ -17,6 +18,7 @@ import {
   totalSpent,
 } from "@/shared/functions";
 import { ItemStatus, MaterialType } from "@/shared/types";
+import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { DeleteTarget } from "./DeleteTarget";
 import { ItemDrawerState } from "./ItemDrawerState";
 
@@ -53,209 +55,248 @@ export default function ElementePage() {
   }
 
   return (
-    <div className="px-6 py-6 lg:px-10 max-w-7xl">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold">
-          Elemente de Cumpărat
-        </h1>
-        <button
-          onClick={() => setRoomDrawerOpen(true)}
-          className="rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
-        >
-          + Adaugă Cameră
-        </button>
-      </div>
+    <div>
+      <PageHeader title="Elemente de Cumpărat" searchPlaceholder="Caută elemente..." />
 
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Buget total estimat"
-          value={formatMoney(project.totalBudget)}
-        />
-        <StatCard
-          label="Total cheltuit"
-          value={formatMoney(spent)}
-          accent="secondary"
-        />
-        <StatCard
-          label="Elemente achiziționate"
-          value={`${bought} din ${items.length}`}
-        />
-        <StatCard label="Progres achiziții" value={`${progress}%`} />
-      </div>
-
-      {/* Adăugare rapidă */}
-      <form
-        onSubmit={quickAdd}
-        className="mt-6 flex flex-wrap items-end gap-3 rounded-lg bg-primary p-4"
-      >
-        <span className="text-sm font-semibold text-white">
-          ⚡ Adăugare Rapidă
-        </span>
-        <div className="flex-1 min-w-40">
-          <label className="mb-1 block text-[10px] font-bold uppercase text-white/60">
-            Nume element
-          </label>
-          <input
-            value={qaName}
-            onChange={(e) => setQaName(e.target.value)}
-            placeholder="ex: Parchet stejar"
-            className="w-full rounded-md px-3 py-2 text-sm bg-white outline-none"
-          />
-        </div>
-        <div className="min-w-36">
-          <label className="mb-1 block text-[10px] font-bold uppercase text-white/60">
-            Cameră
-          </label>
-          <select
-            value={qaRoom}
-            onChange={(e) => setQaRoom(e.target.value)}
-            className="w-full rounded-md px-3 py-2 text-sm bg-white outline-none"
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-10">
+        <div className="flex justify-end">
+          <button
+            onClick={() => setRoomDrawerOpen(true)}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
           >
-            {rooms.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
+            + Adaugă Cameră
+          </button>
         </div>
-        <div className="w-32">
-          <label className="mb-1 block text-[10px] font-bold uppercase text-white/60">
-            Preț estimat (€)
-          </label>
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            value={qaPrice}
-            onChange={(e) => setQaPrice(e.target.value)}
-            placeholder="0,00"
-            className="w-full rounded-md px-3 py-2 text-sm bg-white outline-none font-mono"
+
+        {/* Sumar */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Buget total estimat" value={formatMoney(project.totalBudget)} />
+          <StatCard label="Total cheltuit" value={formatMoney(spent)} accent="secondary" />
+          <StatCard
+            label="Elemente achiziționate"
+            value={`${bought} din ${items.length}`}
           />
+          <StatCard label="Progres achiziții" value={`${progress}%`} />
         </div>
-        <button
-          type="submit"
-          className="rounded-md bg-secondary px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+
+        {/* Adăugare rapidă */}
+        <form
+          onSubmit={quickAdd}
+          className="rounded-xl bg-primary p-4 text-white shadow-md"
         >
-          Salvează
-        </button>
-      </form>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="material-symbols-outlined text-secondary">
+                {ACTION_ICONS.quickAdd}
+              </span>
+              <h3 className="font-heading text-base font-bold">Adăugare Rapidă</h3>
+            </div>
+            <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+              <div className="space-y-1">
+                <label className="block text-[9px] font-bold uppercase tracking-widest text-white/70">
+                  Nume element
+                </label>
+                <input
+                  value={qaName}
+                  onChange={(e) => setQaName(e.target.value)}
+                  placeholder="ex: Parchet stejar"
+                  className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white placeholder-white/40 outline-none transition-all focus:bg-white/20"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[9px] font-bold uppercase tracking-widest text-white/70">
+                  Cameră
+                </label>
+                <select
+                  value={qaRoom}
+                  onChange={(e) => setQaRoom(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white outline-none transition-all focus:bg-white/20"
+                >
+                  {rooms.map((r) => (
+                    <option key={r.id} value={r.id} className="bg-primary text-white">
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[9px] font-bold uppercase tracking-widest text-white/70">
+                  Preț estimat (€)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={qaPrice}
+                  onChange={(e) => setQaPrice(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-mono text-sm text-white outline-none transition-all focus:bg-white/20"
+                />
+              </div>
+              <button
+                type="submit"
+                className="flex h-10 items-center justify-center gap-2 self-end rounded-lg bg-secondary px-6 text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  {ACTION_ICONS.save}
+                </span>
+                Salvează
+              </button>
+            </div>
+          </div>
+        </form>
 
-      {/* Camere */}
-      <div className="mt-8 space-y-6">
-        {rooms.map((room) => {
-          const roomItems = itemsForRoom(items, room.id);
-          const spentInRoom = roomSpent(items, room.id);
-          return (
-            <section
-              key={room.id}
-              className="rounded-lg border border-line bg-surface"
-            >
-              <header className="flex items-center justify-between border-b border-line px-5 py-4">
-                <h2 className="font-heading text-lg font-semibold">
-                  {room.name}
-                </h2>
-                <div className="flex items-center gap-4">
-                  <p className="text-sm text-muted">
-                    <span className="text-[10px] font-bold uppercase block text-right">
-                      Buget utilizat
-                    </span>
-                    <span className="font-mono">
-                      {formatMoney(spentInRoom)} /{" "}
-                      {formatMoney(room.allocatedBudget)}
-                    </span>
-                  </p>
-                  <button
-                    onClick={() =>
-                      setItemDrawer({ open: true, roomId: room.id })
-                    }
-                    className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
-                  >
-                    Adaugă
-                  </button>
-                  <button
-                    onClick={() =>
-                      setDeleteTarget({
-                        kind: "room",
-                        id: room.id,
-                        name: room.name,
-                      })
-                    }
-                    className="rounded p-2 text-muted hover:text-red-600"
-                    aria-label={`Șterge camera ${room.name}`}
-                  >
-                    🗑
-                  </button>
-                </div>
-              </header>
-
-              {roomItems.length === 0 ? (
-                <p className="px-5 py-6 text-sm text-muted">
-                  Niciun element încă. Adaugă primul element pentru această
-                  cameră.
-                </p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-muted">
-                      <th className="px-5 py-3">Element</th>
-                      <th className="px-3 py-3">Sursă</th>
-                      <th className="px-3 py-3 text-right">Buc</th>
-                      <th className="px-3 py-3 text-right">Preț unit</th>
-                      <th className="px-3 py-3 text-right">Total</th>
-                      <th className="px-3 py-3">Status</th>
-                      <th className="px-3 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {roomItems.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border-t border-line hover:bg-surface-low/50"
+        {/* Camere */}
+        <div className="space-y-6">
+          {rooms.map((room) => {
+            const roomItems = itemsForRoom(items, room.id);
+            const spentInRoom = roomSpent(items, room.id);
+            return (
+              <section
+                key={room.id}
+                className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm"
+              >
+                <div className="overflow-x-auto border-b border-line bg-surface">
+                  <div className="flex min-w-max items-center justify-between gap-4 whitespace-nowrap px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-secondary">
+                        {ROOM_TYPE_ICONS[room.type]}
+                      </span>
+                      <h2 className="font-heading text-sm font-bold">{room.name}</h2>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="hidden flex-col items-end sm:flex">
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-muted">
+                          Buget utilizat
+                        </span>
+                        <span className="font-mono text-xs text-primary">
+                          {formatMoney(spentInRoom)} / {formatMoney(room.allocatedBudget)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setItemDrawer({ open: true, roomId: room.id })}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
                       >
-                        <td className="px-5 py-3 font-medium">{item.name}</td>
-                        <td className="px-3 py-3 text-muted">{item.source}</td>
-                        <td className="px-3 py-3 text-right font-mono">
-                          {item.quantity}
-                        </td>
-                        <td className="px-3 py-3 text-right font-mono">
-                          {formatMoney(item.unitPrice)}
-                        </td>
-                        <td className="px-3 py-3 text-right font-mono font-semibold">
-                          {formatMoney(itemTotal(item))}
-                        </td>
-                        <td className="px-3 py-3">
-                          <StatusChip status={item.status} />
-                        </td>
-                        <td className="px-3 py-3 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => setItemDrawer({ open: true, item })}
-                            className="rounded p-1.5 text-muted hover:text-foreground"
-                            aria-label={`Editează ${item.name}`}
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() =>
-                              setDeleteTarget({
-                                kind: "item",
-                                id: item.id,
-                                name: item.name,
-                              })
-                            }
-                            className="rounded p-1.5 text-muted hover:text-red-600"
-                            aria-label={`Șterge ${item.name}`}
-                          >
-                            🗑
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </section>
-          );
-        })}
+                        Adaugă
+                      </button>
+                      <button
+                        onClick={() =>
+                          setDeleteTarget({ kind: "room", id: room.id, name: room.name })
+                        }
+                        className="rounded p-1 text-muted hover:text-tertiary"
+                        aria-label={`Șterge camera ${room.name}`}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          {ACTION_ICONS.delete}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {roomItems.length === 0 ? (
+                  <p className="px-6 py-6 text-sm text-muted">
+                    Niciun element încă. Adaugă primul element pentru această cameră.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b border-line bg-surface-low/30">
+                        <tr className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                          <th className="whitespace-nowrap px-6 py-3">
+                            <span className="inline-flex items-center gap-1">
+                              Element
+                              <span className="material-symbols-outlined text-[14px] opacity-50">
+                                {ACTION_ICONS.sortIndicator}
+                              </span>
+                            </span>
+                          </th>
+                          <th className="whitespace-nowrap px-3 py-3">
+                            <span className="inline-flex items-center gap-1">
+                              Sursă
+                              <span className="material-symbols-outlined text-[14px] opacity-50">
+                                {ACTION_ICONS.sortIndicator}
+                              </span>
+                            </span>
+                          </th>
+                          <th className="whitespace-nowrap px-3 py-3 text-right">Buc</th>
+                          <th className="whitespace-nowrap px-3 py-3 text-right">
+                            Preț unit
+                          </th>
+                          <th className="whitespace-nowrap px-3 py-3 text-right">Total</th>
+                          <th className="whitespace-nowrap px-3 py-3">Status</th>
+                          <th className="px-3 py-3" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {roomItems.map((item) => (
+                          <tr key={item.id} className="transition-colors hover:bg-surface-low/40">
+                            <td className="whitespace-nowrap px-6 py-3">
+                              <div className="flex items-center gap-3">
+                                {item.imageUrl && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="h-8 w-8 shrink-0 rounded border border-line object-cover"
+                                  />
+                                )}
+                                <span className="font-medium text-primary">{item.name}</span>
+                              </div>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 text-muted">
+                              {item.source}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
+                              {item.quantity}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
+                              {formatMoney(item.unitPrice)}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 text-right font-mono font-semibold text-primary">
+                              {formatMoney(itemTotal(item))}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3">
+                              <StatusChip status={item.status} size="sm" />
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 text-right">
+                              <div className="flex items-center justify-end gap-3">
+                                <button
+                                  onClick={() => setItemDrawer({ open: true, item })}
+                                  className="text-muted transition-colors hover:text-primary"
+                                  aria-label={`Editează ${item.name}`}
+                                >
+                                  <span className="material-symbols-outlined text-lg">
+                                    {ACTION_ICONS.editInline}
+                                  </span>
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setDeleteTarget({
+                                      kind: "item",
+                                      id: item.id,
+                                      name: item.name,
+                                    })
+                                  }
+                                  className="text-muted transition-colors hover:text-tertiary"
+                                  aria-label={`Șterge ${item.name}`}
+                                >
+                                  <span className="material-symbols-outlined text-lg">
+                                    {ACTION_ICONS.delete}
+                                  </span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
       </div>
 
       <ItemFormDrawer
@@ -264,10 +305,7 @@ export default function ElementePage() {
         roomId={itemDrawer.roomId}
         item={itemDrawer.item}
       />
-      <RoomFormDrawer
-        open={roomDrawerOpen}
-        onClose={() => setRoomDrawerOpen(false)}
-      />
+      <RoomFormDrawer open={roomDrawerOpen} onClose={() => setRoomDrawerOpen(false)} />
       <ConfirmDialog
         open={!!deleteTarget}
         title="Confirmare ștergere"

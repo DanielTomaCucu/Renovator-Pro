@@ -1,16 +1,55 @@
-import { Currency, Item, ItemStatus, MaterialType, Project, Room, RoomType } from "./types";
+import {
+  Currency,
+  FlooringType,
+  InstallationType,
+  Item,
+  ItemStatus,
+  MaterialType,
+  Project,
+  Room,
+  RoomType,
+  TileSize,
+  Wall,
+} from "./types";
 
 export const mockProject: Project = {
   id: "p1",
-  title: "Project Renovation",
+  title: "Apartament 3 Camere - Pipera",
   totalBudget: 12500,
   currency: Currency.EUR,
 };
 
 export const mockRooms: Room[] = [
-  { id: "r1", type: RoomType.Baie, name: "Baie Principală", allocatedBudget: 1200 },
+  {
+    id: "r1",
+    type: RoomType.Baie,
+    name: "Baie Principală",
+    allocatedBudget: 1200,
+    floorMaterial: FlooringType.Gresie,
+    floorArea: 5.4,
+    perimeter: 9.3,
+    tileSize: TileSize.Medie,
+    installationType: InstallationType.Drept,
+    door: { width: 0.8, height: 2.1, wall: Wall.Vest },
+    wallTiling: {
+      tiledWallsCount: 3,
+      tileHeight: 2.4,
+      wallLengths: { [Wall.Nord]: 2.4, [Wall.Est]: 2.25, [Wall.Sud]: 2.4, [Wall.Vest]: 2.25 },
+    },
+  },
   { id: "r2", type: RoomType.Bucatarie, name: "Bucătărie", allocatedBudget: 3500 },
-  { id: "r3", type: RoomType.Living, name: "Living & Dining", allocatedBudget: 4800 },
+  {
+    id: "r3",
+    type: RoomType.Living,
+    name: "Living & Dining",
+    allocatedBudget: 4800,
+    floorMaterial: FlooringType.ParchetLaminat,
+    floorArea: 27.3,
+    perimeter: 21,
+    tileSize: TileSize.Medie,
+    installationType: InstallationType.Drept,
+    door: { width: 0.9, height: 2.1, wall: Wall.Nord },
+  },
   { id: "r4", type: RoomType.Dormitor, name: "Dormitor Matrimonial", allocatedBudget: 2000 },
 ];
 

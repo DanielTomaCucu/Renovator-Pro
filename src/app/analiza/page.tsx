@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import StatCard from "@/components/StatCard";
+import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/shared/store";
 import {
   boughtCount,
@@ -40,10 +41,11 @@ export default function AnalizaPage() {
   const overBudget = spent > project.totalBudget;
 
   return (
-    <div className="px-6 py-6 lg:px-10 max-w-7xl">
-      <h1 className="font-heading text-2xl font-bold">Analiză Bugetară</h1>
+    <div>
+      <PageHeader title="Analiză Bugetară" searchPlaceholder="Caută..." />
 
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="px-6 py-6 lg:px-10 max-w-7xl">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total alocat"
           value={formatMoney(project.totalBudget)}
@@ -182,6 +184,7 @@ export default function AnalizaPage() {
             {items.length} elemente în {rooms.length} camere.
           </p>
         </div>
+      </div>
       </div>
     </div>
   );
