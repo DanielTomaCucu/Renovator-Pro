@@ -289,3 +289,16 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/components/Sidebar.tsx`, `src/app/layout.tsx`, `src/app/analiza/page.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/centralizator`: variantă mobilă 1:1 cu Stitch („Centralizator Costuri - Mobile Table View")
+**De ce:** userul a cerut varianta de telefon a paginii Centralizator Costuri, identică cu mockup-ul mobil dedicat.
+
+- Layout-ul desktop existent (nu avea încă un wrapper `hidden`/breakpoint dedicat — era doar responsive prin `overflow-x-auto`) e acum înfășurat explicit în `hidden md:block`, aliniat la breakpoint-ul `md` folosit deja de `Sidebar`/`/analiza`. Sub `md` se randează un bloc nou `md:hidden`: carduri de sumar cu scroll orizontal (Total Estimat/Cheltuit/Eficiență), secțiuni per cameră ca acordeon cu bară stânga `border-l-4 border-primary` (reutilizează exact același state `collapsed`/`toggleRoom` ca varianta desktop — un singur „adevăr" pt. ce cameră e restrânsă, nu duplicat), fiecare cu tabel real scrollabil orizontal (`min-w-[600px]` + `overflow-x-auto`, la fel ca în design — NU listă de carduri), rând de subtotal per cameră, footer sticky (`fixed bottom-0`) cu „Total General Estimat" + buton „PDF" (vizual, fără export real — la fel ca butoanele Imprimă/Partajează de pe desktop).
+- Date reale peste tot: aceleași `estimated`/`spent`/`efficiency`/`itemsForRoom`/`roomSubtotal`/`MATERIAL_BADGE_STYLES`/`STATUS_DOT` ca varianta desktop — zero duplicare de logică, doar markup diferit.
+- `icons.ts`: adăugat `DOCUMENT_ICONS.download` (glyph distinct de `exportPdf`, folosit explicit în acest ecran) și `CENTRALIZATOR_ICONS.trendUp` (`trending_up`, badge-ul de eficiență).
+- **Intenționat omis, la cererea userului (consecvent cu `/analiza` mobil):** bottom navigation bar din mockup — rămâne să fie construit în aplicația Flutter, nu în web.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px (carduri scroll orizontal, acordeon funcțional — colaps/expand testat interactiv, tabel scrollabil, footer sticky) și 1440px (desktop neschimbat).
+
+**Fișiere atinse:** `src/app/centralizator/page.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.

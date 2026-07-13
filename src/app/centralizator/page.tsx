@@ -70,7 +70,8 @@ export default function CentralizatorPage() {
     <div>
       <PageHeader title="Centralizator Costuri" searchPlaceholder="Caută element sau lucrare..." />
 
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-10">
+      {/* Desktop — vezi „Tabel Centralizator - Meniu Restrâns Premium" */}
+      <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
         {/* Sumar */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="relative overflow-hidden rounded-xl border border-line bg-surface p-6 shadow-sm sm:p-8">
@@ -384,6 +385,180 @@ export default function CentralizatorPage() {
               Partajează Detalii
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Mobil — vezi „Centralizator Costuri - Mobile Table View" (fără bottom nav, se face în Flutter) */}
+      <div className="pb-24 md:hidden">
+        <div className="px-4 py-4">
+          {/* Sumar — carduri cu scroll orizontal */}
+          <section className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2">
+            <div className="flex min-w-[200px] flex-col gap-1 rounded-lg border border-line bg-surface p-4">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                Total Estimat
+              </span>
+              <span className="font-mono text-[20px] text-primary">{formatMoney(estimated)}</span>
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface-low">
+                <div className="h-full w-full bg-secondary" />
+              </div>
+            </div>
+            <div className="flex min-w-[200px] flex-col gap-1 rounded-lg border border-line bg-surface p-4">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                Total Cheltuit
+              </span>
+              <span className="font-mono text-[20px] text-secondary">{formatMoney(spent)}</span>
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface-low">
+                <div
+                  className="h-full bg-secondary/40"
+                  style={{ width: `${Math.min(100, efficiency)}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex min-w-[200px] flex-col gap-1 rounded-lg border border-line bg-surface p-4">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                Eficiență
+              </span>
+              <span className="font-mono text-[20px] text-primary">{efficiency}%</span>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-secondary">
+                <span className="material-symbols-outlined text-[14px]">
+                  {CENTRALIZATOR_ICONS.trendUp}
+                </span>
+                <span>din total estimat</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Secțiuni per cameră — acordeon cu tabel scrollabil orizontal */}
+          <div className="mt-4 flex flex-col gap-6">
+            {rooms.map((room) => {
+              const roomItems = itemsForRoom(items, room.id);
+              const subtotal = roomSubtotal(items, room.id);
+              if (roomItems.length === 0) return null;
+              const isCollapsed = collapsed.has(room.id);
+
+              return (
+                <section key={room.id} className="border-b border-line/50">
+                  <button
+                    type="button"
+                    onClick={() => toggleRoom(room.id)}
+                    className="flex w-full items-center justify-between rounded-r border-l-4 border-primary bg-surface-low py-2 pl-4 pr-2"
+                  >
+                    <h2 className="font-heading text-[16px] text-primary">{room.name}</h2>
+                    <span
+                      className={`material-symbols-outlined text-muted transition-transform ${isCollapsed ? "rotate-180" : ""}`}
+                    >
+                      {ACTION_ICONS.expandMore}
+                    </span>
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="-mx-4 overflow-x-auto px-4">
+                      <table className="w-full min-w-[600px] border-collapse">
+                        <thead>
+                          <tr className="border-t border-line/50 bg-surface-low">
+                            <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted">
+                              Element
+                            </th>
+                            <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted">
+                              Sursă
+                            </th>
+                            <th className="px-3 py-2 text-right text-[10px] uppercase tracking-wider text-muted">
+                              Cant.
+                            </th>
+                            <th className="px-3 py-2 text-right text-[10px] uppercase tracking-wider text-muted">
+                              Preț Unitar
+                            </th>
+                            <th className="px-3 py-2 text-right text-[10px] uppercase tracking-wider text-muted">
+                              Total
+                            </th>
+                            <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wider text-muted">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-sm">
+                          {roomItems.map((item) => {
+                            const status = STATUS_DOT[item.status];
+                            return (
+                              <tr
+                                key={item.id}
+                                className="border-b border-line/50 transition-colors hover:bg-background"
+                              >
+                                <td className="px-3 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="whitespace-nowrap text-primary">
+                                      {item.name}
+                                    </span>
+                                    <span
+                                      className={`whitespace-nowrap rounded px-1.5 py-0.5 text-[9px] uppercase ${MATERIAL_BADGE_STYLES[item.materialType]}`}
+                                    >
+                                      {item.materialType}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-3 text-muted">
+                                  {item.source}
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
+                                  {item.quantity}
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
+                                  {formatMoney(item.unitPrice)}
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
+                                  {formatMoney(itemTotal(item))}
+                                </td>
+                                <td className="px-3 py-3">
+                                  <div className="flex justify-center">
+                                    <span
+                                      className={`material-symbols-outlined text-[20px] ${status.className}`}
+                                    >
+                                      {status.icon}
+                                    </span>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          <tr className="border-t border-line/50 bg-surface-low">
+                            <td
+                              colSpan={4}
+                              className="px-3 py-3 text-[10px] font-bold uppercase tracking-wider text-muted"
+                            >
+                              Total {room.name}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-[14px] text-muted">
+                              {formatMoney(subtotal)}
+                            </td>
+                            <td />
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Rezumat sticky */}
+        <div className="fixed bottom-0 left-0 z-40 flex w-full items-center justify-between border-t border-line bg-surface px-4 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold uppercase text-muted">
+              Total General Estimat
+            </span>
+            <span className="font-mono text-[20px] text-primary">{formatMoney(estimated)}</span>
+          </div>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 rounded bg-primary px-4 py-2 font-bold text-white active:opacity-80"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {DOCUMENT_ICONS.download}
+            </span>
+            PDF
+          </button>
         </div>
       </div>
     </div>

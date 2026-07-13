@@ -62,6 +62,7 @@ export const DOCUMENT_ICONS = {
   exportPdf: "picture_as_pdf",
   print: "print",
   share: "share",
+  download: "download",
 } as const;
 
 export const ANALYTICS_ICONS = {
@@ -84,6 +85,7 @@ export const CENTRALIZATOR_ICONS = {
   eficientaBugetaraBadge: "analytics",
   tabelDetaliat: "analytics",
   statusInAsteptare: "schedule",
+  trendUp: "trending_up",
 } as const;
 
 /**
