@@ -98,13 +98,16 @@ export default function AnalizaPage() {
           className="w-full overflow-hidden rounded-xl p-8 text-white shadow-md"
           style={{ background: "linear-gradient(135deg, #1e293b 0%, #000000 100%)" }}
         >
-          <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-4">
-            <div className="space-y-2 border-white/10 pr-4 md:border-r">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4">
+            <div className="min-w-0 space-y-2 border-white/10 pr-4 lg:border-r">
               <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
                 Total Alocat
               </p>
               <div className="flex items-baseline gap-1">
-                <span className="font-mono text-[32px] font-bold tracking-tight">
+                <span
+                  className="block truncate font-mono font-bold tracking-tight"
+                  style={{ fontSize: "clamp(18px, 2.2vw, 32px)" }}
+                >
                   {formatMoney(project.totalBudget)}
                 </span>
               </div>
@@ -113,12 +116,15 @@ export default function AnalizaPage() {
               </p>
             </div>
 
-            <div className="space-y-2 border-white/10 pr-4 md:border-r">
+            <div className="min-w-0 space-y-2 border-white/10 pr-4 lg:border-r">
               <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
                 Cheltuieli Totale
               </p>
               <div className="flex items-baseline gap-1">
-                <span className="font-mono text-[32px] font-bold tracking-tight">
+                <span
+                  className="block truncate font-mono font-bold tracking-tight"
+                  style={{ fontSize: "clamp(18px, 2.2vw, 32px)" }}
+                >
                   {formatMoney(spent)}
                 </span>
               </div>
@@ -129,40 +135,46 @@ export default function AnalizaPage() {
                     style={{ width: `${Math.min(100, spentPct)}%` }}
                   />
                 </div>
-                <span className="font-mono text-[10px] opacity-60">{spentPct}%</span>
+                <span className="shrink-0 font-mono text-[10px] opacity-60">{spentPct}%</span>
               </div>
             </div>
 
-            <div className="space-y-2 border-white/10 pr-4 md:border-r">
+            <div className="min-w-0 space-y-2 border-white/10 pr-4 lg:border-r">
               <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
                 Buget Rămas
               </p>
               <div className="flex items-baseline gap-1">
                 <span
-                  className={`font-mono text-[32px] font-bold tracking-tight ${remaining < 0 ? "text-tertiary" : ""}`}
+                  className={`block truncate font-mono font-bold tracking-tight ${remaining < 0 ? "text-tertiary" : ""}`}
+                  style={{ fontSize: "clamp(18px, 2.2vw, 32px)" }}
                 >
                   {formatMoney(remaining)}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
-                <span className="text-[11px] font-medium uppercase tracking-wider opacity-60">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-secondary" />
+                <span className="truncate text-[11px] font-medium uppercase tracking-wider opacity-60">
                   {remainingPct}% disponibil
                 </span>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
+            <div className="min-w-0 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-[10px] font-bold uppercase tracking-widest opacity-70">
                   Achiziții Finalizate
                 </p>
-                <p className="font-mono text-[10px] opacity-80">
+                <p className="shrink-0 font-mono text-[10px] opacity-80">
                   {bought} / {items.length}
                 </p>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="font-mono text-[32px] font-bold tracking-tight">{progress}</span>
+                <span
+                  className="font-mono font-bold tracking-tight"
+                  style={{ fontSize: "clamp(18px, 2.2vw, 32px)" }}
+                >
+                  {progress}
+                </span>
                 <span className="text-[18px] font-medium opacity-60">%</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">

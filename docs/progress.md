@@ -362,3 +362,15 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza` desktop: fix responsive pe cardul unic KPI (text se suprapunea pe ecrane medii)
+**De ce:** userul a semnalat că pe ecrane de lățime medie (ex. 900px) textul din cardul consolidat KPI (introdus în sesiunea anterioară) se suprapunea — `grid-cols-1 md:grid-cols-4` sărea direct la 4 coloane la 768px, iar cifrele la `text-[32px]` font-mono nu încăpeau, provocând overflow vizual peste coloana vecină.
+
+- Grid schimbat din `grid-cols-1 md:grid-cols-4` în `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` — 2 coloane pe ecrane medii (768–1024px), 4 doar de la `lg` (1024px) în sus, unde există loc real.
+- Mărimea cifrelor mari (Total Alocat / Cheltuieli Totale / Buget Rămas / Achiziții %) trece de la `text-[32px]` fix la `clamp(18px, 2.2vw, 32px)` (inline style) — se micșorează fluid odată cu ecranul în loc să sară brusc între breakpoints sau să deborde.
+- Adăugat `min-w-0` pe fiecare coloană + `truncate`/`shrink-0` pe elementele care puteau împinge conținutul peste lățimea coloanei (border-uri divizoare mutate la `lg:border-r`, ca să nu rămână vizual „rupte" pe layout-ul de 2 coloane).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 768px, 900px, 1440px și 1600px — text lizibil, fără suprapuneri la nicio lățime; sub `md` (mobil) cardul light-gradient separat rămâne neatins.
+
+**Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
