@@ -315,3 +315,13 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/elemente/page.tsx`, `src/components/ConfirmDialog.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/elemente`: FAB „Adaugă Cameră" doar pe mobil
+**De ce:** userul a cerut butonul flotant din colțul jos-dreapta al design-ului Stitch (vizibil doar pe telefon), care deschide același formular ca butonul „+ Adaugă Cameră" de pe desktop.
+
+- Buton rotund `fixed bottom-6 right-6`, `md:hidden`, deschide `RoomFormDrawer` existent (`setRoomDrawerOpen(true)`) — zero logică nouă, doar un trigger vizual suplimentar pt. mobil.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px — FAB vizibil jos-dreapta, deschide corect drawer-ul „Adaugă Cameră Nouă"; la 1440px FAB-ul nu apare (desktop neschimbat).
+
+**Fișiere atinse:** `src/app/elemente/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.

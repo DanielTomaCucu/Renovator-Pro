@@ -586,6 +586,18 @@ export default function ElementePage() {
         </div>
       </div>
 
+      {/* FAB „Adaugă Cameră" — doar pe mobil, vezi design Stitch (buton flotant jos-dreapta) */}
+      <button
+        type="button"
+        onClick={() => setRoomDrawerOpen(true)}
+        aria-label="Adaugă Cameră"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-2xl transition-transform active:scale-95 hover:scale-105 md:hidden"
+      >
+        <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>
+          {ACTION_ICONS.addRoom}
+        </span>
+      </button>
+
       <ItemFormDrawer
         open={itemDrawer.open}
         onClose={() => setItemDrawer({ open: false })}
