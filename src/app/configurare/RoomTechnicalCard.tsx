@@ -98,7 +98,7 @@ function TechnicalSection({
           </span>
         </div>
       </summary>
-      <div className="space-y-6 bg-surface p-6">{children}</div>
+      <div className="space-y-6 bg-background p-3 sm:p-6">{children}</div>
     </details>
   );
 }
@@ -259,10 +259,10 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
       )}
 
       {open && (
-        <div className="flex flex-col gap-8 p-6">
+        <div className="flex flex-col gap-6 p-3 sm:gap-8 sm:p-6">
           <div className="space-y-4">
             <TechnicalSection number={1} icon={TECHNICAL_ICONS.floorAndWalls} title="Pardoseală & Pereți">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
                 <SelectField
                   label="Tip Material"
                   value={room.floorMaterial ?? ""}
@@ -343,7 +343,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 }
               >
                 <>
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
                     <SelectField
                       label="Număr pereți placați"
                       value={room.wallTiling!.tiledWallsCount}
@@ -430,7 +430,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               icon={TECHNICAL_ICONS.doorConfig}
               title="Configurare Ușă"
             >
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-3">
                 <label className="space-y-1">
                   <span className={labelCls}>Lățime (m)</span>
                   <input
