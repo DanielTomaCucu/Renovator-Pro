@@ -3,6 +3,10 @@
 import { useState } from "react";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import PageHeader from "@/components/PageHeader";
+import DashboardSummaryCard, {
+  SummaryAccentFooter,
+  SummaryProgressFooter,
+} from "@/components/DashboardSummaryCard";
 import { useStore } from "@/shared/store";
 import { formatMoney } from "@/shared/functions";
 import { TECHNICAL_ICONS } from "@/shared/icons";
@@ -22,57 +26,30 @@ export default function ConfigurarePage() {
       <PageHeader title="Configurare Apartament" searchPlaceholder="Caută cameră..." />
 
       <main className="mx-auto max-w-6xl space-y-6 px-6 py-6 lg:px-10">
-        {/* Sumar tehnic global */}
-        <section className="rounded-xl border border-line bg-surface p-6 shadow-sm">
-          <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted">
-                Proiect Curent
-              </p>
-              <h2 className="font-heading text-xl font-bold">{project.title}</h2>
-            </div>
-            <div className="flex gap-8">
-              <div className="text-right">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted">
-                  Suprafață Utilă
-                </p>
-                <p className="font-mono font-bold text-primary">
-                  {summary.totalFloorArea.toFixed(1)} mp
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted">
-                  Status
-                </p>
-                <div className="flex items-center justify-end gap-2">
-                  <div className="h-2 w-2 rounded-full bg-secondary" />
-                  <p className="font-mono font-bold text-primary">{status}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted">
-                  Buget Total
-                </p>
-                <p className="font-mono font-bold text-primary">
-                  {formatMoney(project.totalBudget)}
-                </p>
-              </div>
-            </div>
+        {/* Sumar tehnic global — card unic cu gradient închis, identic pe mobil și desktop. */}
+        <section className="space-y-3">
+          <div>
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted">
+              Proiect Curent
+            </p>
+            <h2 className="font-heading text-xl font-bold">{project.title}</h2>
           </div>
-          <div className="mt-4">
-            <div className="mb-1 flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
-                Progres Calcul
-              </p>
-              <p className="font-mono text-[10px] font-bold text-primary">{progressPct}%</p>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-line">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-          </div>
+          <DashboardSummaryCard
+            metrics={[
+              { label: "Suprafață Utilă", value: `${summary.totalFloorArea.toFixed(1)} mp` },
+              {
+                label: "Status",
+                value: status,
+                footer: <SummaryAccentFooter>Stadiu curent</SummaryAccentFooter>,
+              },
+              { label: "Buget Total", value: formatMoney(project.totalBudget) },
+              {
+                label: "Progres Calcul",
+                value: `${progressPct}%`,
+                footer: <SummaryProgressFooter percent={progressPct} color="secondary" />,
+              },
+            ]}
+          />
         </section>
 
         {/* Listă camere cu configurare tehnică */}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import StatCard from "@/components/StatCard";
 import StatusChip from "@/components/StatusChip";
+import DashboardSummaryCard, { SummaryProgressFooter } from "@/components/DashboardSummaryCard";
 import ItemFormDrawer from "@/components/ItemFormDrawer";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -72,6 +72,30 @@ export default function ElementePage() {
     <div>
       <PageHeader title="Elemente de Cumpărat" searchPlaceholder="Caută elemente..." />
 
+      {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop. */}
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
+        <DashboardSummaryCard
+          metrics={[
+            { label: "Buget total estimat", value: formatMoney(project.totalBudget) },
+            {
+              label: "Total cheltuit",
+              value: formatMoney(spent),
+              footer: (
+                <SummaryProgressFooter
+                  percent={project.totalBudget ? (spent / project.totalBudget) * 100 : 0}
+                />
+              ),
+            },
+            { label: "Elemente achiziționate", value: `${bought} din ${items.length}` },
+            {
+              label: "Progres achiziții",
+              value: `${progress}%`,
+              footer: <SummaryProgressFooter percent={progress} color="secondary" />,
+            },
+          ]}
+        />
+      </div>
+
       {/* Desktop — vezi „Elemente de Cumpărat - Meniu Restrâns" */}
       <div className="mx-auto hidden max-w-7xl space-y-6 px-4 py-6 sm:px-6 md:block lg:px-10">
         <div className="flex justify-end">
@@ -81,17 +105,6 @@ export default function ElementePage() {
           >
             + Adaugă Cameră
           </button>
-        </div>
-
-        {/* Sumar */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Buget total estimat" value={formatMoney(project.totalBudget)} />
-          <StatCard label="Total cheltuit" value={formatMoney(spent)} accent="secondary" />
-          <StatCard
-            label="Elemente achiziționate"
-            value={`${bought} din ${items.length}`}
-          />
-          <StatCard label="Progres achiziții" value={`${progress}%`} />
         </div>
 
         {/* Adăugare rapidă */}
@@ -316,39 +329,6 @@ export default function ElementePage() {
 
       {/* Mobil — vezi „Confirmare Ștergere - Bottom Sheet Mobile" (dialogul e ConfirmDialog, deja bottom-sheet pe mobil) */}
       <div className="space-y-6 px-4 py-4 md:hidden">
-        {/* Sumar */}
-        <section className="rounded-xl border border-line bg-gradient-to-br from-surface to-surface-low p-6 shadow-sm">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted">
-                Buget Total Estimat
-              </p>
-              <p className="font-mono text-[15px] font-bold text-foreground">
-                {formatMoney(project.totalBudget)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted">
-                Total Cheltuit
-              </p>
-              <p className="font-mono text-[15px] font-bold text-primary">
-                {formatMoney(spent)}
-              </p>
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="mb-1 flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
-                Progres Achiziții
-              </p>
-              <p className="font-mono text-[10px] font-bold text-primary">{progress}%</p>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/20">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-        </section>
-
         {/* Filtre cameră */}
         <section className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           <button

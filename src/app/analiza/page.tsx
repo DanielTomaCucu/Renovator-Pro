@@ -16,6 +16,10 @@ import {
 } from "@/shared/functions";
 import { ItemStatus } from "@/shared/types";
 import { ACTION_ICONS, ANALYTICS_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
+import DashboardSummaryCard, {
+  SummaryAccentFooter,
+  SummaryProgressFooter,
+} from "@/components/DashboardSummaryCard";
 
 /** Paletă pastel pt. segmentele donut-ului „Cost per Cameră" (desktop) — vezi design Stitch. */
 const PIE_COLORS = ["#a7f3d0", "#ddd6fe", "#fecaca", "#bae6fd", "#fde68a"];
@@ -91,102 +95,40 @@ export default function AnalizaPage() {
         }
       />
 
+      {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop (design „Dashboard Premium Consolidat"). */}
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
+        <DashboardSummaryCard
+          metrics={[
+            {
+              label: "Total Alocat",
+              value: formatMoney(project.totalBudget),
+              footer: (
+                <SummaryAccentFooter dotClassName="bg-emerald-400" textClassName="text-emerald-400">
+                  Buget de referință
+                </SummaryAccentFooter>
+              ),
+            },
+            {
+              label: "Cheltuieli Totale",
+              value: formatMoney(spent),
+              footer: <SummaryProgressFooter percent={spentPct} color="white" />,
+            },
+            {
+              label: "Buget Rămas",
+              value: formatMoney(remaining),
+              footer: <SummaryAccentFooter>{remainingPct}% disponibil</SummaryAccentFooter>,
+            },
+            {
+              label: `Achiziții Finalizate (${bought} / ${items.length})`,
+              value: `${progress}%`,
+              footer: <SummaryProgressFooter percent={progress} color="secondary" />,
+            },
+          ]}
+        />
+      </div>
+
       {/* Desktop — bento grid, vezi „Analiză Bugetară - Meniu Restrâns Premium v2" */}
       <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
-        {/* Sumar — card unic cu gradient închis, vezi „Analiză Bugetară - Dashboard Premium Consolidat Desktop" */}
-        <div
-          className="w-full overflow-hidden rounded-xl p-8 text-white shadow-md"
-          style={{ background: "linear-gradient(135deg, #1e293b 0%, #000000 100%)" }}
-        >
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4">
-            <div className="min-w-0 space-y-2 border-white/10 pr-4 lg:border-r">
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
-                Total Alocat
-              </p>
-              <div className="flex items-baseline gap-1">
-                <span
-                  className="block truncate font-mono font-bold tracking-tight"
-                  style={{ fontSize: "clamp(18px, 2.2vw, 32px)" }}
-                >
-                  {formatMoney(project.totalBudget)}
-                </span>
-              </div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-emerald-400">
-                Buget de referință
-              </p>
-            </div>
-
-            <div className="min-w-0 space-y-2 border-white/10 pr-4 lg:border-r">
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
-                Cheltuieli Totale
-              </p>
-              <div className="flex items-baseline gap-1">
-                <span
-                  className="block truncate font-mono font-bold tracking-tight"
-                  style={{ fontSize: "clamp(18px, 2.2vw, 32px)" }}
-                >
-                  {formatMoney(spent)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-white"
-                    style={{ width: `${Math.min(100, spentPct)}%` }}
-                  />
-                </div>
-                <span className="shrink-0 font-mono text-[10px] opacity-60">{spentPct}%</span>
-              </div>
-            </div>
-
-            <div className="min-w-0 space-y-2 border-white/10 pr-4 lg:border-r">
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
-                Buget Rămas
-              </p>
-              <div className="flex items-baseline gap-1">
-                <span
-                  className={`block truncate font-mono font-bold tracking-tight ${remaining < 0 ? "text-tertiary" : ""}`}
-                  style={{ fontSize: "clamp(18px, 2.2vw, 32px)" }}
-                >
-                  {formatMoney(remaining)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-secondary" />
-                <span className="truncate text-[11px] font-medium uppercase tracking-wider opacity-60">
-                  {remainingPct}% disponibil
-                </span>
-              </div>
-            </div>
-
-            <div className="min-w-0 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-[10px] font-bold uppercase tracking-widest opacity-70">
-                  Achiziții Finalizate
-                </p>
-                <p className="shrink-0 font-mono text-[10px] opacity-80">
-                  {bought} / {items.length}
-                </p>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span
-                  className="font-mono font-bold tracking-tight"
-                  style={{ fontSize: "clamp(18px, 2.2vw, 32px)" }}
-                >
-                  {progress}
-                </span>
-                <span className="text-[18px] font-medium opacity-60">%</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-secondary"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Grafice */}
         <div className="grid grid-cols-12 gap-6">
           {/* Evoluția Cheltuielilor — placeholder vizual, fără date reale (vezi backlog #4) */}
@@ -428,57 +370,6 @@ export default function AnalizaPage() {
 
       {/* Mobil — vezi „Analiză Bugetară - Mobile Premium Black Theme" (fără bottom nav, se face în Flutter) */}
       <div className="mx-auto max-w-md space-y-6 px-4 py-6 md:hidden">
-        {/* KPI — card unic cu gradient, vezi „Analiză Bugetară - Mobile Premium Light Gradient Layout" */}
-        <section
-          className="rounded-xl border border-line p-4 shadow-sm"
-          style={{ background: "linear-gradient(135deg, #ffffff 0%, var(--surface-low) 100%)" }}
-        >
-          <div className="grid grid-cols-2 gap-6 border-b border-line/60 pb-3">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
-                Total Alocat
-              </p>
-              <p className="font-mono text-[15px] text-foreground">
-                {formatMoney(project.totalBudget)}
-              </p>
-            </div>
-            <div className="space-y-1 text-right">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
-                Cheltuieli Totale
-              </p>
-              <p className="font-mono text-[15px] text-foreground">{formatMoney(spent)}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 items-end gap-6 pt-3">
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
-                Buget Rămas
-              </p>
-              <p
-                className={`font-mono text-[20px] font-semibold ${remaining < 0 ? "text-tertiary" : "text-foreground"}`}
-              >
-                {formatMoney(remaining)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
-                  Achiziții Finalizate
-                </p>
-                <p className="font-mono text-[10px] text-foreground">
-                  {bought} / {items.length}
-                </p>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-low">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Grafice */}
         <section className="space-y-3">
           <div className="rounded-xl border border-line bg-surface p-5">

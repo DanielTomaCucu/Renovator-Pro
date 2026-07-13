@@ -374,3 +374,19 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — Header de statistici unificat pe toate paginile: `DashboardSummaryCard`
+**De ce:** userul a confirmat că îi place cardul cu gradient închis introdus pe `/analiza` desktop și a cerut explicit ca ACELAȘI design (culori, font, poziționare) să fie folosit pe toate paginile, indiferent de mobil/desktop — dar cu datele reale ale fiecărei pagini, nu date copiate.
+
+- **Component nou** `src/components/DashboardSummaryCard.tsx` — extras din implementarea de pe `/analiza`, generic: primește `metrics: SummaryMetric[]` (2–4 elemente, `{label, value, footer?}`), randează gradientul, grid-ul responsive (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-{n}`, `border-r` doar la `lg`) și tipografia. Exportă și `SummaryProgressFooter` (bară + %) și `SummaryAccentFooter` (punct colorat + text) pt. footer-ul fiecărui metric — evită duplicarea celor două „stiluri" de footer văzute în design.
+- **Aplicat pe toate paginile**, înlocuind headerele de statistici anterioare (fiecare avea propriul stil, uneori diferit pe mobil vs. desktop):
+  - `/analiza` — unificat cele două variante (light-gradient mobil + dark-gradient desktop) într-una singură, afișată necondiționat (nu mai există split `md:hidden`/`hidden md:block` pt. acest bloc).
+  - `/elemente` — înlocuit grid-ul de `StatCard` (desktop) + cardul light propriu (mobil) cu `DashboardSummaryCard` (4 metrici: Buget total estimat, Total cheltuit, Elemente achiziționate, Progres achiziții).
+  - `/centralizator` — înlocuit cele 3 carduri cu bară colorată + donut de eficiență (desktop) și cardurile cu scroll orizontal (mobil) cu `DashboardSummaryCard` (3 metrici: Total Estimat Proiect, Total Cheltuit la Zi, Eficiență Bugetară — donut-ul de eficiență a fost eliminat, înlocuit cu bară de progres în footer).
+  - `/configurare` — înlocuit „Sumar Tehnic Global" (card alb) cu `DashboardSummaryCard` (4 metrici: Suprafață Utilă, Status, Buget Total, Progres Calcul); titlul „Proiect Curent" + numele proiectului rămân deasupra cardului (conținut real, nu un metric generic).
+- **Fix responsive găsit în timpul verificării:** la 1440px, pe `/configurare` (container `max-w-6xl`, mai îngust decât `max-w-7xl` de pe celelalte pagini), valoarea „12.500,00 EUR" se trunchia (`clamp(18px, 2.2vw, 32px)` prea mare pt. coloana disponibilă). Redus la `clamp(16px, 1.6vw, 26px)` — încape pe toate paginile la toate lățimile testate.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual pe toate cele 4 pagini, la 375px și 1440px — design identic (gradient, font, poziționare), doar datele diferă per pagină.
+
+**Fișiere atinse:** `src/components/DashboardSummaryCard.tsx` (nou), `src/app/analiza/page.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/configurare/page.tsx`, `CLAUDE.md`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.

@@ -145,6 +145,19 @@ Regulă: **toate sumele de bani și cantitățile se afișează cu `font-mono`**
 
 Status chips: Cumpărat = emerald, În așteptare = amber, Planificat = sky — capsule `rounded-full`, text uppercase 11px bold (vezi `StatusChip.tsx`).
 
+### Card de sumar / header de statistici — `DashboardSummaryCard`
+
+**Toate paginile principale** (`/elemente`, `/centralizator`, `/analiza`, `/configurare`) folosesc **același** component
+`src/components/DashboardSummaryCard.tsx` pt. blocul de statistici din capul paginii — identic pe mobil ȘI desktop
+(nu mai există variante separate „mobil light" / „desktop dark"). Gradient închis `linear-gradient(135deg, #1e293b 0%, #000000 100%)`,
+text alb, grid responsive (`grid-cols-1` → `sm:grid-cols-2` → `lg:grid-cols-{n}`, cu `border-r` doar la `lg`), valoare mare
+`font-mono font-bold` la `clamp(16px, 1.6vw, 26px)` (fluid, nu sare între breakpoints — testează mereu la 768/900/1440px
+dacă adaugi un metric nou, ca să nu se trunchieze).
+
+**Dacă o pagină nouă are nevoie de un header de statistici, folosește `DashboardSummaryCard` cu 2–4 metrici** (`SummaryMetric[]`),
+opțional cu footer `<SummaryProgressFooter percent={...} />` (bară + %) sau `<SummaryAccentFooter>` (punct colorat + text) —
+NU crea un card nou de la zero. Datele afișate rămân mereu specifice paginii (nu se copiază datele altei pagini).
+
 ### Elevation & forme
 - **Fără umbre grele.** Carduri = alb + border 1px `border-line`. Doar dropdown/modal primesc umbră discretă (`shadow-xl` pe Drawer e OK).
 - Colțuri strânse: elemente mici 4px (`rounded`), carduri/inputs 8px (`rounded-lg` max). **Fără forme „bubble"** — excepție doar status pills (capsule).

@@ -20,6 +20,10 @@ import {
   ROOM_TYPE_ICONS,
   STATUS_ICONS,
 } from "@/shared/icons";
+import DashboardSummaryCard, {
+  SummaryAccentFooter,
+  SummaryProgressFooter,
+} from "@/components/DashboardSummaryCard";
 
 /** Culoare de fundal/text a badge-ului „Tip” per categorie de material — vezi design Stitch. */
 const MATERIAL_BADGE_STYLES: Record<MaterialType, string> = {
@@ -64,112 +68,39 @@ export default function CentralizatorPage() {
     });
   }
 
-  const donutOffset = 100 - efficiency;
-
   return (
     <div>
       <PageHeader title="Centralizator Costuri" searchPlaceholder="Caută element sau lucrare..." />
 
+      {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop. */}
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
+        <DashboardSummaryCard
+          metrics={[
+            {
+              label: "Total Estimat Proiect",
+              value: formatMoney(estimated),
+              footer: (
+                <SummaryAccentFooter dotClassName="bg-emerald-400" textClassName="text-emerald-400">
+                  Buget de referință
+                </SummaryAccentFooter>
+              ),
+            },
+            {
+              label: "Total Cheltuit la Zi",
+              value: formatMoney(spent),
+              footer: <SummaryAccentFooter>{efficiency}% din total estimat</SummaryAccentFooter>,
+            },
+            {
+              label: "Eficiență Bugetară",
+              value: `${efficiency}%`,
+              footer: <SummaryProgressFooter percent={efficiency} color="secondary" />,
+            },
+          ]}
+        />
+      </div>
+
       {/* Desktop — vezi „Tabel Centralizator - Meniu Restrâns Premium" */}
       <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
-        {/* Sumar */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="relative overflow-hidden rounded-xl border border-line bg-surface p-6 shadow-sm sm:p-8">
-            <div className="absolute left-0 top-0 h-full w-1.5 bg-primary" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px] text-primary">
-                  {CENTRALIZATOR_ICONS.totalEstimat}
-                </span>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-muted">
-                  Total Estimat Proiect
-                </p>
-              </div>
-              <span className="font-mono text-[32px] font-extrabold leading-none tracking-tight text-primary">
-                {formatMoney(estimated)}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-primary/20" />
-                <span className="text-[10px] uppercase tracking-wider text-muted">
-                  Buget de Referință
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden rounded-xl border border-line bg-surface p-6 shadow-sm sm:p-8">
-            <div className="absolute left-0 top-0 h-full w-1.5 bg-secondary" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px] text-secondary">
-                  {CENTRALIZATOR_ICONS.totalCheltuit}
-                </span>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-muted">
-                  Total Cheltuit la Zi
-                </p>
-              </div>
-              <span className="font-mono text-[32px] font-extrabold leading-none tracking-tight text-secondary">
-                {formatMoney(spent)}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-secondary/20" />
-                <span className="text-[10px] uppercase tracking-wider text-muted">
-                  {efficiency}% din total estimat
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden rounded-xl border border-primary/10 bg-surface-low p-6 shadow-sm sm:p-8">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-            <div className="relative z-10 flex items-start justify-between">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-primary">
-                    {CENTRALIZATOR_ICONS.eficientaBugetara}
-                  </span>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-primary/60">
-                    Eficiență Bugetară
-                  </p>
-                </div>
-                <span className="font-mono text-[32px] font-extrabold leading-none tracking-tight text-primary">
-                  {efficiency}%
-                </span>
-                <p className="text-[10px] uppercase tracking-wider text-muted">
-                  Calculat în timp real
-                </p>
-              </div>
-              <div className="relative flex h-20 w-20 shrink-0 items-center justify-center">
-                <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
-                  <circle
-                    className="stroke-primary/10"
-                    cx="18"
-                    cy="18"
-                    fill="none"
-                    r="16"
-                    strokeWidth="3"
-                  />
-                  <circle
-                    className="stroke-primary"
-                    cx="18"
-                    cy="18"
-                    fill="none"
-                    r="16"
-                    strokeDasharray="100"
-                    strokeDashoffset={donutOffset}
-                    strokeLinecap="round"
-                    strokeWidth="3"
-                    pathLength={100}
-                  />
-                </svg>
-                <span className="material-symbols-outlined absolute text-[24px] text-primary/40">
-                  {CENTRALIZATOR_ICONS.eficientaBugetaraBadge}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Tabel */}
         <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
           <div className="flex items-center justify-between border-b border-line bg-surface-low px-6 py-4 sm:px-8">
@@ -391,43 +322,6 @@ export default function CentralizatorPage() {
       {/* Mobil — vezi „Centralizator Costuri - Mobile Table View" (fără bottom nav, se face în Flutter) */}
       <div className="pb-24 md:hidden">
         <div className="px-4 py-4">
-          {/* Sumar — carduri cu scroll orizontal */}
-          <section className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2">
-            <div className="flex min-w-[200px] flex-col gap-1 rounded-lg border border-line bg-surface p-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
-                Total Estimat
-              </span>
-              <span className="font-mono text-[20px] text-primary">{formatMoney(estimated)}</span>
-              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface-low">
-                <div className="h-full w-full bg-secondary" />
-              </div>
-            </div>
-            <div className="flex min-w-[200px] flex-col gap-1 rounded-lg border border-line bg-surface p-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
-                Total Cheltuit
-              </span>
-              <span className="font-mono text-[20px] text-secondary">{formatMoney(spent)}</span>
-              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface-low">
-                <div
-                  className="h-full bg-secondary/40"
-                  style={{ width: `${Math.min(100, efficiency)}%` }}
-                />
-              </div>
-            </div>
-            <div className="flex min-w-[200px] flex-col gap-1 rounded-lg border border-line bg-surface p-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
-                Eficiență
-              </span>
-              <span className="font-mono text-[20px] text-primary">{efficiency}%</span>
-              <div className="flex items-center gap-1 text-[10px] font-bold text-secondary">
-                <span className="material-symbols-outlined text-[14px]">
-                  {CENTRALIZATOR_ICONS.trendUp}
-                </span>
-                <span>din total estimat</span>
-              </div>
-            </div>
-          </section>
-
           {/* Secțiuni per cameră — acordeon cu tabel scrollabil orizontal */}
           <div className="mt-4 flex flex-col gap-6">
             {rooms.map((room) => {
