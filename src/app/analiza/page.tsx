@@ -15,10 +15,13 @@ import {
   totalSpent,
 } from "@/shared/functions";
 import { ItemStatus } from "@/shared/types";
-import { ANALYTICS_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
+import { ACTION_ICONS, ANALYTICS_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
 
-/** Paletă pastel pt. segmentele donut-ului „Cost per Cameră" — vezi design Stitch. */
+/** Paletă pastel pt. segmentele donut-ului „Cost per Cameră" (desktop) — vezi design Stitch. */
 const PIE_COLORS = ["#a7f3d0", "#ddd6fe", "#fecaca", "#bae6fd", "#fde68a"];
+
+/** Paletă monocromă pt. donut-ul mobil „Premium Black Theme" — vezi design Stitch. */
+const MOBILE_PIE_COLORS = ["#000000", "#45464d", "#76777d", "#c6c6cd", "#e2e8f0"];
 
 export default function AnalizaPage() {
   const { project, rooms, items } = useStore();
@@ -50,6 +53,21 @@ export default function AnalizaPage() {
   );
   const topRoom = segments[0];
 
+  const mobileSegments = useMemo(
+    () =>
+      donutSegments(perRoom).map((s, idx) => ({
+        ...s,
+        pct: Math.round((s.end - s.start) * 100),
+        color: MOBILE_PIE_COLORS[idx % MOBILE_PIE_COLORS.length],
+      })),
+    [perRoom]
+  );
+  const mobileConicGradient = mobileSegments.length
+    ? `conic-gradient(${mobileSegments
+        .map((s) => `${s.color} ${s.start * 100}% ${s.end * 100}%`)
+        .join(", ")})`
+    : "conic-gradient(var(--color-surface-low, #eff4ff) 0% 100%)";
+
   const overBudget = spent > project.totalBudget;
   const pendingTotal = totalEstimated(
     items.filter((i) => i.status === ItemStatus.InAsteptare)
@@ -73,7 +91,8 @@ export default function AnalizaPage() {
         }
       />
 
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-10">
+      {/* Desktop — bento grid, vezi „Analiză Bugetară - Meniu Restrâns Premium v2" */}
+      <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:block lg:px-10">
         {/* Sumar */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-line bg-surface p-6 shadow-sm transition-all hover:shadow-md">
@@ -399,6 +418,226 @@ export default function AnalizaPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobil — vezi „Analiză Bugetară - Mobile Premium Black Theme" (fără bottom nav, se face în Flutter) */}
+      <div className="mx-auto max-w-md space-y-6 px-4 py-6 lg:hidden">
+        {/* KPI */}
+        <section className="space-y-3">
+          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+            <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
+              Total Alocat
+            </span>
+            <div className="font-mono text-[24px] font-semibold text-primary">
+              {formatMoney(project.totalBudget)}
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-low">
+              <div className="h-full w-full rounded-full bg-primary" />
+            </div>
+            <p className="text-[14px] text-muted">Buget estimat conform proiectului tehnic.</p>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+            <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
+              Cheltuieli Totale
+            </span>
+            <div className="font-mono text-[24px] font-semibold text-primary">
+              {formatMoney(spent)}
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-low">
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${Math.min(100, spentPct)}%` }}
+              />
+            </div>
+            <p className="text-[14px] text-muted">
+              Reprezintă {spentPct}% din bugetul total alocat.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+            <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
+              Buget Rămas
+            </span>
+            <div
+              className={`font-mono text-[24px] font-semibold ${remaining < 0 ? "text-tertiary" : "text-primary"}`}
+            >
+              {formatMoney(remaining)}
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-low">
+              <div
+                className="h-full rounded-full bg-primary opacity-30"
+                style={{ width: `${Math.max(0, Math.min(100, remainingPct))}%` }}
+              />
+            </div>
+            <p className="text-[14px] text-muted">Fonduri disponibile pentru restul etapelor.</p>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
+            <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
+              Achiziții Finalizate
+            </span>
+            <div className="font-mono text-[24px] font-semibold text-primary">
+              {bought} / {items.length}
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-low">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="text-[14px] text-muted">{progress}% din elemente achiziționate.</p>
+          </div>
+        </section>
+
+        {/* Grafice */}
+        <section className="space-y-3">
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <h3 className="mb-4 text-[12px] font-bold uppercase tracking-wider text-muted">
+              Evoluția Cheltuielilor
+            </h3>
+            <div className="relative flex h-48 w-full items-end justify-between px-2">
+              <div className="h-[20%] w-8 rounded-t bg-surface-low" />
+              <div className="h-[45%] w-8 rounded-t bg-surface-low" />
+              <div className="h-[75%] w-8 rounded-t border-x border-t border-primary bg-line" />
+              <div className="h-[90%] w-8 rounded-t bg-primary" />
+              <div className="h-[55%] w-8 rounded-t bg-surface-low" />
+              <div className="absolute -bottom-6 left-0 flex w-full justify-between text-[10px] font-bold uppercase text-muted">
+                <span>Ian</span>
+                <span>Feb</span>
+                <span>Mar</span>
+                <span>Apr</span>
+                <span>Mai</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <h3 className="mb-4 text-[12px] font-bold uppercase tracking-wider text-muted">
+              Cost per Cameră
+            </h3>
+            <div className="flex items-center gap-6">
+              <div className="relative h-32 w-32 shrink-0">
+                <div
+                  className="h-full w-full rounded-full"
+                  style={{ background: mobileConicGradient }}
+                />
+                <div className="absolute inset-4 flex items-center justify-center rounded-full bg-surface p-1 text-center">
+                  <span className="font-mono text-[10px] leading-tight text-primary">
+                    {formatMoney(estimated)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex-grow space-y-2">
+                {mobileSegments.map((s) => (
+                  <div key={s.name} className="flex items-center gap-2">
+                    <span
+                      className="h-3 w-3 shrink-0 rounded-full"
+                      style={{ backgroundColor: s.color }}
+                    />
+                    <span className="text-[14px] text-foreground">{s.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Categorii */}
+        <section className="space-y-3">
+          <h2 className="font-heading text-[20px] font-semibold text-foreground">
+            Stadiul pe Categorii
+          </h2>
+          <div className="flex flex-col gap-3">
+            {perCategory.map(([cat, v]) => {
+              const pct = v.total ? Math.round((v.spent / v.total) * 100) : 0;
+              return (
+                <div
+                  key={cat}
+                  className="space-y-3 rounded-xl border border-line bg-surface p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-foreground">{cat}</span>
+                    <span className="font-mono font-bold text-primary">
+                      {formatMoney(v.total)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="h-2 flex-grow overflow-hidden rounded-full bg-surface-low">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="min-w-[32px] text-[12px] font-bold text-foreground">
+                      {pct}%
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Sugestii */}
+        <section className="space-y-3">
+          <h2 className="font-heading text-[20px] font-semibold text-foreground">
+            Sugestii &amp; Analiză
+          </h2>
+
+          <div className="flex gap-4 rounded-xl border border-line bg-surface p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+              <span className="material-symbols-outlined">{ANALYTICS_ICONS.economii}</span>
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-[12px] font-bold uppercase text-primary">
+                Optimizare Costuri
+              </h4>
+              <p className="text-[14px] text-muted">
+                Elementele „În așteptare” însumează {formatMoney(pendingTotal)}. Compară
+                prețurile între surse înainte de achiziție.
+              </p>
+            </div>
+          </div>
+
+          <div
+            className={`flex gap-4 rounded-xl border p-5 ${overBudget ? "border-tertiary/20 bg-tertiary/10" : "border-line bg-surface"}`}
+          >
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${overBudget ? "bg-tertiary/20" : "bg-surface-low"}`}
+            >
+              <span
+                className={`material-symbols-outlined ${overBudget ? "text-tertiary" : "text-primary"}`}
+              >
+                {overBudget ? ACTION_ICONS.confirmDelete : ANALYTICS_ICONS.statusProiect}
+              </span>
+            </div>
+            <div className="space-y-1">
+              <h4
+                className={`text-[12px] font-bold uppercase ${overBudget ? "text-tertiary" : "text-primary"}`}
+              >
+                {overBudget ? "Atenție Depășire" : "Buget Sub Control"}
+              </h4>
+              <p className="text-[14px] text-muted">
+                {overBudget
+                  ? `Cheltuielile depășesc bugetul alocat cu ${formatMoney(spent - project.totalBudget)}.`
+                  : `Mai ai ${formatMoney(remaining)} disponibili din bugetul total.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-4 rounded-xl border border-line bg-surface p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-low">
+              <span className="material-symbols-outlined text-primary">
+                {ANALYTICS_ICONS.actualizare}
+              </span>
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-[12px] font-bold uppercase text-primary">Status Proiect</h4>
+              <p className="text-[14px] text-muted">
+                Total estimat al proiectului: {formatMoney(estimated)} — {items.length} elemente
+                în {rooms.length} camere.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

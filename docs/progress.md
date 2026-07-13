@@ -264,3 +264,16 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/analiza/page.tsx` (rescris), `src/components/PageHeader.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza`: variantă mobilă 1:1 cu Stitch („Analiză Bugetară - Mobile Premium Black Theme")
+**De ce:** userul a cerut varianta de telefon a paginii Analiză Bugetară, identică cu mockup-ul mobil dedicat — explicit FĂRĂ bottom nav (acela se implementează în aplicația Flutter, nu în web).
+
+- Layout-ul desktop existent (bento grid) e acum înfășurat în `hidden lg:block`; sub breakpoint-ul `lg` (1024px) se randează un bloc nou `lg:hidden` cu structura mockup-ului mobil: 4 KPI cards verticale cu progress bar full-width, grafic bare static „Evoluția Cheltuielilor" (decorativ, aceeași lipsă de date lunare reale ca la varianta desktop), donut „Cost per Cameră" cu paletă **monocromă** (`MOBILE_PIE_COLORS`, negru→gri deschis — temă distinctă de paleta pastel de pe desktop, conform design-ului „Premium Black Theme"), listă „Stadiul pe Categorii", 3 carduri „Sugestii & Analiză" cu iconițe în cerc (`trending_down`/`warning`/`update`).
+- Date reale peste tot (nu s-a fabricat nimic): aceleași calcule ca varianta desktop (`spentPct`, `remainingPct`, `progress`, `perCategory`, `costPerRoom`/`donutSegments`, `pendingTotal`, `overBudget`).
+- Fix aplicat în timpul verificării vizuale: eticheta din centrul donut-ului mobil ieșea din cerc la `text-[14px]` — redusă la `text-[10px]` + `leading-tight` + padding, acum încape complet.
+- **Intenționat omis, la cererea userului:** bottom navigation bar din mockup (Overview/Rooms/Analiză/Settings) — rămâne să fie construit în aplicația Flutter, nu în web.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px (mobil, sub breakpoint `lg`) și 1440px (desktop neschimbat, confirmă breakpoint-ul corect).
+
+**Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
