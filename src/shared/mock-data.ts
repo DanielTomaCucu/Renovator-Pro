@@ -17,6 +17,7 @@ export const mockProject: Project = {
   title: "Apartament 3 Camere - Pipera",
   totalBudget: 12500,
   currency: Currency.EUR,
+  totalArea: 85,
 };
 
 export const mockRooms: Room[] = [

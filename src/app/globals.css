@@ -6,6 +6,7 @@
   --surface: #ffffff;
   --surface-low: #eff4ff;
   --border: #e2e8f0;
+  --border-strong: #cbd5e1;
   --primary: #000000;
   --secondary: #0ea5e9;
   --tertiary: #f97316;
@@ -18,6 +19,7 @@
   --color-surface: var(--surface);
   --color-surface-low: var(--surface-low);
   --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
   --color-tertiary: var(--tertiary);

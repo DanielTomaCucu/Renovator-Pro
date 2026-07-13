@@ -7,6 +7,7 @@ export interface RenovationStore {
   project: Project;
   rooms: Room[];
   items: Item[];
+  updateProject: (patch: Partial<Project>) => void;
   addRoom: (room: Omit<Room, "id">) => void;
   updateRoom: (id: string, patch: Partial<Room>) => void;
   deleteRoom: (id: string) => void;

@@ -33,6 +33,17 @@ export default function ElementePage() {
   const [qaName, setQaName] = useState("");
   const [qaRoom, setQaRoom] = useState(rooms[0]?.id ?? "");
   const [qaPrice, setQaPrice] = useState("");
+  // Poză făcută cu camera telefonului — stocată ca data URL (base64), nu există upload/backend real încă.
+  const [qaImage, setQaImage] = useState<string | undefined>(undefined);
+
+  function handleQaPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setQaImage(reader.result as string);
+    reader.readAsDataURL(file);
+  }
 
   // Mobil — vezi „Confirmare Ștergere - Bottom Sheet Mobile" (acoperă întreg ecranul „Elemente de Cumpărat" mobil)
   const [mobileQuickAddOpen, setMobileQuickAddOpen] = useState(false);
@@ -63,9 +74,11 @@ export default function ElementePage() {
       status: ItemStatus.InAsteptare,
       quantity: 1,
       unitPrice: Number(qaPrice) || 0,
+      imageUrl: qaImage,
     });
     setQaName("");
     setQaPrice("");
+    setQaImage(undefined);
   }
 
   return (
@@ -427,6 +440,42 @@ export default function ElementePage() {
                     className="w-full rounded border border-line bg-surface-low p-3 font-mono text-sm outline-none focus:border-secondary"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase text-muted">
+                  Poză element
+                </label>
+                {qaImage ? (
+                  <div className="flex items-center gap-3 rounded border border-line bg-surface-low p-2">
+                    <img
+                      src={qaImage}
+                      alt="Poză element"
+                      className="h-14 w-14 rounded object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setQaImage(undefined)}
+                      className="ml-auto flex items-center gap-1 text-[11px] font-bold uppercase text-tertiary"
+                    >
+                      <span className="material-symbols-outlined icon-btn">
+                        {ACTION_ICONS.delete}
+                      </span>
+                      Elimină
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded border border-dashed border-line bg-surface-low p-3 text-[12px] font-bold uppercase text-muted active:scale-[0.98]">
+                    <span className="material-symbols-outlined">{ACTION_ICONS.photoCamera}</span>
+                    Fă o poză
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleQaPhoto}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
               <button
                 type="submit"

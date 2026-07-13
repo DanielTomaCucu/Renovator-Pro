@@ -54,7 +54,7 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `WallTiling` | `WallTiling.ts` | interface (tiledWallsCount, tileHeight, wallLengths per `Wall`) |
 | `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `door?: RoomDoor`, `wallTiling?: WallTiling`) |
 | `Item` | `Item.ts` | interface |
-| `Project` | `Project.ts` | interface |
+| `Project` | `Project.ts` | interface (extins cu `totalArea?: number`) |
 | `RenovationStore` | `RenovationStore.ts` | interface |
 | `DonutSegment` | `DonutSegment.ts` | interface |
 
@@ -388,5 +388,107 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 - Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual pe toate cele 4 pagini, la 375px și 1440px — design identic (gradient, font, poziționare), doar datele diferă per pagină.
 
 **Fișiere atinse:** `src/components/DashboardSummaryCard.tsx` (nou), `src/app/analiza/page.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/configurare/page.tsx`, `CLAUDE.md`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `DashboardSummaryCard`: layout compact pe mobil (2 coloane în loc de 1)
+**De ce:** userul a semnalat că pe telefon cardul de sumar (aplicat pe toate paginile) ocupa mult spațiu vertical inutil — pe mobil grila era `grid-cols-1` (toate metricile stivuite), iar etichetele lungi și footer-ele se trunchiau cu `truncate`.
+
+- Grid schimbat din `grid-cols-1 sm:grid-cols-2 lg:grid-cols-{n}` în **`grid-cols-2` mereu** (inclusiv pe telefon), cu `lg:grid-cols-{n}` doar de la 1024px în sus — reduce înălțimea cardului la jumătate pe mobil (2×2 în loc de 4×1 pt. 4 metrici).
+- Adăugate separatoare vizuale (`border-r`/`border-b`) calculate per-index, ca grila 2 coloane să arate intenționat, nu doar înghesuit — dacă numărul de metrici e impar (ex. 3 pe `/centralizator`), ultimul ocupă `col-span-2` pe rândul lui.
+- Eliminat `truncate` de pe etichete și pe footer-ul `SummaryAccentFooter` — acum fac wrap pe 2 rânduri în loc să taie textul cu „…” (ex. „Buget total estimat", „38% din total estimat").
+- Mărimea cifrei mari trece de la `clamp(16px, 1.6vw, 26px)` la `clamp(13px, 4vw, 26px)` — pe coloane înguste de mobil (jumătate din lățimea ecranului) cifrele încap acum complet (ex. „12.500,00 EUR" pe `/configurare`, care se trunchia înainte).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual pe toate cele 4 pagini la 375px (card compact, fără trunchiere) și reconfirmat 900px/1440px (desktop neschimbat, fără suprapuneri).
+
+**Fișiere atinse:** `src/components/DashboardSummaryCard.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-13 — `/configurare`: card „Suprafață Totală Apartament (MP)" + aliniere inputuri la ecranul Stitch nou
+**De ce:** userul a adăugat în Stitch un ecran nou, „Configurare Tehnică - cu Input Suprafață Totală" (proiect `14594146001803528847`), cu un card nou de input manual pentru suprafața totală a apartamentului, plus inputuri/selecturi cu colțuri `rounded-lg` (nu `rounded-xl` ca în implementarea anterioară). A cerut implementarea cardului și alinierea stilului de input la acest ecran.
+
+- **Model de date extins**: `Project` (`src/shared/types/Project.ts`) primește `totalArea?: number` — suprafața totală introdusă manual de user, sursa de adevăr pt. „Suprafață Utilă" din cardul de sumar (înainte calculată doar ca sumă a `floorArea` per cameră). Opțional: dacă nu e completată, cardul de sumar cade back pe suma camerelor (`projectTechnicalSummary(rooms).totalFloorArea`), ca să nu afișeze 0 pe un proiect nou.
+- **`RenovationStore`** (`src/shared/types/RenovationStore.ts`) primește metodă nouă `updateProject(patch: Partial<Project>)`, implementată în `store.tsx` (`setProject` + merge shallow, la fel ca `updateRoom`/`updateItem`).
+- **Card nou** în `configurare/page.tsx`, imediat sub sumarul global: icon `square_foot` (adăugat în `TECHNICAL_ICONS.totalArea`, plus `TECHNICAL_ICONS.info` pt. iconița de subtitlu), titlu, subtitlu explicativ, input numeric cu sufix „mp" — markup extras direct din HTML-ul ecranului Stitch (`bg-surface-container-lowest` → `bg-surface-low` pe token-urile noastre).
+- **Aliniere colțuri inputuri**: `selectCls`/`inputCls` din `RoomTechnicalCard.tsx` trec de la `rounded-xl` la `rounded-lg` (diferența vizibilă exactă față de HTML-ul noului ecran Stitch, unde toate `<input>`/`<select>` de configurare tehnică folosesc `rounded-lg`). Containerele mai mari (blueprint placeholder, panoul „Calcule Detaliate") rămân `rounded-xl`, neschimbate — Stitch le păstrează la fel. Inputul „Buget alocat" per cameră din `page.tsx` aliniat la aceeași convenție (`rounded-md` → `rounded-lg`).
+- `mock-data.ts`: `mockProject.totalArea = 85` (aceeași valoare ca în mockup-ul Stitch), ca noul câmp să aibă o valoare vizibilă din start.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent, nelegat, pe `<img>` din `/elemente`). Testat vizual desktop (1440px) și mobil (375px): cardul nou randează identic cu mockup-ul, editarea valorii actualizează live „Suprafață Utilă" din cardul de sumar, zero erori în consolă.
+
+**Fișiere atinse:** `src/shared/types/Project.ts`, `src/shared/types/RenovationStore.ts`, `src/shared/store.tsx`, `src/shared/mock-data.ts`, `src/shared/icons.ts`, `src/app/configurare/page.tsx`, `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-13 — `/configurare`: bordură nouă `line-strong` pt. delimitare clară a inputurilor/selecturilor
+**De ce:** userul a semnalat că, deși inputurile/selecturile fuseseră deja aliniate la noul ecran Stitch, delimitarea vizuală tot nu era suficient de clară — bordura `border-line` (#e2e8f0) e prea deschisă, aproape invizibilă pe fundal alb. Ecranul Stitch de referință folosește `outline-variant` (#c6c6cd), o bordură mult mai vizibilă, identică pe input ȘI select (fără diferențiere de fundal între ele).
+
+- **Token nou** în `globals.css`: `--border-strong: #cbd5e1` (slate-300), expus ca `--color-line-strong` → clasa Tailwind `border-line-strong`. Adăugat lângă `--border` existent, nu îl înlocuiește (restul aplicației, carduri/containere, rămâne pe `border-line`, neatins — schimbarea e scopată strict la câmpurile de input/select din `/configurare`, unde a fost cerută).
+- **`RoomTechnicalCard.tsx`**: `selectCls`/`inputCls` trec de la `border-line` + fundaluri diferite (`bg-surface-low` pt. select, `bg-surface` pt. input) la `border-line-strong` + fundal alb unitar (`bg-surface`) pe ambele — diferențierea select/input rămâne clară doar prin chevron-ul custom (`SelectField`), nu prin culoare de fundal, exact ca în mockup.
+- **`page.tsx`**: inputul „Suprafață Totală Apartament" și „Buget alocat" per cameră aliniate la același `border-line-strong`.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat vizual desktop (1440px): bordurile se disting clar pe fundal alb, select-urile au chevron vizibil distinct de inputurile numerice simple, zero erori în consolă.
+
+**Fișiere atinse:** `src/app/globals.css`, `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/configurare/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-13 — Cardurile de cameră (Baie, Bucătărie etc.) refăcute 1:1 după „Configurare Tehnică - cu Input Suprafață Totală"
+**De ce:** userul a cerut ca structura internă a cardurilor de cameră din `/configurare` să corespundă exact ecranului Stitch de referință — sub-secțiuni numerotate, colapsabile individual, nu un singur bloc plat „1. Configurare Tehnică" cu titluri simple.
+
+- **`RoomTechnicalCard.tsx` restructurat**: componentă nouă `TechnicalSection` (accordion nativ `<details>`/`<summary>`, cu `group/section` + chevron care se rotește la `group-open/section:rotate-180`, exact markup-ul din Stitch) — înlocuiește vechile `<h5>` simple. Fiecare cameră are acum: „1. Pardoseală & Pereți" (mereu deschisă implicit), „2. Placări Detaliate" (doar dacă placarea e activată pt. cameră) și „Configurare Ușă" — numerotată dinamic 2 sau 3 în funcție de prezența secțiunii de placare (`doorSectionNumber = wallTilingEnabled ? 3 : 2`), la fel ca în mockup (Living Room fără placare → Configurare Ușă e a 2-a secțiune; Baie cu placare → a 3-a).
+- **Rândul de sumar colapsat** (când cardul camerei e închis) diferă acum pe tip de cameră, ca în Stitch: camere cu placare afișează „X mp Pardoseală / Y mp Faianță / Înălțime placare: Zm"; restul afișează „X mp / Material / Y ml Plintă" (comportamentul vechi).
+- **Toggle-ul de placare pereți** ("+ Adaugă placare" / "Elimină placare") mutat din antet separat în `action` al `TechnicalSection` (când activat) sau, când dezactivat, redat ca buton dedicat cu bordură punctată — mockup-ul nu are acest toggle explicit (fiecare cameră din Stitch e presetată wet/dry), dar păstrăm funcționalitatea existentă (orice cameră poate activa placarea), doar restilizată.
+- **Deviații deliberate, documentate și de această dată** (consecvente cu deciziile anterioare din 2026-07-12): (1) inputul „Perimetru" rămâne — mockup-ul nu are un input explicit pt. el (calculul de „Plintă" din exemplul Living Room pare să folosească o valoare hardcodată invizibilă în design), dar fără el calculul de plintă ar fi decorativ pt. camerele fără placare pereți; (2) butonul „Salvează Configurarea" din mockup (per card, la finalul rezultatelor) NU a fost adăugat — store-ul scrie deja instant la fiecare modificare, un buton de „salvare" separat ar fi decorativ/mincinos vizual, aceeași motivație documentată la 2026-07-12 pt. „Salvare Plan" global.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat vizual desktop (1440px): accordion-urile se deschid/închid independent (native `<details>`), numerotarea dinamică corectă pe Baie Principală (3 secțiuni, cu placare) și Bucătărie (2 secțiuni, fără placare), zero erori reale în consolă (după curățare completă cache Turbopack — `.next` șters, server repornit — confirmat că erorile de parsing raportate inițial de `read_console_messages` erau istoric stale dintr-o versiune intermediară a fișierului, nu erori curente).
+
+**Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-13 — „Buget alocat" lipit de cardul camerei + header-e de accordion pe fundal alb
+**De ce:** userul a semnalat două probleme din capturi: (1) rândul „Buget alocat (€)" era o cutie separată, cu bordură/colțuri proprii și un gap vizibil sub cardul camerei, în loc să pară parte din el; (2) header-ele de accordion (header-ul camerei „Baie Principală" și cele de sub-secțiune „1. Pardoseală & Pereți") aveau fundal albăstrui (`bg-surface-low`), cerut să fie alb.
+
+- **„Buget alocat" mutat în `RoomTechnicalCard.tsx`**: rând nou, direct sub `<button>`-ul header-ului camerei, în interiorul aceluiași container cu `overflow-hidden rounded-lg` — fără gap, fără bordură/colțuri proprii (doar `border-b` de separare), deci vizual lipit de card. Editarea bugetului folosește `patch()` (același helper local ca restul câmpurilor camerei), nu mai trece prin `updateRoom` din `page.tsx`.
+- **`page.tsx` simplificat**: bucla `rooms.map` nu mai randează un `<div>` wrapper cu cardul + cutia de buget separată, doar `<RoomTechnicalCard key={room.id} room={room} />`. `updateRoom` eliminat din destructurarea `useStore()` (nu mai e folosit direct în `page.tsx`).
+- **Fundal alb pe header-e**: `bg-surface-low` → `bg-surface` pe header-ul `<button>` al camerei și pe `<summary>` din `TechnicalSection`. Restul utilizărilor de `bg-surface-low` (formula din `ResultRow`, hover pe butonul „Adaugă placare", placeholder-ul de schiță) au rămas neschimbate — nu sunt header-e de dropdown.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat vizual: „Buget alocat" apare acum imediat sub header-ul camerei, în aceeași cutie; header-ele de accordion sunt albe, delimitate doar prin bordură subtilă.
+
+**Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/configurare/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-13 — Eliminare „Perimetru", „Mărime plăci" condiționat de Gresie, pereți placați afișați doar câți sunt selectați
+**De ce:** userul a cerut, pe bază de capturi: (1) eliminarea completă a câmpului „Perimetru" (nu mai e necesar); (2) „Mărime plăci" să apară doar când tipul de material e Gresie (nu are sens la Parchet/Mochetă); (3) la „Placări Detaliate", să vadă doar inputurile pentru pereții pe care chiar îi placă (conform „Număr pereți placați"), nu toate cele 4 (N/E/S/V) mereu; (4) select-urile să rămână albe, la fel ca inputurile (revenire asupra fundalului subtil `bg-background` adăugat în sesiunea anterioară).
+
+- **Câmpul „Perimetru" șters** din `RoomTechnicalCard.tsx`. **Consecință de reținut**: `baseboardLength()` (funcția care calculează „Plintă") folosește în continuare `room.perimeter`, dar acesta nu mai are un editor UI — rândul „Plintă" din panoul de rezultate se afișează doar dacă o cameră are deja o valoare de perimetru (ex. din `mock-data.ts`); camerele noi nu vor avea acest calcul până nu se decide un nou mod de completare (of. viitor: derivare din pereții placați, sau reintroducere ca și câmp).
+- **„Mărime plăci" condiționat**: `SelectField` randat doar dacă `room.floorMaterial === FlooringType.Gresie`.
+- **Pereți placați afișați condiționat**: în secțiunea „Placări Detaliate", inputurile de lungime pt. pereți (`Perete N/E/S/V`) sunt acum `walls.slice(0, tiledWallsCount)` — dacă „Număr pereți placați" = 3, apar doar primii 3 (N, E, S), nu și V; dacă = 0, blocul de inputuri nu se afișează deloc. Ordinea (N→E→S→V) e aceeași folosită deja de `dimensions.ts` (`wallOrder`) pt. calculul de faianță, deci UI-ul reflectă exact ce se calculează.
+- **Select-uri revenite la fundal alb**: `selectCls` de la `bg-background` înapoi la `bg-surface` — identic cu inputurile, la cererea explicită a userului.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat vizual: Baie Principală (Gresie, 3 pereți placați) — „Mărime plăci" vizibil, doar Perete N/E/S afișate; fără „Perimetru" nicăieri.
+
+**Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-13 — Buget alocat opțional (hide/show) + statisticile din header ascunse pe mobil în loc să strice layout-ul
+**De ce:** userul a semnalat două probleme, cu capturi de pe telefon: (1) „Buget alocat" era mereu vizibil și obligatoriu vizual, deși nu toate camerele au nevoie de el; (2) pe mobil, rândul de statistici din header-ul camerei („5.40 mp pardoseală" etc.) nu încăpea și, din cauza `flex-wrap`, împingea butoanele de expand/ștergere în stânga, sub titlu — layout complet stricat.
+
+- **Buget alocat opțional**: `RoomTechnicalCard` primește state local `budgetOpen`, inițializat `true` doar dacă `room.allocatedBudget > 0`. Dacă e închis, se afișează un rând subțire „+ Adaugă buget alocat" (link, nu ocupă spațiu vizual greu); la click se deschide inputul. Când e deschis, are acum și un buton „×" care resetează bugetul la 0 și ascunde rândul din nou — bugetul nu mai pare o cerință obligatorie.
+- **Header cameră restructurat pe mobil**: butonul header nu mai e `flex-wrap` (cauza reflow-ului greșit) — rămâne `flex items-center justify-between`, cu `min-w-0`/`truncate` pe blocul titlu (nume lung de cameră nu mai împinge restul), și `shrink-0` pe blocul de butoane (chevron + ștergere), ca acestea să rămână mereu fixate în dreapta, pe același rând cu titlul.
+- **Statisticile din header** ([]„mp pardoseală”, „mp faianță” etc.) mutate de la `flex flex-wrap` (vizibil peste tot, dar se rupea urât pe ecrane mici) la `hidden lg:flex` — **complet ascunse sub 1024px**, vizibile doar pe ecrane suficient de late încât să încapă pe un singur rând lângă titlu. Comportament conform cerinței explicite: „dacă nu ajung toate datele pe telefon, nu le pui” — mai bine lipsă decât layout stricat.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat vizual: mobil (375px) — header cu titlu stânga + butoane dreapta, fără statistici, fără reflow; desktop (1440px) — statisticile revin, aliniate corect pe un singur rând; toggle buget alocat funcțional (adaugă/elimină) pe ambele camere.
+
+**Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-13 — Rafinament final inputuri `/configurare`: border pe header-e, fără sufixe de unitate, „Tip montaj" full-width, fundal subtil pe select-uri
+**De ce:** userul a semnalat, pe bază de capturi: (1) header-ele de sub-secțiune („1. Pardoseală & Pereți" etc.) și corpul lor sunt acum ambele albe (schimbare din sesiunea anterioară) și se pierd vizual una în alta, fără o linie de separare; (2) sufixele de unitate afișate lângă inputuri (`ml`, `mp`, `m`) sunt redundante — informația e deja în label; (3) „Tip montaj", ultimul câmp dintr-un grid cu număr impar de elemente, rămâne singur pe ultimul rând dar ocupă doar jumătate din lățime; (4) select-urile (dropdown-urile) sunt greu de distins de inputurile simple pe fundal alb identic.
+
+- **`TechnicalSection`**: `<summary>` primește `border-b border-line`, separă vizual clar header-ul de corpul secțiunii (ambele rămân albe, dar acum delimitate).
+- **Sufixe de unitate eliminate** din toate inputurile din `RoomTechnicalCard.tsx` (`Suprafață`, `Perimetru`, `Înălțime Placare`) și din inputul „Suprafață Totală Apartament" din `page.tsx` — unitatea e mutată în text în label (`Perimetru (ML)`), inputul redevine un `<input>` simplu, fără `<div className="flex items-center gap-2">` de împachetare.
+- **„Tip montaj" full-width**: `SelectField` primește prop nou `wrapperClassName`, folosit aici cu `"md:col-span-2"` ca să ocupe tot rândul din grid-ul cu 2 coloane, în loc să rămână pe jumătate cu spațiu gol lângă el.
+- **Fundal subtil pe select-uri**: `selectCls` trece de la `bg-surface` (alb, identic cu inputurile) la `bg-background` (`#f8f9ff`, tokenul de fundal al paginii — o nuanță foarte discretă, aproape imperceptibilă, dar suficientă cât să distingă vizual un dropdown de un input simplu, fără să introducă o culoare nouă în paletă).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat vizual: header-ele de secțiune au acum o linie de separare clară, niciun input nu mai are text de unitate alături, „Tip montaj" ocupă tot rândul, select-urile au un fundal ușor diferit de inputurile numerice.
+
+**Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/configurare/page.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
