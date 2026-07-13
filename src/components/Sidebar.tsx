@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ICONS } from "@/shared/icons";
+import { ACTION_ICONS, NAV_ICONS } from "@/shared/icons";
 
 const nav = [
   { href: "/configurare", label: "Configurare Apartament", icon: NAV_ICONS.configurare },
@@ -15,9 +15,92 @@ const nav = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const currentPageTitle =
+    nav.find((item) => pathname.startsWith(item.href))?.label ?? "Renovator Pro";
 
   return (
-    <aside
+    <>
+      {/* Bară + meniu mobil — vizibile doar sub breakpoint-ul md, unde <aside> dispare.
+          Închis: bara arată titlul paginii curente. Deschis: panoul dropdown arată logo-ul
+          + numele aplicației deasupra linkurilor de navigare (vezi cererea userului). */}
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-surface-low px-4 py-3 md:hidden">
+        <span className="truncate font-heading text-base font-bold text-primary">
+          {currentPageTitle}
+        </span>
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-label={mobileOpen ? "Închide meniul" : "Deschide meniul"}
+          aria-expanded={mobileOpen}
+          className="shrink-0 rounded-lg p-2 text-primary hover:bg-surface"
+        >
+          <span className="material-symbols-outlined">
+            {mobileOpen ? ACTION_ICONS.close : NAV_ICONS.mobileMenu}
+          </span>
+        </button>
+      </header>
+
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <nav
+        className={`fixed left-0 right-0 top-[57px] z-40 origin-top border-b border-line bg-surface shadow-lg transition-all duration-200 md:hidden ${
+          mobileOpen ? "scale-y-100 opacity-100" : "pointer-events-none scale-y-95 opacity-0"
+        }`}
+      >
+        <div className="flex items-center gap-3 border-b border-line p-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary">
+            <span
+              className="material-symbols-outlined text-white"
+              style={{ fontVariationSettings: '"FILL" 1' }}
+            >
+              {NAV_ICONS.logo}
+            </span>
+          </div>
+          <div className="whitespace-nowrap">
+            <p className="font-heading text-[15px] font-extrabold leading-tight text-primary">
+              Renovator Pro
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted opacity-60">
+              Management Buget
+            </p>
+          </div>
+        </div>
+        <div className="space-y-0.5 p-3">
+          {nav.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
+                  active
+                    ? "bg-secondary/10 text-secondary"
+                    : "text-muted hover:bg-surface-low hover:text-primary"
+                }`}
+              >
+                <span
+                  className="material-symbols-outlined shrink-0 text-[20px]"
+                  style={active ? { fontVariationSettings: '"FILL" 1' } : undefined}
+                >
+                  {item.icon}
+                </span>
+                <span className="text-sm font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <aside
       className={`hidden md:flex h-screen shrink-0 flex-col border-r border-line bg-surface-low transition-all duration-300 sticky top-0 ${
         collapsed ? "w-20 p-3" : "w-64 p-4"
       }`}
@@ -134,5 +217,6 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

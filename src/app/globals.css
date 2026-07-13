@@ -6,7 +6,7 @@
   --surface: #ffffff;
   --surface-low: #eff4ff;
   --border: #e2e8f0;
-  --primary: #0f172a;
+  --primary: #000000;
   --secondary: #0ea5e9;
   --tertiary: #f97316;
   --muted: #64748b;
@@ -41,5 +41,11 @@ h4 {
 }
 
 .material-symbols-outlined {
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+}
+
+/* iconițe de buton (edit/delete/adaugă/salvează) — mărime aliniată la textul din jur, vezi CLAUDE.md */
+.icon-btn {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 14;
+  font-size: 13px;
 }

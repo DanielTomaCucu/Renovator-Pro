@@ -18,13 +18,21 @@ export default function StatusChip({
     size === "sm"
       ? "px-2 py-0.5 text-[9px] font-medium gap-0.5"
       : "px-2.5 py-0.5 text-[11px] font-bold gap-1";
-  const iconCls = size === "sm" ? "text-[11px]" : "text-[13px]";
+  const iconSize = size === "sm" ? 10 : 12;
 
   return (
     <span
       className={`inline-flex items-center whitespace-nowrap rounded-full uppercase tracking-wide ${sizeCls} ${styles[status]}`}
     >
-      <span className={`material-symbols-outlined ${iconCls}`}>{STATUS_ICONS[status]}</span>
+      <span
+        className="material-symbols-outlined"
+        style={{
+          fontSize: iconSize,
+          fontVariationSettings: `"FILL" 0, "wght" 400, "GRAD" 0, "opsz" ${iconSize}`,
+        }}
+      >
+        {STATUS_ICONS[status]}
+      </span>
       {status}
     </span>
   );

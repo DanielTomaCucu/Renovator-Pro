@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import StatCard from "@/components/StatCard";
 import StatusChip from "@/components/StatusChip";
+import DashboardSummaryCard, { SummaryProgressFooter } from "@/components/DashboardSummaryCard";
 import ItemFormDrawer from "@/components/ItemFormDrawer";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -34,6 +34,20 @@ export default function ElementePage() {
   const [qaRoom, setQaRoom] = useState(rooms[0]?.id ?? "");
   const [qaPrice, setQaPrice] = useState("");
 
+  // Mobil — vezi „Confirmare Ștergere - Bottom Sheet Mobile" (acoperă întreg ecranul „Elemente de Cumpărat" mobil)
+  const [mobileQuickAddOpen, setMobileQuickAddOpen] = useState(false);
+  const [mobileFilterRoomId, setMobileFilterRoomId] = useState<string | null>(null);
+  const [mobileOpenRooms, setMobileOpenRooms] = useState<Set<string>>(new Set());
+
+  function toggleMobileRoom(roomId: string) {
+    setMobileOpenRooms((prev) => {
+      const next = new Set(prev);
+      if (next.has(roomId)) next.delete(roomId);
+      else next.add(roomId);
+      return next;
+    });
+  }
+
   const spent = useMemo(() => totalSpent(items), [items]);
   const bought = boughtCount(items);
   const progress = purchaseProgress(items);
@@ -58,7 +72,32 @@ export default function ElementePage() {
     <div>
       <PageHeader title="Elemente de Cumpărat" searchPlaceholder="Caută elemente..." />
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-10">
+      {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop. */}
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
+        <DashboardSummaryCard
+          metrics={[
+            { label: "Buget total estimat", value: formatMoney(project.totalBudget) },
+            {
+              label: "Total cheltuit",
+              value: formatMoney(spent),
+              footer: (
+                <SummaryProgressFooter
+                  percent={project.totalBudget ? (spent / project.totalBudget) * 100 : 0}
+                />
+              ),
+            },
+            { label: "Elemente achiziționate", value: `${bought} din ${items.length}` },
+            {
+              label: "Progres achiziții",
+              value: `${progress}%`,
+              footer: <SummaryProgressFooter percent={progress} color="secondary" />,
+            },
+          ]}
+        />
+      </div>
+
+      {/* Desktop — vezi „Elemente de Cumpărat - Meniu Restrâns" */}
+      <div className="mx-auto hidden max-w-7xl space-y-6 px-4 py-6 sm:px-6 md:block lg:px-10">
         <div className="flex justify-end">
           <button
             onClick={() => setRoomDrawerOpen(true)}
@@ -66,17 +105,6 @@ export default function ElementePage() {
           >
             + Adaugă Cameră
           </button>
-        </div>
-
-        {/* Sumar */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Buget total estimat" value={formatMoney(project.totalBudget)} />
-          <StatCard label="Total cheltuit" value={formatMoney(spent)} accent="secondary" />
-          <StatCard
-            label="Elemente achiziționate"
-            value={`${bought} din ${items.length}`}
-          />
-          <StatCard label="Progres achiziții" value={`${progress}%`} />
         </div>
 
         {/* Adăugare rapidă */}
@@ -137,7 +165,7 @@ export default function ElementePage() {
                 type="submit"
                 className="flex h-10 items-center justify-center gap-2 self-end rounded-lg bg-secondary px-6 text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
               >
-                <span className="material-symbols-outlined text-sm">
+                <span className="material-symbols-outlined icon-btn">
                   {ACTION_ICONS.save}
                 </span>
                 Salvează
@@ -174,21 +202,21 @@ export default function ElementePage() {
                         </span>
                       </div>
                       <button
-                        onClick={() => setItemDrawer({ open: true, roomId: room.id })}
-                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
-                      >
-                        Adaugă
-                      </button>
-                      <button
                         onClick={() =>
                           setDeleteTarget({ kind: "room", id: room.id, name: room.name })
                         }
                         className="rounded p-1 text-muted hover:text-tertiary"
                         aria-label={`Șterge camera ${room.name}`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">
+                        <span className="material-symbols-outlined icon-btn">
                           {ACTION_ICONS.delete}
                         </span>
+                      </button>
+                      <button
+                        onClick={() => setItemDrawer({ open: true, roomId: room.id })}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
+                      >
+                        Adaugă
                       </button>
                     </div>
                   </div>
@@ -266,7 +294,7 @@ export default function ElementePage() {
                                   className="text-muted transition-colors hover:text-primary"
                                   aria-label={`Editează ${item.name}`}
                                 >
-                                  <span className="material-symbols-outlined text-lg">
+                                  <span className="material-symbols-outlined icon-btn">
                                     {ACTION_ICONS.editInline}
                                   </span>
                                 </button>
@@ -281,7 +309,7 @@ export default function ElementePage() {
                                   className="text-muted transition-colors hover:text-tertiary"
                                   aria-label={`Șterge ${item.name}`}
                                 >
-                                  <span className="material-symbols-outlined text-lg">
+                                  <span className="material-symbols-outlined icon-btn">
                                     {ACTION_ICONS.delete}
                                   </span>
                                 </button>
@@ -298,6 +326,257 @@ export default function ElementePage() {
           })}
         </div>
       </div>
+
+      {/* Mobil — vezi „Confirmare Ștergere - Bottom Sheet Mobile" (dialogul e ConfirmDialog, deja bottom-sheet pe mobil) */}
+      <div className="space-y-6 px-4 py-4 md:hidden">
+        {/* Filtre cameră */}
+        <section className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <button
+            onClick={() => setMobileFilterRoomId(null)}
+            className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+              mobileFilterRoomId === null
+                ? "bg-primary text-white"
+                : "border border-line bg-surface text-muted hover:bg-surface-low"
+            }`}
+          >
+            Toate
+          </button>
+          {rooms.map((room) => (
+            <button
+              key={room.id}
+              onClick={() => setMobileFilterRoomId(room.id)}
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                mobileFilterRoomId === room.id
+                  ? "bg-primary text-white"
+                  : "border border-line bg-surface text-muted hover:bg-surface-low"
+              }`}
+            >
+              {room.name}
+            </button>
+          ))}
+        </section>
+
+        {/* Adăugare rapidă — acordeon */}
+        <section className="overflow-hidden rounded-xl border border-line bg-surface-low">
+          <button
+            type="button"
+            onClick={() => setMobileQuickAddOpen((v) => !v)}
+            className="flex w-full items-center justify-between border-b border-line bg-white px-4 py-3"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-foreground">
+                {ACTION_ICONS.quickAdd}
+              </span>
+              <span className="text-[12px] font-bold uppercase text-foreground">
+                Adăugare Rapidă
+              </span>
+            </div>
+            <span
+              className={`material-symbols-outlined text-foreground transition-transform duration-300 ${mobileQuickAddOpen ? "rotate-180" : ""}`}
+            >
+              {ACTION_ICONS.expandMore}
+            </span>
+          </button>
+          {mobileQuickAddOpen && (
+            <form
+              onSubmit={(e) => {
+                quickAdd(e);
+                setMobileQuickAddOpen(false);
+              }}
+              className="space-y-3 bg-white px-4 py-4"
+            >
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase text-muted">
+                  Nume element
+                </label>
+                <input
+                  value={qaName}
+                  onChange={(e) => setQaName(e.target.value)}
+                  placeholder="ex: Baterie lavoar"
+                  className="w-full rounded border border-line bg-surface-low p-3 text-sm outline-none focus:border-secondary"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase text-muted">
+                    Cameră
+                  </label>
+                  <select
+                    value={qaRoom}
+                    onChange={(e) => setQaRoom(e.target.value)}
+                    className="w-full appearance-none rounded border border-line bg-surface-low p-3 text-sm outline-none focus:border-secondary"
+                  >
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase text-muted">
+                    Preț estimat
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={qaPrice}
+                    onChange={(e) => setQaPrice(e.target.value)}
+                    placeholder="0,00"
+                    className="w-full rounded border border-line bg-surface-low p-3 font-mono text-sm outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-primary py-4 text-[12px] font-bold uppercase tracking-widest text-white transition-transform active:scale-[0.98]"
+              >
+                Salvează Articol
+              </button>
+            </form>
+          )}
+        </section>
+
+        {/* Camere — acordeon */}
+        <div className="space-y-3">
+          {rooms
+            .filter((room) => !mobileFilterRoomId || room.id === mobileFilterRoomId)
+            .map((room) => {
+              const roomItems = itemsForRoom(items, room.id);
+              const roomBought = boughtCount(roomItems);
+              const roomTotal = roomItems.reduce((s, i) => s + itemTotal(i), 0);
+              const isOpen = mobileOpenRooms.has(room.id);
+
+              return (
+                <div
+                  key={room.id}
+                  className="overflow-hidden rounded-xl border border-line bg-surface"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleMobileRoom(room.id)}
+                    className="flex w-full items-center justify-between px-4 py-4 text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-primary">
+                        {ROOM_TYPE_ICONS[room.type]}
+                      </span>
+                      <div>
+                        <h3 className="font-heading text-[15px] font-bold text-foreground">
+                          {room.name}
+                        </h3>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                          {roomBought} din {roomItems.length} cumpărate
+                        </p>
+                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-secondary">
+                          Total: {formatMoney(roomTotal)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setItemDrawer({ open: true, roomId: room.id });
+                          }}
+                          className="p-1 text-muted hover:text-primary"
+                          aria-label={`Adaugă element în ${room.name}`}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            {ACTION_ICONS.add}
+                          </span>
+                        </span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget({ kind: "room", id: room.id, name: room.name });
+                          }}
+                          className="p-1 text-tertiary/70 hover:text-tertiary"
+                          aria-label={`Șterge camera ${room.name}`}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            {ACTION_ICONS.delete}
+                          </span>
+                        </span>
+                      </div>
+                      <span
+                        className={`material-symbols-outlined text-foreground transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+                      >
+                        {ACTION_ICONS.expandMore}
+                      </span>
+                    </div>
+                  </button>
+
+                  {isOpen && (
+                    <div className="divide-y divide-line border-t border-line/30">
+                      {roomItems.length === 0 ? (
+                        <p className="px-4 py-4 text-sm text-muted">
+                          Niciun element încă în această cameră.
+                        </p>
+                      ) : (
+                        roomItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between px-4 py-4"
+                          >
+                            <div className="space-y-1">
+                              <h4 className="font-heading text-[15px] font-bold text-foreground">
+                                {item.name}
+                              </h4>
+                              <p className="font-mono text-sm text-muted">
+                                {formatMoney(item.unitPrice)}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => setItemDrawer({ open: true, item })}
+                                className="p-1 text-muted transition-colors hover:text-primary active:scale-90"
+                                aria-label={`Editează ${item.name}`}
+                              >
+                                <span className="material-symbols-outlined text-[20px]">
+                                  {ACTION_ICONS.editInline}
+                                </span>
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setDeleteTarget({ kind: "item", id: item.id, name: item.name })
+                                }
+                                className="p-1 text-tertiary/70 transition-colors hover:text-tertiary active:scale-90"
+                                aria-label={`Șterge ${item.name}`}
+                              >
+                                <span className="material-symbols-outlined text-[20px]">
+                                  {ACTION_ICONS.delete}
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* FAB „Adaugă Cameră" — doar pe mobil, vezi design Stitch (buton flotant jos-dreapta) */}
+      <button
+        type="button"
+        onClick={() => setRoomDrawerOpen(true)}
+        aria-label="Adaugă Cameră"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-2xl transition-transform active:scale-95 hover:scale-105 md:hidden"
+      >
+        <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>
+          {ACTION_ICONS.addRoom}
+        </span>
+      </button>
 
       <ItemFormDrawer
         open={itemDrawer.open}

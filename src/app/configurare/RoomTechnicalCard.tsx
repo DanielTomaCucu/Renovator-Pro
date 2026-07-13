@@ -145,7 +145,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
             className="text-muted hover:text-tertiary"
             aria-label="Șterge camera"
           >
-            <span className="material-symbols-outlined">{ACTION_ICONS.delete}</span>
+            <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
           </span>
         </div>
       </button>

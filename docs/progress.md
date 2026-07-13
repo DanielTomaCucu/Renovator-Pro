@@ -22,6 +22,7 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `roomSubtotal(items, roomId)` | `shared/functions/items.ts` | total estimat al unei camere | `elemente`, `centralizator`, intern în `charts.ts` (costPerRoom) |
 | `roomSpent(items, roomId)` | `shared/functions/items.ts` | cheltuit efectiv într-o cameră | `elemente` |
 | `budgetRemaining(totalBudget, items)` | `shared/functions/budget.ts` | buget total − cheltuit | `analiza` |
+| `budgetEfficiency(estimated, spent)` | `shared/functions/budget.ts` | % din estimat efectiv cheltuit (0 dacă nu există estimat) | `centralizator` |
 | `costPerRoom(rooms, items)` | `shared/functions/charts.ts` | distribuție cost pe cameră, sortată desc, fără camere goale | `analiza` (donut chart) |
 | `costPerCategory(items)` | `shared/functions/charts.ts` | agregare {total, spent} per `MaterialType`, sortată desc | `analiza` (progress bars) |
 | `donutSegments(data)` | `shared/functions/charts.ts` | transformă `{name, total}[]` în `DonutSegment[]` cumulative (start/end 0–1) pt. SVG donut | `analiza` |
@@ -222,5 +223,170 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 - Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat la 375px (mobil): header-ele de cameră rămân pe un rând cu scroll orizontal vizibil, tabelele idem, zero wrap pe 2 rânduri nicăieri, zero erori în consolă.
 
 **Fișiere atinse:** `src/app/elemente/page.tsx`, `src/components/StatusChip.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/elemente`: dimensiune uniformă iconițe de buton + fix axă `opsz`
+**De ce:** userul a semnalat că iconițele de pe butoane (Salvează, edit/delete din tabel) sunt disproporționat de mari față de textul din jur.
+
+- Cauza reală: `.material-symbols-outlined` avea `opsz` (optical size) fixat la 24 global — la randare sub 20px, traseul glifei rămâne desenat pt. 24px, deci apare gros/mare indiferent de `font-size`.
+- `globals.css`: `opsz` global coborât la 20; adăugată clasa nouă `.icon-btn` (font-size 13px, `opsz` 14) — standardul pt. toate iconițele din butoane (edit/delete/adaugă/salvează).
+- Aplicat `.icon-btn` pe toate iconițele de buton din `elemente/page.tsx` și pe iconița delete din `RoomTechnicalCard.tsx`; ordinea butoanelor din header-ul de secțiune cameră schimbată (Șterge înaintea lui Adaugă).
+- `StatusChip.tsx`: iconița de status redusă la 10/12px cu `opsz` ajustat inline (nu folosește `.icon-btn`, are nevoie de mărime proprie, mai mică).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Verificat vizual.
+
+**Fișiere atinse:** `src/app/globals.css`, `src/app/elemente/page.tsx`, `src/app/configurare/RoomTechnicalCard.tsx`, `src/components/StatusChip.tsx`, `CLAUDE.md`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/centralizator` rescris pixel-apropiat de Stitch („Tabel Centralizator - Meniu Restrâns Premium")
+**De ce:** userul a cerut ca pagina Centralizator Costuri să semene cât mai fidel cu ecranul Stitch dedicat.
+
+- Descărcat HTML-ul sursă al ecranului (proiect Stitch `14594146001803528847`) și rescris `centralizator/page.tsx`: 3 stat cards cu bară colorată pe margine stângă (estimat/cheltuit/eficiență), donut SVG de eficiență bugetară, tabel cu secțiuni per cameră **colapsabile** (click pe header, `expand_more` rotit), toggle „Afișează Subtotaluri" (checkbox), badge-uri de tip material colorate per categorie, iconițe de status (`check_circle`/`schedule`) în loc de `StatusChip` (design-ul specific acestui ecran folosește iconițe simple, nu pastile), footer negru cu „TOTAL GENERAL ESTIMAT", card de acțiuni cu butoanele „Imprimă Raport" + „Partajează Detalii" (vizual, fără funcționalitate reală de partajare — nu există backend).
+- Adăugată funcția nouă `budgetEfficiency(estimated, spent)` în `shared/functions/budget.ts` (% din estimat efectiv cheltuit) — designul calculează „Eficiență Bugetară" ca spent/estimated, diferit de `purchaseProgress` (raport pe număr de elemente) folosit greșit anterior pe această pagină.
+- `icons.ts`: adăugat `DOCUMENT_ICONS.share` și un grup nou `CENTRALIZATOR_ICONS` (payments, account_balance_wallet, monitoring, analytics, schedule) — toate numele de iconițe noi centralizate, nu hardcodate în JSX.
+- **Omis intenționat față de design:** coloana „U.M." (unitate de măsură) — `Item` nu are un câmp de unitate de măsură în model, iar adăugarea lui ar fi fost o schimbare de schemă de date nerelaționată cu cererea de stilizare; blocul de echivalent valutar RON→EUR din design a fost omis, pentru că proiectul nu are curs valutar real (backlog item 6, neimplementat) și moneda proiectului e deja EUR.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual: carduri, donut, colaps/expand secțiuni, toggle subtotaluri — toate funcționale.
+
+**Fișiere atinse:** `src/app/centralizator/page.tsx` (rescris), `src/shared/functions/budget.ts`, `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza` rescris pixel-apropiat de Stitch („Analiză Bugetară - Meniu Restrâns Premium v2")
+**De ce:** userul a cerut ca pagina Analiză Bugetară să semene cât mai fidel cu ecranul Stitch dedicat.
+
+- Descărcat HTML-ul sursă al ecranului (proiect Stitch `14594146001803528847`) și rescris `analiza/page.tsx`: 4 stat cards cu progress bars (Cheltuieli/Achiziții), bento grid cu grafic linie „Evoluția Cheltuielilor" (col-span-8) + donut „Cost per Cameră" cu paletă pastel și callout „Top Room" în centru (col-span-4), secțiune „Stadiul Achizițiilor pe Categorii" convertită din listă în grid de carduri cu progress bar, 3 carduri de recomandări restilizate (icon box cu bordură, culoare per tip: secondary/tertiary sau emerald/emerald).
+- **`PageHeader.tsx`** (shared): adăugat prop opțional `actions?: React.ReactNode` — slot generic lângă căutare, folosit aici pt. butonul „Export PDF" (vizual, fără export real cablat — backlog item 5, neimplementat). Celelalte pagini nu sunt afectate (prop opțional, fără valoare implicită vizibilă).
+- **Grafic „Evoluția Cheltuielilor":** randat ca SVG static (path fix, aceleași luni Ian–Iul ca în design) — **nu există date lunare reale** în modelul `Item` (backlog item 4, neimplementat), deci graficul e intenționat decorativ/placeholder, la fel ca în mockup-ul Stitch original.
+- Card „Total Alocat": eliminat textul static „+12% față de plan" din design (nu are echivalent calculabil din date reale), înlocuit cu eticheta „Buget de referință" (consecvent cu tratamentul din `/centralizator`).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual: cardurile de sumar, donut, cardurile de categorie (fix inițial: suma și procentul se suprapuneau pe carduri înguste — rezolvat cu `flex-wrap` + `font-mono`), cardurile de recomandări.
+
+**Fișiere atinse:** `src/app/analiza/page.tsx` (rescris), `src/components/PageHeader.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza`: variantă mobilă 1:1 cu Stitch („Analiză Bugetară - Mobile Premium Black Theme")
+**De ce:** userul a cerut varianta de telefon a paginii Analiză Bugetară, identică cu mockup-ul mobil dedicat — explicit FĂRĂ bottom nav (acela se implementează în aplicația Flutter, nu în web).
+
+- Layout-ul desktop existent (bento grid) e acum înfășurat în `hidden lg:block`; sub breakpoint-ul `lg` (1024px) se randează un bloc nou `lg:hidden` cu structura mockup-ului mobil: 4 KPI cards verticale cu progress bar full-width, grafic bare static „Evoluția Cheltuielilor" (decorativ, aceeași lipsă de date lunare reale ca la varianta desktop), donut „Cost per Cameră" cu paletă **monocromă** (`MOBILE_PIE_COLORS`, negru→gri deschis — temă distinctă de paleta pastel de pe desktop, conform design-ului „Premium Black Theme"), listă „Stadiul pe Categorii", 3 carduri „Sugestii & Analiză" cu iconițe în cerc (`trending_down`/`warning`/`update`).
+- Date reale peste tot (nu s-a fabricat nimic): aceleași calcule ca varianta desktop (`spentPct`, `remainingPct`, `progress`, `perCategory`, `costPerRoom`/`donutSegments`, `pendingTotal`, `overBudget`).
+- Fix aplicat în timpul verificării vizuale: eticheta din centrul donut-ului mobil ieșea din cerc la `text-[14px]` — redusă la `text-[10px]` + `leading-tight` + padding, acum încape complet.
+- **Intenționat omis, la cererea userului:** bottom navigation bar din mockup (Overview/Rooms/Analiză/Settings) — rămâne să fie construit în aplicația Flutter, nu în web.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px (mobil, sub breakpoint `lg`) și 1440px (desktop neschimbat, confirmă breakpoint-ul corect).
+
+**Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — Meniu hamburger mobil (`Sidebar.tsx`) + fix breakpoint `/analiza` (aplicație întreagă)
+**De ce:** userul a semnalat două probleme: (1) `<aside>` (`Sidebar.tsx`) e `hidden md:flex` de la început — sub 768px dispărea complet și nu exista nimic în loc, deci pe telefon nu mai exista NICI un meniu de navigare; (2) `/analiza` comuta pe layout-ul mobil la breakpoint-ul `lg` (1024px), deschis mai devreme decât breakpoint-ul `md` (768px) la care dispare sidebar-ul — rezultatul: pe ecrane medii (768–1024px, cu sidebar vizibil) pagina "sărea" deja în modul telefon cu o singură coloană.
+
+- **`Sidebar.tsx`**: adăugat un header + meniu dropdown mobil (`md:hidden`), randate din același array `nav` folosit de `<aside>` (o singură sursă de adevăr, zero duplicare de linkuri). Header sticky sus, cu logo + buton hamburger (iconiță nouă `NAV_ICONS.mobileMenu` = `menu`, devine `ACTION_ICONS.close` când e deschis). La click se deschide un panou dropdown (de sus în jos, `scale-y` + `opacity`, `aria-expanded`) cu overlay semi-transparent care închide meniul la click în afara lui; fiecare link închide meniul la navigare.
+- **`layout.tsx`**: containerul rădăcină trece din `flex` (rând, fix) în `flex flex-col md:flex-row`, ca header-ul mobil din `Sidebar` să stea deasupra conținutului (nu lângă el) sub 768px, și lângă el (ca înainte) de la 768px în sus.
+- **`/analiza`**: breakpoint-ul de comutare mobil/desktop schimbat din `lg` (1024px) în `md` (768px), aliniat cu breakpoint-ul la care dispare/apare `<aside>`-ul — acum layout-ul cu o singură coloană apare DOAR sub 768px (telefon real), nu și pe ecrane medii/tablete.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual: 375px (meniu hamburger funcțional, deschide/închide, navighează, overlay), 900px (sidebar complet vizibil, `/analiza` afișează layout-ul desktop, NU mai sare pe o coloană), 1440px (neschimbat).
+
+**Fișiere atinse:** `src/components/Sidebar.tsx`, `src/app/layout.tsx`, `src/app/analiza/page.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/centralizator`: variantă mobilă 1:1 cu Stitch („Centralizator Costuri - Mobile Table View")
+**De ce:** userul a cerut varianta de telefon a paginii Centralizator Costuri, identică cu mockup-ul mobil dedicat.
+
+- Layout-ul desktop existent (nu avea încă un wrapper `hidden`/breakpoint dedicat — era doar responsive prin `overflow-x-auto`) e acum înfășurat explicit în `hidden md:block`, aliniat la breakpoint-ul `md` folosit deja de `Sidebar`/`/analiza`. Sub `md` se randează un bloc nou `md:hidden`: carduri de sumar cu scroll orizontal (Total Estimat/Cheltuit/Eficiență), secțiuni per cameră ca acordeon cu bară stânga `border-l-4 border-primary` (reutilizează exact același state `collapsed`/`toggleRoom` ca varianta desktop — un singur „adevăr" pt. ce cameră e restrânsă, nu duplicat), fiecare cu tabel real scrollabil orizontal (`min-w-[600px]` + `overflow-x-auto`, la fel ca în design — NU listă de carduri), rând de subtotal per cameră, footer sticky (`fixed bottom-0`) cu „Total General Estimat" + buton „PDF" (vizual, fără export real — la fel ca butoanele Imprimă/Partajează de pe desktop).
+- Date reale peste tot: aceleași `estimated`/`spent`/`efficiency`/`itemsForRoom`/`roomSubtotal`/`MATERIAL_BADGE_STYLES`/`STATUS_DOT` ca varianta desktop — zero duplicare de logică, doar markup diferit.
+- `icons.ts`: adăugat `DOCUMENT_ICONS.download` (glyph distinct de `exportPdf`, folosit explicit în acest ecran) și `CENTRALIZATOR_ICONS.trendUp` (`trending_up`, badge-ul de eficiență).
+- **Intenționat omis, la cererea userului (consecvent cu `/analiza` mobil):** bottom navigation bar din mockup — rămâne să fie construit în aplicația Flutter, nu în web.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px (carduri scroll orizontal, acordeon funcțional — colaps/expand testat interactiv, tabel scrollabil, footer sticky) și 1440px (desktop neschimbat).
+
+**Fișiere atinse:** `src/app/centralizator/page.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/elemente`: variantă mobilă 1:1 cu Stitch + `ConfirmDialog` devine bottom sheet pe mobil
+**De ce:** userul a cerut varianta de telefon a paginii Elemente de Cumpărat, identică cu ecranul „Confirmare Ștergere - Bottom Sheet Mobile" (care conține atât pagina de listă, cât și dialogul de ștergere ca bottom sheet).
+
+- **`ConfirmDialog.tsx`** (shared — afectează global orice ștergere, nu doar `/elemente`): sub breakpoint-ul `sm`, dialogul se randează acum ca bottom sheet (`items-end`, colțuri sus rotunjite `rounded-t-[24px]`, handle bar, titlu/mesaj centrate, buton „Șterge" roșu full-width sus + „Anulează" text dedesubt, ambele cu `active:scale`), fidel design-ului Stitch. De la `sm` în sus, comportamentul rămâne EXACT ca înainte (modal centrat, butoane side-by-side) — zero regresie pe desktop.
+- **`/elemente`**: layout desktop existent (nu avea încă wrapper `hidden`/breakpoint) înfășurat explicit în `hidden md:block`. Bloc nou `md:hidden` cu: card de sumar (buget/cheltuit + bară de progres), chip-uri de filtrare pe cameră (fully funcționale — `mobileFilterRoomId`, „Toate" resetează), acordeon „Adăugare Rapidă" (colapsat implicit, reutilizează `quickAdd` existent), carduri de cameră ca acordeon cu iconițe inline adaugă/șterge în header (`role="button"` în interiorul unui `<button>` — nu `<button>` imbricat, pattern deja folosit în `RoomTechnicalCard.tsx`), rânduri de elemente cu edit/șterge (iconița „visibility" din design nu are echivalent — un singur creion de editare, documentat ca simplificare).
+- State nou, local paginii: `mobileQuickAddOpen`, `mobileFilterRoomId`, `mobileOpenRooms` (`Set<string>`, separat de accordion state-ul desktop-ului — cele două view-uri nu sunt randate simultan, deci nu există sincronizare de făcut).
+- **Simplificare documentată:** design-ul are și un bottom sheet separat „Detalii Articol" (read-only + edit/delete) — nu a fost construit un componentă nouă pt. asta; iconița de vizualizare din listă ar deschide același `ItemFormDrawer` folosit la editare (nu există încă un view read-only dedicat).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px: filtrare pe cameră, acordeon adăugare rapidă, acordeon cameră cu add/delete, editare/ștergere element, bottom sheet-ul de confirmare (screenshot confirmă potrivire exactă cu design: handle bar, text centrat, buton roșu full-width, Anulează dedesubt). 1440px: desktop neschimbat.
+
+**Fișiere atinse:** `src/app/elemente/page.tsx`, `src/components/ConfirmDialog.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/elemente`: FAB „Adaugă Cameră" doar pe mobil
+**De ce:** userul a cerut butonul flotant din colțul jos-dreapta al design-ului Stitch (vizibil doar pe telefon), care deschide același formular ca butonul „+ Adaugă Cameră" de pe desktop.
+
+- Buton rotund `fixed bottom-6 right-6`, `md:hidden`, deschide `RoomFormDrawer` existent (`setRoomDrawerOpen(true)`) — zero logică nouă, doar un trigger vizual suplimentar pt. mobil.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px — FAB vizibil jos-dreapta, deschide corect drawer-ul „Adaugă Cameră Nouă"; la 1440px FAB-ul nu apare (desktop neschimbat).
+
+**Fișiere atinse:** `src/app/elemente/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — Bara mobilă: titlu paginii sus (nu logo), branding mutat în dropdown (aplicație întreagă)
+**De ce:** userul a semnalat că pe mobil titlul paginii era afișat DE DOUĂ ORI (o dată logo+"Renovator Pro" în bara sus din `Sidebar.tsx`, o dată titlul real al paginii sub ea, din `PageHeader.tsx`) — voia ca bara de sus, când meniul e închis, să arate direct numele paginii curente; iar logo-ul + numele aplicației să apară doar când deschizi meniul (dropdown-ul), sub buton.
+
+- **`Sidebar.tsx`**: bara mobilă sticky nu mai arată logo+"Renovator Pro" — arată titlul paginii curente (`nav.find((item) => pathname.startsWith(item.href))?.label`, fallback `"Renovator Pro"` pt. rute fără match, ex. `/`). Logo-ul + „Renovator Pro / Management Buget" s-au mutat în panoul dropdown (randate deasupra listei de linkuri, sub bara sus), vizibile doar când `mobileOpen` e `true`.
+- **`PageHeader.tsx`**: header-ul întreg (titlu + căutare + acțiuni) e acum `hidden md:block` — pe mobil titlul e deja afișat o singură dată în bara din `Sidebar`, deci nu mai are rost să fie randat și aici (ar fi fost duplicat). De la `md` în sus, comportamentul e identic cu înainte.
+- Schimbarea e la nivel de componente shared (`Sidebar`, `PageHeader`), deci se aplică automat pe TOATE paginile, nu doar `/elemente` — testat pe `/elemente` și `/configurare`.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px (titlu unic sus pe fiecare pagină, meniu deschis arată corect logo+brand deasupra linkurilor) și 1440px (desktop neschimbat — sidebar complet + `PageHeader` cu titlu/căutare ca înainte).
+
+**Fișiere atinse:** `src/components/Sidebar.tsx`, `src/components/PageHeader.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza` mobil: cele 4 carduri KPI → un singur card compact cu gradient
+**De ce:** userul a semnalat că cele 4 carduri KPI stivuite ocupau prea mult spațiu vertical pe telefon; a cerut înlocuirea cu cardul unic din „Analiză Bugetară - Mobile Premium Light Gradient Layout" — aceleași date, doar aranjate diferit.
+
+- Cele 4 carduri separate (`Total Alocat`, `Cheltuieli Totale`, `Buget Rămas`, `Achiziții Finalizate`, fiecare cu propriul chenar + bară de progres) înlocuite cu un singur card cu fundal gradient (`linear-gradient(135deg, #ffffff 0%, var(--surface-low) 100%)`), grid 2×2: rândul de sus (Total Alocat / Cheltuieli Totale) separat printr-o linie de rândul de jos (Buget Rămas, valoare mare / Achiziții Finalizate, cu bară de progres subțire) — fidel design-ului.
+- Date identice, zero calcule noi: `formatMoney(project.totalBudget)`, `formatMoney(spent)`, `formatMoney(remaining)`, `bought`/`items.length`, `progress` — toate deja existente.
+- Doar secțiunea mobilă (`md:hidden`) a fost atinsă — cele 4 carduri de pe desktop (`hidden md:block`) rămân neschimbate.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px (card compact, mult mai puțin spațiu ocupat) și 1440px (desktop neschimbat, cele 4 carduri separate).
+
+**Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza` desktop: cele 4 carduri KPI → card unic cu gradient închis (Dashboard Premium Consolidat)
+**De ce:** userul a cerut înlocuirea celor 4 carduri albe separate de pe desktop cu design-ul consolidat din „Analiză Bugetară - Dashboard Premium Consolidat Desktop".
+
+- Cele 4 carduri albe (`border border-line bg-surface`, fiecare cu umbră proprie) înlocuite cu un singur card cu gradient închis (`linear-gradient(135deg, #1e293b 0%, #000000 100%)`), text alb, 4 coloane separate prin `border-r border-white/10` (md+), fidel design-ului: Total Alocat / Cheltuieli Totale (cu bară de progres albă) / Buget Rămas / Achiziții Finalizate (cu bară secundară).
+- Date identice, aceleași variabile deja calculate (`formatMoney`, `spentPct`, `remainingPct`, `bought`, `progress`) — zero logică nouă.
+- Accentul verde „+12% față de plan" din design (fără echivalent real calculabil) a fost înlocuit cu eticheta reală „Buget de referință" (consecvent cu decizia anterioară de pe această pagină și pe `/centralizator`).
+- Doar secțiunea desktop (`hidden md:block`) a fost atinsă — cardul mobil (light gradient, cerut anterior) rămâne neschimbat.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 1440px (card unic cu gradient, cele 4 metrici aliniate) și 375px (mobil neschimbat).
+
+**Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza` desktop: fix responsive pe cardul unic KPI (text se suprapunea pe ecrane medii)
+**De ce:** userul a semnalat că pe ecrane de lățime medie (ex. 900px) textul din cardul consolidat KPI (introdus în sesiunea anterioară) se suprapunea — `grid-cols-1 md:grid-cols-4` sărea direct la 4 coloane la 768px, iar cifrele la `text-[32px]` font-mono nu încăpeau, provocând overflow vizual peste coloana vecină.
+
+- Grid schimbat din `grid-cols-1 md:grid-cols-4` în `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` — 2 coloane pe ecrane medii (768–1024px), 4 doar de la `lg` (1024px) în sus, unde există loc real.
+- Mărimea cifrelor mari (Total Alocat / Cheltuieli Totale / Buget Rămas / Achiziții %) trece de la `text-[32px]` fix la `clamp(18px, 2.2vw, 32px)` (inline style) — se micșorează fluid odată cu ecranul în loc să sară brusc între breakpoints sau să deborde.
+- Adăugat `min-w-0` pe fiecare coloană + `truncate`/`shrink-0` pe elementele care puteau împinge conținutul peste lățimea coloanei (border-uri divizoare mutate la `lg:border-r`, ca să nu rămână vizual „rupte" pe layout-ul de 2 coloane).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 768px, 900px, 1440px și 1600px — text lizibil, fără suprapuneri la nicio lățime; sub `md` (mobil) cardul light-gradient separat rămâne neatins.
+
+**Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — Header de statistici unificat pe toate paginile: `DashboardSummaryCard`
+**De ce:** userul a confirmat că îi place cardul cu gradient închis introdus pe `/analiza` desktop și a cerut explicit ca ACELAȘI design (culori, font, poziționare) să fie folosit pe toate paginile, indiferent de mobil/desktop — dar cu datele reale ale fiecărei pagini, nu date copiate.
+
+- **Component nou** `src/components/DashboardSummaryCard.tsx` — extras din implementarea de pe `/analiza`, generic: primește `metrics: SummaryMetric[]` (2–4 elemente, `{label, value, footer?}`), randează gradientul, grid-ul responsive (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-{n}`, `border-r` doar la `lg`) și tipografia. Exportă și `SummaryProgressFooter` (bară + %) și `SummaryAccentFooter` (punct colorat + text) pt. footer-ul fiecărui metric — evită duplicarea celor două „stiluri" de footer văzute în design.
+- **Aplicat pe toate paginile**, înlocuind headerele de statistici anterioare (fiecare avea propriul stil, uneori diferit pe mobil vs. desktop):
+  - `/analiza` — unificat cele două variante (light-gradient mobil + dark-gradient desktop) într-una singură, afișată necondiționat (nu mai există split `md:hidden`/`hidden md:block` pt. acest bloc).
+  - `/elemente` — înlocuit grid-ul de `StatCard` (desktop) + cardul light propriu (mobil) cu `DashboardSummaryCard` (4 metrici: Buget total estimat, Total cheltuit, Elemente achiziționate, Progres achiziții).
+  - `/centralizator` — înlocuit cele 3 carduri cu bară colorată + donut de eficiență (desktop) și cardurile cu scroll orizontal (mobil) cu `DashboardSummaryCard` (3 metrici: Total Estimat Proiect, Total Cheltuit la Zi, Eficiență Bugetară — donut-ul de eficiență a fost eliminat, înlocuit cu bară de progres în footer).
+  - `/configurare` — înlocuit „Sumar Tehnic Global" (card alb) cu `DashboardSummaryCard` (4 metrici: Suprafață Utilă, Status, Buget Total, Progres Calcul); titlul „Proiect Curent" + numele proiectului rămân deasupra cardului (conținut real, nu un metric generic).
+- **Fix responsive găsit în timpul verificării:** la 1440px, pe `/configurare` (container `max-w-6xl`, mai îngust decât `max-w-7xl` de pe celelalte pagini), valoarea „12.500,00 EUR" se trunchia (`clamp(18px, 2.2vw, 32px)` prea mare pt. coloana disponibilă). Redus la `clamp(16px, 1.6vw, 26px)` — încape pe toate paginile la toate lățimile testate.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual pe toate cele 4 pagini, la 375px și 1440px — design identic (gradient, font, poziționare), doar datele diferă per pagină.
+
+**Fișiere atinse:** `src/components/DashboardSummaryCard.tsx` (nou), `src/app/analiza/page.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/configurare/page.tsx`, `CLAUDE.md`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.

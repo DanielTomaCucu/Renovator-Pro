@@ -134,7 +134,7 @@ Regulă: **toate sumele de bani și cantitățile se afișează cu `font-mono`**
 ### Paleta de culori (tokens în `globals.css`, expuse ca clase Tailwind)
 | Token | Hex | Clasă | Utilizare |
 |---|---|---|---|
-| primary | `#0f172a` | `bg-primary` | text principal, butoane primare, navigare, blocuri structurale |
+| primary | `#000000` | `bg-primary` | text principal, butoane primare, navigare, blocuri structurale — negru absolut, fidel design-ului Stitch (NU un negru „fad”/navy) |
 | secondary | `#0ea5e9` | `text-secondary` | date, progress bars, highlight-uri informaționale („Cheltuit") |
 | tertiary | `#f97316` | `text-tertiary` | CTA critice, alerte, depășiri de buget — folosit RAR |
 | background | `#f8f9ff` | `bg-background` | fundal pagină |
@@ -144,6 +144,19 @@ Regulă: **toate sumele de bani și cantitățile se afișează cu `font-mono`**
 | muted | `#64748b` | `text-muted` | text secundar, etichete |
 
 Status chips: Cumpărat = emerald, În așteptare = amber, Planificat = sky — capsule `rounded-full`, text uppercase 11px bold (vezi `StatusChip.tsx`).
+
+### Card de sumar / header de statistici — `DashboardSummaryCard`
+
+**Toate paginile principale** (`/elemente`, `/centralizator`, `/analiza`, `/configurare`) folosesc **același** component
+`src/components/DashboardSummaryCard.tsx` pt. blocul de statistici din capul paginii — identic pe mobil ȘI desktop
+(nu mai există variante separate „mobil light" / „desktop dark"). Gradient închis `linear-gradient(135deg, #1e293b 0%, #000000 100%)`,
+text alb, grid responsive (`grid-cols-1` → `sm:grid-cols-2` → `lg:grid-cols-{n}`, cu `border-r` doar la `lg`), valoare mare
+`font-mono font-bold` la `clamp(16px, 1.6vw, 26px)` (fluid, nu sare între breakpoints — testează mereu la 768/900/1440px
+dacă adaugi un metric nou, ca să nu se trunchieze).
+
+**Dacă o pagină nouă are nevoie de un header de statistici, folosește `DashboardSummaryCard` cu 2–4 metrici** (`SummaryMetric[]`),
+opțional cu footer `<SummaryProgressFooter percent={...} />` (bară + %) sau `<SummaryAccentFooter>` (punct colorat + text) —
+NU crea un card nou de la zero. Datele afișate rămân mereu specifice paginii (nu se copiază datele altei pagini).
 
 ### Elevation & forme
 - **Fără umbre grele.** Carduri = alb + border 1px `border-line`. Doar dropdown/modal primesc umbră discretă (`shadow-xl` pe Drawer e OK).
@@ -170,7 +183,20 @@ Utilizare (span cu clasa `material-symbols-outlined`, numele iconiței ca text):
 ```
 **Nu adăuga clasa `material-symbols-outlined` fără să încarci fontul întâi** — fără font, textul iconiței apare literal (ex: „bed” în loc de o iconiță). Până la migrare, componentele folosesc emoji locale (vezi ex. `ROOM_TYPE_EMOJI` din `RoomFormDrawer.tsx`).
 
-**Stil:** outlined, weight ~400, dimensiune 20–24px, culoare `text-muted` pe acțiuni secundare, `text-white`/`primary` pe acțiuni pe fundal întunecat.
+**Stil:** outlined, weight ~400, culoare `text-muted` pe acțiuni secundare, `text-white`/`primary` pe acțiuni pe fundal întunecat.
+
+**Mărime standard iconițe de buton (edit/delete/adaugă/salvează în butoane, tabele, headere de secțiune):
+clasa `icon-btn` (`globals.css`), aplicată uniform pe toate paginile.** Iconițele pur decorative (indicator
+sortare coloană, iconiță tip cameră lângă titlu, iconițe mari de empty-state) nu intră sub această regulă
+și pot avea alte dimensiuni.
+
+**Important — axa `opsz` a fontului Material Symbols:** fontul are o axă variabilă `opsz` (optical size,
+proiectată pt. randare 24px). Dacă `opsz` rămâne fixată la 24 în timp ce iconița e afișată la 14–16px
+(`text-sm`/`text-base`), traseul e desenat prea gros pt. dimensiunea reală și iconița pare "mare"/bold
+chiar dacă `font-size` e mic. De asta clasa globală `.material-symbols-outlined` din `globals.css` ține
+`opsz` la 20, iar `.icon-btn` (font-size 15px) coboară `opsz` la 18. **Nu seta doar `text-[Npx]` pe o
+iconiță mică fără să ajustezi și `opsz`** — dacă ai nevoie de o dimensiune nouă, ajustează `font-variation-settings`
+în `globals.css` (sau inline, vezi `StatusChip.tsx`), nu doar clasa de `text-size`.
 
 #### Navigare sidebar (`Sidebar.tsx`)
 | Iconiță | Secțiune |
