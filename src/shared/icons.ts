@@ -50,6 +50,7 @@ export const ACTION_ICONS = {
   link: "link",
   image: "image",
   sortIndicator: "unfold_more",
+  photoCamera: "photo_camera",
 } as const;
 
 export const STATUS_ICONS: Record<ItemStatus, string> = {
@@ -107,4 +108,6 @@ export const TECHNICAL_ICONS = {
   calculatedResults: "calculate",
   saveConfig: "save",
   addRoomEmpty: "add_circle",
+  totalArea: "square_foot",
+  info: "info",
 } as const;

@@ -6,4 +6,6 @@ export interface Project {
   title: string;
   totalBudget: number;
   currency: Currency;
+  /** Suprafață totală introdusă manual (mp) — folosită pt. progresul de proiect, nu suma camerelor. */
+  totalArea?: number;
 }

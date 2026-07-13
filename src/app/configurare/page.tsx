@@ -14,12 +14,14 @@ import { projectTechnicalSummary } from "./dimensions";
 import RoomTechnicalCard from "./RoomTechnicalCard";
 
 export default function ConfigurarePage() {
-  const { project, rooms, updateRoom } = useStore();
+  const { project, rooms, updateProject } = useStore();
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
   const summary = projectTechnicalSummary(rooms);
   const progressPct = Math.round(summary.configuredRoomsRatio * 100);
   const status =
     progressPct === 0 ? "Neînceput" : progressPct === 100 ? "Finalizat" : "În Lucru";
+  // Suprafață utilă afișată: valoarea manuală a proiectului dacă există, altfel suma camerelor configurate.
+  const displayedArea = project.totalArea ?? summary.totalFloorArea;
 
   return (
     <div>
@@ -36,7 +38,7 @@ export default function ConfigurarePage() {
           </div>
           <DashboardSummaryCard
             metrics={[
-              { label: "Suprafață Utilă", value: `${summary.totalFloorArea.toFixed(1)} mp` },
+              { label: "Suprafață Utilă", value: `${displayedArea.toFixed(1)} mp` },
               {
                 label: "Status",
                 value: status,
@@ -52,24 +54,43 @@ export default function ConfigurarePage() {
           />
         </section>
 
+        {/* Suprafață Totală Apartament — valoare manuală, sursa de adevăr pt. progresul de proiect */}
+        <section className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-low text-primary">
+              <span className="material-symbols-outlined">{TECHNICAL_ICONS.totalArea}</span>
+            </div>
+            <div>
+              <h3 className="font-heading text-base font-bold text-primary">
+                Suprafață Totală Apartament (MP)
+              </h3>
+              <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                <span className="material-symbols-outlined text-[12px]">
+                  {TECHNICAL_ICONS.info}
+                </span>
+                Valoare utilizată pentru calculul progresului proiectului
+              </p>
+            </div>
+          </div>
+          <div className="w-full md:w-48">
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              placeholder="0.00"
+              value={project.totalArea ?? ""}
+              onChange={(e) =>
+                updateProject({ totalArea: e.target.value ? Number(e.target.value) : undefined })
+              }
+              className="w-full rounded-lg border border-line-strong bg-surface px-4 py-3 font-mono text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+            />
+          </div>
+        </section>
+
         {/* Listă camere cu configurare tehnică */}
         <section className="space-y-6">
           {rooms.map((room) => (
-            <div key={room.id} className="space-y-2">
-              <RoomTechnicalCard room={room} />
-              <label className="flex items-center justify-between rounded-lg border border-line bg-surface px-5 py-3 text-sm text-muted">
-                Buget alocat (€)
-                <input
-                  type="number"
-                  min={0}
-                  value={room.allocatedBudget}
-                  onChange={(e) =>
-                    updateRoom(room.id, { allocatedBudget: Number(e.target.value) })
-                  }
-                  className="w-32 rounded-md border border-line px-3 py-2 text-right font-mono text-sm text-foreground outline-none focus:border-secondary"
-                />
-              </label>
-            </div>
+            <RoomTechnicalCard key={room.id} room={room} />
           ))}
 
           {/* Adaugă cameră nouă — stare goală */}

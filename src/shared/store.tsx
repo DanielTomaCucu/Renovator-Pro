@@ -17,9 +17,13 @@ let seq = 100;
 const nextId = (prefix: string) => `${prefix}${seq++}`;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [project] = useState<Project>(mockProject);
+  const [project, setProject] = useState<Project>(mockProject);
   const [rooms, setRooms] = useState<Room[]>(mockRooms);
   const [items, setItems] = useState<Item[]>(mockItems);
+
+  const updateProject = useCallback((patch: Partial<Project>) => {
+    setProject((prev) => ({ ...prev, ...patch }));
+  }, []);
 
   const addRoom = useCallback((room: Omit<Room, "id">) => {
     setRooms((prev) => [...prev, { ...room, id: nextId("r") }]);
@@ -51,6 +55,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       project,
       rooms,
       items,
+      updateProject,
       addRoom,
       updateRoom,
       deleteRoom,
@@ -58,7 +63,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateItem,
       deleteItem,
     }),
-    [project, rooms, items, addRoom, updateRoom, deleteRoom, addItem, updateItem, deleteItem]
+    [
+      project,
+      rooms,
+      items,
+      updateProject,
+      addRoom,
+      updateRoom,
+      deleteRoom,
+      addItem,
+      updateItem,
+      deleteItem,
+    ]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
