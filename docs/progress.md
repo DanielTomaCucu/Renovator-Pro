@@ -302,3 +302,16 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/centralizator/page.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/elemente`: variantă mobilă 1:1 cu Stitch + `ConfirmDialog` devine bottom sheet pe mobil
+**De ce:** userul a cerut varianta de telefon a paginii Elemente de Cumpărat, identică cu ecranul „Confirmare Ștergere - Bottom Sheet Mobile" (care conține atât pagina de listă, cât și dialogul de ștergere ca bottom sheet).
+
+- **`ConfirmDialog.tsx`** (shared — afectează global orice ștergere, nu doar `/elemente`): sub breakpoint-ul `sm`, dialogul se randează acum ca bottom sheet (`items-end`, colțuri sus rotunjite `rounded-t-[24px]`, handle bar, titlu/mesaj centrate, buton „Șterge" roșu full-width sus + „Anulează" text dedesubt, ambele cu `active:scale`), fidel design-ului Stitch. De la `sm` în sus, comportamentul rămâne EXACT ca înainte (modal centrat, butoane side-by-side) — zero regresie pe desktop.
+- **`/elemente`**: layout desktop existent (nu avea încă wrapper `hidden`/breakpoint) înfășurat explicit în `hidden md:block`. Bloc nou `md:hidden` cu: card de sumar (buget/cheltuit + bară de progres), chip-uri de filtrare pe cameră (fully funcționale — `mobileFilterRoomId`, „Toate" resetează), acordeon „Adăugare Rapidă" (colapsat implicit, reutilizează `quickAdd` existent), carduri de cameră ca acordeon cu iconițe inline adaugă/șterge în header (`role="button"` în interiorul unui `<button>` — nu `<button>` imbricat, pattern deja folosit în `RoomTechnicalCard.tsx`), rânduri de elemente cu edit/șterge (iconița „visibility" din design nu are echivalent — un singur creion de editare, documentat ca simplificare).
+- State nou, local paginii: `mobileQuickAddOpen`, `mobileFilterRoomId`, `mobileOpenRooms` (`Set<string>`, separat de accordion state-ul desktop-ului — cele două view-uri nu sunt randate simultan, deci nu există sincronizare de făcut).
+- **Simplificare documentată:** design-ul are și un bottom sheet separat „Detalii Articol" (read-only + edit/delete) — nu a fost construit un componentă nouă pt. asta; iconița de vizualizare din listă ar deschide același `ItemFormDrawer` folosit la editare (nu există încă un view read-only dedicat).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px: filtrare pe cameră, acordeon adăugare rapidă, acordeon cameră cu add/delete, editare/ștergere element, bottom sheet-ul de confirmare (screenshot confirmă potrivire exactă cu design: handle bar, text centrat, buton roșu full-width, Anulează dedesubt). 1440px: desktop neschimbat.
+
+**Fișiere atinse:** `src/app/elemente/page.tsx`, `src/components/ConfirmDialog.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
