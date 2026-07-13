@@ -82,7 +82,7 @@ export default function ConfigurarePage() {
               onChange={(e) =>
                 updateProject({ totalArea: e.target.value ? Number(e.target.value) : undefined })
               }
-              className="w-full rounded-lg border border-line-strong bg-surface px-4 py-3 font-mono text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+              className="w-full rounded-lg border border-line bg-surface px-4 py-3 font-mono text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
             />
           </div>
         </section>

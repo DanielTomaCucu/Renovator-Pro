@@ -36,9 +36,9 @@ const ROOM_TYPE_DESCRIPTION: Record<RoomType, string> = {
 };
 
 const selectCls =
-  "w-full appearance-none rounded-lg border border-line-strong bg-surface px-4 py-3 text-sm font-medium outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20";
+  "w-full appearance-none rounded-lg border border-line bg-surface px-4 py-3 text-sm font-medium outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20";
 const inputCls =
-  "w-full rounded-lg border border-line-strong bg-surface px-4 py-3 font-mono text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20";
+  "w-full rounded-lg border border-line bg-surface px-4 py-3 font-mono text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20";
 const labelCls = "block text-[10px] font-bold uppercase text-muted";
 
 /** Select cu iconiță chevron custom — distinge vizual selectoarele de inputurile numerice. */
@@ -232,7 +232,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               min={0}
               value={room.allocatedBudget}
               onChange={(e) => patch({ allocatedBudget: Number(e.target.value) })}
-              className="w-32 rounded-lg border border-line-strong px-3 py-2 text-right font-mono text-sm text-foreground outline-none focus:border-secondary"
+              className="w-32 rounded-lg border border-line px-3 py-2 text-right font-mono text-sm text-foreground outline-none focus:border-secondary"
             />
             <button
               type="button"

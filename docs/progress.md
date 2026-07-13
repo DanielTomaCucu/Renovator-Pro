@@ -503,3 +503,14 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/configurare/page.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-13 — Revert `border-line-strong`: bordurile de pe `/configurare` ieșeau prea închise
+**De ce:** userul a semnalat că inputurile/select-urile de pe `/configurare` au o bordură vizibil mai închisă decât restul aplicației (arăta „negru"), inconsistent cu convenția existentă — restul paginilor (`/elemente`, `PageHeader`, `Drawer` etc.) folosesc mereu `border-line` (`#e2e8f0`), niciodată o variantă mai puternică.
+
+- Toate utilizările `border-line-strong` din `RoomTechnicalCard.tsx` și `page.tsx` (introduse în două sesiuni anterioare din aceeași zi, ca reacție la o cerere de bordură „mai vizibilă") revenite la `border-line` — aliniat cu restul aplicației.
+- Token-ul `--border-strong` / `--color-line-strong` șters din `globals.css` (nefolosit nicăieri altundeva).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat vizual desktop (1440px): bordurile de pe `/configurare` sunt acum identice ca nuanță cu restul aplicației.
+
+**Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/configurare/page.tsx`, `src/app/globals.css`, `docs/progress.md`.
+
+**Branch:** `005-padding-mobil-fundal-sectiuni`.
