@@ -277,3 +277,15 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — Meniu hamburger mobil (`Sidebar.tsx`) + fix breakpoint `/analiza` (aplicație întreagă)
+**De ce:** userul a semnalat două probleme: (1) `<aside>` (`Sidebar.tsx`) e `hidden md:flex` de la început — sub 768px dispărea complet și nu exista nimic în loc, deci pe telefon nu mai exista NICI un meniu de navigare; (2) `/analiza` comuta pe layout-ul mobil la breakpoint-ul `lg` (1024px), deschis mai devreme decât breakpoint-ul `md` (768px) la care dispare sidebar-ul — rezultatul: pe ecrane medii (768–1024px, cu sidebar vizibil) pagina "sărea" deja în modul telefon cu o singură coloană.
+
+- **`Sidebar.tsx`**: adăugat un header + meniu dropdown mobil (`md:hidden`), randate din același array `nav` folosit de `<aside>` (o singură sursă de adevăr, zero duplicare de linkuri). Header sticky sus, cu logo + buton hamburger (iconiță nouă `NAV_ICONS.mobileMenu` = `menu`, devine `ACTION_ICONS.close` când e deschis). La click se deschide un panou dropdown (de sus în jos, `scale-y` + `opacity`, `aria-expanded`) cu overlay semi-transparent care închide meniul la click în afara lui; fiecare link închide meniul la navigare.
+- **`layout.tsx`**: containerul rădăcină trece din `flex` (rând, fix) în `flex flex-col md:flex-row`, ca header-ul mobil din `Sidebar` să stea deasupra conținutului (nu lângă el) sub 768px, și lângă el (ca înainte) de la 768px în sus.
+- **`/analiza`**: breakpoint-ul de comutare mobil/desktop schimbat din `lg` (1024px) în `md` (768px), aliniat cu breakpoint-ul la care dispare/apare `<aside>`-ul — acum layout-ul cu o singură coloană apare DOAR sub 768px (telefon real), nu și pe ecrane medii/tablete.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual: 375px (meniu hamburger funcțional, deschide/închide, navighează, overlay), 900px (sidebar complet vizibil, `/analiza` afișează layout-ul desktop, NU mai sare pe o coloană), 1440px (neschimbat).
+
+**Fișiere atinse:** `src/components/Sidebar.tsx`, `src/app/layout.tsx`, `src/app/analiza/page.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.

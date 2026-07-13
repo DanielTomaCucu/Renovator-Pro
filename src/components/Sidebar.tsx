@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ICONS } from "@/shared/icons";
+import { ACTION_ICONS, NAV_ICONS } from "@/shared/icons";
 
 const nav = [
   { href: "/configurare", label: "Configurare Apartament", icon: NAV_ICONS.configurare },
@@ -15,9 +15,77 @@ const nav = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <aside
+    <>
+      {/* Bară + meniu mobil — vizibile doar sub breakpoint-ul md, unde <aside> dispare */}
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-surface-low px-4 py-3 md:hidden">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
+            <span
+              className="material-symbols-outlined text-[16px] text-white"
+              style={{ fontVariationSettings: '"FILL" 1' }}
+            >
+              {NAV_ICONS.logo}
+            </span>
+          </div>
+          <span className="font-heading text-sm font-extrabold text-primary">Renovator Pro</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-label={mobileOpen ? "Închide meniul" : "Deschide meniul"}
+          aria-expanded={mobileOpen}
+          className="rounded-lg p-2 text-primary hover:bg-surface"
+        >
+          <span className="material-symbols-outlined">
+            {mobileOpen ? ACTION_ICONS.close : NAV_ICONS.mobileMenu}
+          </span>
+        </button>
+      </header>
+
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <nav
+        className={`fixed left-0 right-0 top-[57px] z-40 origin-top border-b border-line bg-surface shadow-lg transition-all duration-200 md:hidden ${
+          mobileOpen ? "scale-y-100 opacity-100" : "pointer-events-none scale-y-95 opacity-0"
+        }`}
+      >
+        <div className="space-y-0.5 p-3">
+          {nav.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
+                  active
+                    ? "bg-secondary/10 text-secondary"
+                    : "text-muted hover:bg-surface-low hover:text-primary"
+                }`}
+              >
+                <span
+                  className="material-symbols-outlined shrink-0 text-[20px]"
+                  style={active ? { fontVariationSettings: '"FILL" 1' } : undefined}
+                >
+                  {item.icon}
+                </span>
+                <span className="text-sm font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <aside
       className={`hidden md:flex h-screen shrink-0 flex-col border-r border-line bg-surface-low transition-all duration-300 sticky top-0 ${
         collapsed ? "w-20 p-3" : "w-64 p-4"
       }`}
@@ -134,5 +202,6 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

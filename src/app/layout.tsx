@@ -43,9 +43,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full">
         <StoreProvider>
-          <div className="flex min-h-screen">
+          <div className="flex min-h-screen flex-col md:flex-row">
             <Sidebar />
-            <main className="flex-1 min-w-0">{children}</main>
+            <main className="min-w-0 flex-1">{children}</main>
           </div>
         </StoreProvider>
       </body>

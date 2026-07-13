@@ -22,6 +22,7 @@ export const NAV_ICONS = {
   sidebarAddRoom: "add_circle",
   search: "search",
   profil: "account_circle",
+  mobileMenu: "menu",
 } as const;
 
 export const ROOM_TYPE_ICONS: Record<RoomType, string> = {

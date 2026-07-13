@@ -92,7 +92,7 @@ export default function AnalizaPage() {
       />
 
       {/* Desktop — bento grid, vezi „Analiză Bugetară - Meniu Restrâns Premium v2" */}
-      <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:block lg:px-10">
+      <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
         {/* Sumar */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-line bg-surface p-6 shadow-sm transition-all hover:shadow-md">
@@ -421,7 +421,7 @@ export default function AnalizaPage() {
       </div>
 
       {/* Mobil — vezi „Analiză Bugetară - Mobile Premium Black Theme" (fără bottom nav, se face în Flutter) */}
-      <div className="mx-auto max-w-md space-y-6 px-4 py-6 lg:hidden">
+      <div className="mx-auto max-w-md space-y-6 px-4 py-6 md:hidden">
         {/* KPI */}
         <section className="space-y-3">
           <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
