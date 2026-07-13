@@ -514,3 +514,14 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/configurare/page.tsx`, `src/app/globals.css`, `docs/progress.md`.
 
 **Branch:** `005-padding-mobil-fundal-sectiuni`.
+
+### 2026-07-13 — Fix: scroll-ul paginii din spate nu se bloca la deschiderea drawer-elor/dialogurilor
+**De ce:** userul a semnalat că, la orice drawer sau dialog deschis (Adaugă/Editează Cameră, Adaugă/Editează Element, Confirmare Ștergere, meniul hamburger mobil), pagina din spate tot făcea scroll în loc să rămână fixă — pe telefon și pe desktop deopotrivă. Comportament greșit: doar conținutul overlay-ului ar trebui să facă scroll.
+
+- **Hook nou** `useLockBodyScroll(locked: boolean)` în `src/shared/useLockBodyScroll.ts` — setează `document.body.style.overflow = "hidden"` cât timp `locked` e `true`, restaurează valoarea anterioară la `false`/unmount.
+- Folosit în toate cele 3 componente cu overlay `fixed inset-0`: `Drawer.tsx` (RoomFormDrawer, ItemFormDrawer), `ConfirmDialog.tsx`, și meniul hamburger mobil din `Sidebar.tsx`.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat în browser: cu drawer-ul „Adaugă Cameră" deschis, scroll cu rotița peste zona de fundal (backdrop) nu mai mișcă pagina (`window.scrollY` neschimbat); la închidere, `body.style.overflow` revine la normal și scroll-ul funcționează din nou.
+
+**Fișiere atinse:** `src/shared/useLockBodyScroll.ts` (nou), `src/components/Drawer.tsx`, `src/components/ConfirmDialog.tsx`, `src/components/Sidebar.tsx`, `docs/progress.md`.
+
+**Branch:** `005-padding-mobil-fundal-sectiuni`.
