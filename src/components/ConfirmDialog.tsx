@@ -1,5 +1,7 @@
 "use client";
 
+import { useLockBodyScroll } from "@/shared/useLockBodyScroll";
+
 export default function ConfirmDialog({
   open,
   title,
@@ -13,6 +15,8 @@ export default function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  useLockBodyScroll(open);
+
   if (!open) return null;
 
   return (

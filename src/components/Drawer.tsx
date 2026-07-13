@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import { useLockBodyScroll } from "@/shared/useLockBodyScroll";
 
 export default function Drawer({
   open,
@@ -13,6 +14,8 @@ export default function Drawer({
   onClose: () => void;
   children: ReactNode;
 }) {
+  useLockBodyScroll(open);
+
   if (!open) return null;
 
   return (

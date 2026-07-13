@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ACTION_ICONS, NAV_ICONS } from "@/shared/icons";
+import { useLockBodyScroll } from "@/shared/useLockBodyScroll";
 
 const nav = [
   { href: "/configurare", label: "Configurare Apartament", icon: NAV_ICONS.configurare },
@@ -16,6 +17,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  useLockBodyScroll(mobileOpen);
 
   const currentPageTitle =
     nav.find((item) => pathname.startsWith(item.href))?.label ?? "Renovator Pro";
