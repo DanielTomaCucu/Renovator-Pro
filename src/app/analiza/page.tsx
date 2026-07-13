@@ -93,89 +93,83 @@ export default function AnalizaPage() {
 
       {/* Desktop — bento grid, vezi „Analiză Bugetară - Meniu Restrâns Premium v2" */}
       <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
-        {/* Sumar */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm transition-all hover:shadow-md">
-            <div className="flex flex-col gap-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted">
+        {/* Sumar — card unic cu gradient închis, vezi „Analiză Bugetară - Dashboard Premium Consolidat Desktop" */}
+        <div
+          className="w-full overflow-hidden rounded-xl p-8 text-white shadow-md"
+          style={{ background: "linear-gradient(135deg, #1e293b 0%, #000000 100%)" }}
+        >
+          <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-4">
+            <div className="space-y-2 border-white/10 pr-4 md:border-r">
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
                 Total Alocat
               </p>
               <div className="flex items-baseline gap-1">
-                <span className="font-mono text-[32px] font-bold tracking-tight text-primary">
+                <span className="font-mono text-[32px] font-bold tracking-tight">
                   {formatMoney(project.totalBudget)}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary/20" />
-                <span className="text-[11px] font-medium uppercase tracking-wider text-muted">
-                  Buget de referință
-                </span>
-              </div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-emerald-400">
+                Buget de referință
+              </p>
             </div>
-          </div>
 
-          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm transition-all hover:shadow-md">
-            <div className="flex flex-col gap-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted">
+            <div className="space-y-2 border-white/10 pr-4 md:border-r">
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
                 Cheltuieli Totale
               </p>
-              <span className="font-mono text-[32px] font-bold tracking-tight text-primary">
-                {formatMoney(spent)}
-              </span>
-              <div className="space-y-2">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-low">
+              <div className="flex items-baseline gap-1">
+                <span className="font-mono text-[32px] font-bold tracking-tight">
+                  {formatMoney(spent)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
                   <div
-                    className="h-full rounded-full bg-primary"
+                    className="h-full rounded-full bg-white"
                     style={{ width: `${Math.min(100, spentPct)}%` }}
                   />
                 </div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted">
-                  {spentPct}% din total utilizat
-                </p>
+                <span className="font-mono text-[10px] opacity-60">{spentPct}%</span>
               </div>
             </div>
-          </div>
 
-          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm transition-all hover:shadow-md">
-            <div className="flex flex-col gap-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted">
+            <div className="space-y-2 border-white/10 pr-4 md:border-r">
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
                 Buget Rămas
               </p>
-              <span
-                className={`font-mono text-[32px] font-bold tracking-tight ${remaining < 0 ? "text-tertiary" : "text-primary"}`}
-              >
-                {formatMoney(remaining)}
-              </span>
+              <div className="flex items-baseline gap-1">
+                <span
+                  className={`font-mono text-[32px] font-bold tracking-tight ${remaining < 0 ? "text-tertiary" : ""}`}
+                >
+                  {formatMoney(remaining)}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
-                <span className="text-[11px] font-medium uppercase tracking-wider text-muted">
+                <span className="text-[11px] font-medium uppercase tracking-wider opacity-60">
                   {remainingPct}% disponibil
                 </span>
               </div>
             </div>
-          </div>
 
-          <div className="rounded-xl border border-line bg-surface p-6 shadow-sm transition-all hover:shadow-md">
-            <div className="flex flex-col gap-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted">
-                Achiziții Finalizate
-              </p>
-              <div className="flex items-baseline gap-1">
-                <span className="font-mono text-[32px] font-bold tracking-tight text-primary">
-                  {bought}
-                </span>
-                <span className="text-[18px] font-medium text-muted">/ {items.length}</span>
-              </div>
-              <div className="space-y-2">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-low">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted">
-                  {progress}% Progres
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
+                  Achiziții Finalizate
                 </p>
+                <p className="font-mono text-[10px] opacity-80">
+                  {bought} / {items.length}
+                </p>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-mono text-[32px] font-bold tracking-tight">{progress}</span>
+                <span className="text-[18px] font-medium opacity-60">%</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-secondary"
+                  style={{ width: `${progress}%` }}
+                />
               </div>
             </div>
           </div>

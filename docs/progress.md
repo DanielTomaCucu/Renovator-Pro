@@ -349,3 +349,16 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza` desktop: cele 4 carduri KPI → card unic cu gradient închis (Dashboard Premium Consolidat)
+**De ce:** userul a cerut înlocuirea celor 4 carduri albe separate de pe desktop cu design-ul consolidat din „Analiză Bugetară - Dashboard Premium Consolidat Desktop".
+
+- Cele 4 carduri albe (`border border-line bg-surface`, fiecare cu umbră proprie) înlocuite cu un singur card cu gradient închis (`linear-gradient(135deg, #1e293b 0%, #000000 100%)`), text alb, 4 coloane separate prin `border-r border-white/10` (md+), fidel design-ului: Total Alocat / Cheltuieli Totale (cu bară de progres albă) / Buget Rămas / Achiziții Finalizate (cu bară secundară).
+- Date identice, aceleași variabile deja calculate (`formatMoney`, `spentPct`, `remainingPct`, `bought`, `progress`) — zero logică nouă.
+- Accentul verde „+12% față de plan" din design (fără echivalent real calculabil) a fost înlocuit cu eticheta reală „Buget de referință" (consecvent cu decizia anterioară de pe această pagină și pe `/centralizator`).
+- Doar secțiunea desktop (`hidden md:block`) a fost atinsă — cardul mobil (light gradient, cerut anterior) rămâne neschimbat.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 1440px (card unic cu gradient, cele 4 metrici aliniate) și 375px (mobil neschimbat).
+
+**Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
