@@ -390,3 +390,16 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/components/DashboardSummaryCard.tsx` (nou), `src/app/analiza/page.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/configurare/page.tsx`, `CLAUDE.md`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `DashboardSummaryCard`: layout compact pe mobil (2 coloane în loc de 1)
+**De ce:** userul a semnalat că pe telefon cardul de sumar (aplicat pe toate paginile) ocupa mult spațiu vertical inutil — pe mobil grila era `grid-cols-1` (toate metricile stivuite), iar etichetele lungi și footer-ele se trunchiau cu `truncate`.
+
+- Grid schimbat din `grid-cols-1 sm:grid-cols-2 lg:grid-cols-{n}` în **`grid-cols-2` mereu** (inclusiv pe telefon), cu `lg:grid-cols-{n}` doar de la 1024px în sus — reduce înălțimea cardului la jumătate pe mobil (2×2 în loc de 4×1 pt. 4 metrici).
+- Adăugate separatoare vizuale (`border-r`/`border-b`) calculate per-index, ca grila 2 coloane să arate intenționat, nu doar înghesuit — dacă numărul de metrici e impar (ex. 3 pe `/centralizator`), ultimul ocupă `col-span-2` pe rândul lui.
+- Eliminat `truncate` de pe etichete și pe footer-ul `SummaryAccentFooter` — acum fac wrap pe 2 rânduri în loc să taie textul cu „…” (ex. „Buget total estimat", „38% din total estimat").
+- Mărimea cifrei mari trece de la `clamp(16px, 1.6vw, 26px)` la `clamp(13px, 4vw, 26px)` — pe coloane înguste de mobil (jumătate din lățimea ecranului) cifrele încap acum complet (ex. „12.500,00 EUR" pe `/configurare`, care se trunchia înainte).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual pe toate cele 4 pagini la 375px (card compact, fără trunchiere) și reconfirmat 900px/1440px (desktop neschimbat, fără suprapuneri).
+
+**Fișiere atinse:** `src/components/DashboardSummaryCard.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.

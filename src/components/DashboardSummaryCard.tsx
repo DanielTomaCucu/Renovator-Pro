@@ -23,30 +23,45 @@ const COLUMNS_CLASS: Record<number, string> = {
 
 export default function DashboardSummaryCard({ metrics }: { metrics: SummaryMetric[] }) {
   const columnsClass = COLUMNS_CLASS[metrics.length] ?? "lg:grid-cols-4";
+  const rows = Math.ceil(metrics.length / 2);
+  // Pe mobil grila e mereu pe 2 coloane (mai compact) — dacă numărul de metrici e impar,
+  // ultimul metric ocupă lățimea întreagă a rândului lui.
+  const isOddLeftover = metrics.length % 2 === 1;
 
   return (
     <div
-      className="w-full overflow-hidden rounded-xl p-6 text-white shadow-md sm:p-8"
+      className="w-full overflow-hidden rounded-xl p-5 text-white shadow-md sm:p-8"
       style={{ background: "linear-gradient(135deg, #1e293b 0%, #000000 100%)" }}
     >
-      <div className={`grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 ${columnsClass}`}>
-        {metrics.map((metric, idx) => (
-          <div
-            key={metric.label}
-            className={`min-w-0 space-y-2 border-white/10 pr-4 ${idx < metrics.length - 1 ? "lg:border-r" : ""}`}
-          >
-            <p className="truncate text-[10px] font-bold uppercase tracking-widest opacity-70">
-              {metric.label}
-            </p>
-            <span
-              className="block truncate font-mono font-bold tracking-tight"
-              style={{ fontSize: "clamp(16px, 1.6vw, 26px)" }}
+      <div className={`grid grid-cols-2 gap-x-4 gap-y-4 sm:gap-x-8 sm:gap-y-6 ${columnsClass} lg:gap-y-8`}>
+        {metrics.map((metric, idx) => {
+          const isLastAlone = isOddLeftover && idx === metrics.length - 1;
+          const isLeftColumn = !isLastAlone && idx % 2 === 0;
+          const rowIndex = isLastAlone ? rows - 1 : Math.floor(idx / 2);
+          const hasRowBelow = rowIndex < rows - 1;
+
+          return (
+            <div
+              key={metric.label}
+              className={`min-w-0 space-y-1.5 border-white/10 ${isLastAlone ? "col-span-2" : ""} ${
+                isLeftColumn ? "border-r pr-4" : "lg:border-r lg:pr-4"
+              } ${hasRowBelow ? "border-b pb-4 lg:border-b-0 lg:pb-0" : ""} ${
+                idx === metrics.length - 1 ? "lg:border-r-0 lg:pr-0" : ""
+              }`}
             >
-              {metric.value}
-            </span>
-            {metric.footer}
-          </div>
-        ))}
+              <p className="text-[10px] font-bold uppercase leading-tight tracking-widest opacity-70">
+                {metric.label}
+              </p>
+              <span
+                className="block truncate font-mono font-bold tracking-tight"
+                style={{ fontSize: "clamp(13px, 4vw, 26px)" }}
+              >
+                {metric.value}
+              </span>
+              {metric.footer}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -85,10 +100,10 @@ export function SummaryAccentFooter({
   textClassName?: string;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClassName}`} />
+    <div className="flex items-start gap-2">
+      <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${dotClassName}`} />
       <span
-        className={`truncate text-[11px] font-medium uppercase tracking-wider ${textClassName}`}
+        className={`text-[11px] font-medium uppercase leading-tight tracking-wider ${textClassName}`}
       >
         {children}
       </span>
