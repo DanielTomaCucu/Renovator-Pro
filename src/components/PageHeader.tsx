@@ -13,7 +13,8 @@ export default function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-white">
+    // Ascuns sub `md`: pe mobil titlul paginii e afișat deja în bara din Sidebar.tsx (o singură sursă de titlu, nu duplicat).
+    <header className="sticky top-0 z-30 hidden border-b border-line bg-white md:block">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-5 lg:px-10">
         <h1 className="font-heading text-xl font-bold text-primary lg:text-2xl">{title}</h1>
         <div className="flex items-center gap-4">

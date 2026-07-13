@@ -17,27 +17,24 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const currentPageTitle =
+    nav.find((item) => pathname.startsWith(item.href))?.label ?? "Renovator Pro";
+
   return (
     <>
-      {/* Bară + meniu mobil — vizibile doar sub breakpoint-ul md, unde <aside> dispare */}
+      {/* Bară + meniu mobil — vizibile doar sub breakpoint-ul md, unde <aside> dispare.
+          Închis: bara arată titlul paginii curente. Deschis: panoul dropdown arată logo-ul
+          + numele aplicației deasupra linkurilor de navigare (vezi cererea userului). */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-surface-low px-4 py-3 md:hidden">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-            <span
-              className="material-symbols-outlined text-[16px] text-white"
-              style={{ fontVariationSettings: '"FILL" 1' }}
-            >
-              {NAV_ICONS.logo}
-            </span>
-          </div>
-          <span className="font-heading text-sm font-extrabold text-primary">Renovator Pro</span>
-        </div>
+        <span className="truncate font-heading text-base font-bold text-primary">
+          {currentPageTitle}
+        </span>
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label={mobileOpen ? "Închide meniul" : "Deschide meniul"}
           aria-expanded={mobileOpen}
-          className="rounded-lg p-2 text-primary hover:bg-surface"
+          className="shrink-0 rounded-lg p-2 text-primary hover:bg-surface"
         >
           <span className="material-symbols-outlined">
             {mobileOpen ? ACTION_ICONS.close : NAV_ICONS.mobileMenu}
@@ -58,6 +55,24 @@ export default function Sidebar() {
           mobileOpen ? "scale-y-100 opacity-100" : "pointer-events-none scale-y-95 opacity-0"
         }`}
       >
+        <div className="flex items-center gap-3 border-b border-line p-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary">
+            <span
+              className="material-symbols-outlined text-white"
+              style={{ fontVariationSettings: '"FILL" 1' }}
+            >
+              {NAV_ICONS.logo}
+            </span>
+          </div>
+          <div className="whitespace-nowrap">
+            <p className="font-heading text-[15px] font-extrabold leading-tight text-primary">
+              Renovator Pro
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted opacity-60">
+              Management Buget
+            </p>
+          </div>
+        </div>
         <div className="space-y-0.5 p-3">
           {nav.map((item) => {
             const active = pathname.startsWith(item.href);

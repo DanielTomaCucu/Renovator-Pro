@@ -325,3 +325,15 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/elemente/page.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — Bara mobilă: titlu paginii sus (nu logo), branding mutat în dropdown (aplicație întreagă)
+**De ce:** userul a semnalat că pe mobil titlul paginii era afișat DE DOUĂ ORI (o dată logo+"Renovator Pro" în bara sus din `Sidebar.tsx`, o dată titlul real al paginii sub ea, din `PageHeader.tsx`) — voia ca bara de sus, când meniul e închis, să arate direct numele paginii curente; iar logo-ul + numele aplicației să apară doar când deschizi meniul (dropdown-ul), sub buton.
+
+- **`Sidebar.tsx`**: bara mobilă sticky nu mai arată logo+"Renovator Pro" — arată titlul paginii curente (`nav.find((item) => pathname.startsWith(item.href))?.label`, fallback `"Renovator Pro"` pt. rute fără match, ex. `/`). Logo-ul + „Renovator Pro / Management Buget" s-au mutat în panoul dropdown (randate deasupra listei de linkuri, sub bara sus), vizibile doar când `mobileOpen` e `true`.
+- **`PageHeader.tsx`**: header-ul întreg (titlu + căutare + acțiuni) e acum `hidden md:block` — pe mobil titlul e deja afișat o singură dată în bara din `Sidebar`, deci nu mai are rost să fie randat și aici (ar fi fost duplicat). De la `md` în sus, comportamentul e identic cu înainte.
+- Schimbarea e la nivel de componente shared (`Sidebar`, `PageHeader`), deci se aplică automat pe TOATE paginile, nu doar `/elemente` — testat pe `/elemente` și `/configurare`.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px (titlu unic sus pe fiecare pagină, meniu deschis arată corect logo+brand deasupra linkurilor) și 1440px (desktop neschimbat — sidebar complet + `PageHeader` cu titlu/căutare ca înainte).
+
+**Fișiere atinse:** `src/components/Sidebar.tsx`, `src/components/PageHeader.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.
