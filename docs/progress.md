@@ -337,3 +337,15 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/components/Sidebar.tsx`, `src/components/PageHeader.tsx`, `docs/progress.md`.
 
 **Branch:** `004-configurare-apartament-design-tehnic`.
+
+### 2026-07-12 — `/analiza` mobil: cele 4 carduri KPI → un singur card compact cu gradient
+**De ce:** userul a semnalat că cele 4 carduri KPI stivuite ocupau prea mult spațiu vertical pe telefon; a cerut înlocuirea cu cardul unic din „Analiză Bugetară - Mobile Premium Light Gradient Layout" — aceleași date, doar aranjate diferit.
+
+- Cele 4 carduri separate (`Total Alocat`, `Cheltuieli Totale`, `Buget Rămas`, `Achiziții Finalizate`, fiecare cu propriul chenar + bară de progres) înlocuite cu un singur card cu fundal gradient (`linear-gradient(135deg, #ffffff 0%, var(--surface-low) 100%)`), grid 2×2: rândul de sus (Total Alocat / Cheltuieli Totale) separat printr-o linie de rândul de jos (Buget Rămas, valoare mare / Achiziții Finalizate, cu bară de progres subțire) — fidel design-ului.
+- Date identice, zero calcule noi: `formatMoney(project.totalBudget)`, `formatMoney(spent)`, `formatMoney(remaining)`, `bought`/`items.length`, `progress` — toate deja existente.
+- Doar secțiunea mobilă (`md:hidden`) a fost atinsă — cele 4 carduri de pe desktop (`hidden md:block`) rămân neschimbate.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual la 375px (card compact, mult mai puțin spațiu ocupat) și 1440px (desktop neschimbat, cele 4 carduri separate).
+
+**Fișiere atinse:** `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `004-configurare-apartament-design-tehnic`.

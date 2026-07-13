@@ -422,68 +422,54 @@ export default function AnalizaPage() {
 
       {/* Mobil — vezi „Analiză Bugetară - Mobile Premium Black Theme" (fără bottom nav, se face în Flutter) */}
       <div className="mx-auto max-w-md space-y-6 px-4 py-6 md:hidden">
-        {/* KPI */}
-        <section className="space-y-3">
-          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
-            <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
-              Total Alocat
-            </span>
-            <div className="font-mono text-[24px] font-semibold text-primary">
-              {formatMoney(project.totalBudget)}
+        {/* KPI — card unic cu gradient, vezi „Analiză Bugetară - Mobile Premium Light Gradient Layout" */}
+        <section
+          className="rounded-xl border border-line p-4 shadow-sm"
+          style={{ background: "linear-gradient(135deg, #ffffff 0%, var(--surface-low) 100%)" }}
+        >
+          <div className="grid grid-cols-2 gap-6 border-b border-line/60 pb-3">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                Total Alocat
+              </p>
+              <p className="font-mono text-[15px] text-foreground">
+                {formatMoney(project.totalBudget)}
+              </p>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-low">
-              <div className="h-full w-full rounded-full bg-primary" />
+            <div className="space-y-1 text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                Cheltuieli Totale
+              </p>
+              <p className="font-mono text-[15px] text-foreground">{formatMoney(spent)}</p>
             </div>
-            <p className="text-[14px] text-muted">Buget estimat conform proiectului tehnic.</p>
           </div>
-
-          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
-            <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
-              Cheltuieli Totale
-            </span>
-            <div className="font-mono text-[24px] font-semibold text-primary">
-              {formatMoney(spent)}
+          <div className="grid grid-cols-2 items-end gap-6 pt-3">
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                Buget Rămas
+              </p>
+              <p
+                className={`font-mono text-[20px] font-semibold ${remaining < 0 ? "text-tertiary" : "text-foreground"}`}
+              >
+                {formatMoney(remaining)}
+              </p>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-low">
-              <div
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${Math.min(100, spentPct)}%` }}
-              />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                  Achiziții Finalizate
+                </p>
+                <p className="font-mono text-[10px] text-foreground">
+                  {bought} / {items.length}
+                </p>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-low">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
-            <p className="text-[14px] text-muted">
-              Reprezintă {spentPct}% din bugetul total alocat.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
-            <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
-              Buget Rămas
-            </span>
-            <div
-              className={`font-mono text-[24px] font-semibold ${remaining < 0 ? "text-tertiary" : "text-primary"}`}
-            >
-              {formatMoney(remaining)}
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-low">
-              <div
-                className="h-full rounded-full bg-primary opacity-30"
-                style={{ width: `${Math.max(0, Math.min(100, remainingPct))}%` }}
-              />
-            </div>
-            <p className="text-[14px] text-muted">Fonduri disponibile pentru restul etapelor.</p>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-5">
-            <span className="text-[12px] font-bold uppercase tracking-wider text-muted">
-              Achiziții Finalizate
-            </span>
-            <div className="font-mono text-[24px] font-semibold text-primary">
-              {bought} / {items.length}
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-low">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
-            </div>
-            <p className="text-[14px] text-muted">{progress}% din elemente achiziționate.</p>
           </div>
         </section>
 
