@@ -13,6 +13,9 @@ const nav = [
   { href: "/analiza", label: "Grafice Buget", icon: NAV_ICONS.analiza },
 ];
 
+/** Link secundar (nu apare pe bara mobilă/dropdown, doar în footer-ul sidebar-ului desktop). */
+const secondaryNav = { href: "/setari", label: "Setări", icon: NAV_ICONS.setari };
+
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -20,7 +23,8 @@ export default function Sidebar() {
   useLockBodyScroll(mobileOpen);
 
   const currentPageTitle =
-    nav.find((item) => pathname.startsWith(item.href))?.label ?? "Renovator Pro";
+    [...nav, secondaryNav].find((item) => pathname.startsWith(item.href))?.label ??
+    "Renovator Pro";
 
   return (
     <>
@@ -76,7 +80,7 @@ export default function Sidebar() {
           </div>
         </div>
         <div className="space-y-0.5 p-3">
-          {nav.map((item) => {
+          {[...nav, secondaryNav].map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <Link
@@ -188,17 +192,25 @@ export default function Sidebar() {
         </Link>
 
         <div className="space-y-0.5">
-          <span
-            title="Setări (indisponibil)"
-            className={`flex cursor-not-allowed items-center text-muted opacity-50 ${
+          <Link
+            href={secondaryNav.href}
+            title={collapsed ? secondaryNav.label : undefined}
+            className={`flex items-center rounded-lg transition-all ${
               collapsed ? "justify-center p-2" : "gap-3 px-3 py-1.5"
+            } ${
+              pathname.startsWith(secondaryNav.href)
+                ? "bg-secondary/10 text-secondary"
+                : "text-muted hover:bg-surface hover:text-primary"
             }`}
           >
-            <span className="material-symbols-outlined shrink-0 text-[20px]">
-              {NAV_ICONS.setari}
+            <span
+              className="material-symbols-outlined shrink-0 text-[20px]"
+              style={pathname.startsWith(secondaryNav.href) ? { fontVariationSettings: '"FILL" 1' } : undefined}
+            >
+              {secondaryNav.icon}
             </span>
-            {!collapsed && <span className="truncate text-sm font-medium">Setări</span>}
-          </span>
+            {!collapsed && <span className="truncate text-sm font-medium">{secondaryNav.label}</span>}
+          </Link>
 
           <button
             type="button"

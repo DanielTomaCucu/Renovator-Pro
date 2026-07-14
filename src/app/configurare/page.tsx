@@ -44,7 +44,7 @@ export default function ConfigurarePage() {
                 value: status,
                 footer: <SummaryAccentFooter>Stadiu curent</SummaryAccentFooter>,
               },
-              { label: "Buget Total", value: formatMoney(project.totalBudget) },
+              { label: "Buget Total", value: formatMoney(project.totalBudget, project.currency) },
               {
                 label: "Progres Calcul",
                 value: `${progressPct}%`,

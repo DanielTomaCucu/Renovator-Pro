@@ -29,6 +29,7 @@ const MOBILE_PIE_COLORS = ["#000000", "#45464d", "#76777d", "#c6c6cd", "#e2e8f0"
 
 export default function AnalizaPage() {
   const { project, rooms, items } = useStore();
+  const money = (value: number) => formatMoney(value, project.currency);
 
   const estimated = useMemo(() => totalEstimated(items), [items]);
   const spent = useMemo(() => totalSpent(items), [items]);
@@ -101,7 +102,7 @@ export default function AnalizaPage() {
           metrics={[
             {
               label: "Total Alocat",
-              value: formatMoney(project.totalBudget),
+              value: money(project.totalBudget),
               footer: (
                 <SummaryAccentFooter dotClassName="bg-emerald-400" textClassName="text-emerald-400">
                   Buget de referință
@@ -110,12 +111,12 @@ export default function AnalizaPage() {
             },
             {
               label: "Cheltuieli Totale",
-              value: formatMoney(spent),
+              value: money(spent),
               footer: <SummaryProgressFooter percent={spentPct} color="white" />,
             },
             {
               label: "Buget Rămas",
-              value: formatMoney(remaining),
+              value: money(remaining),
               footer: <SummaryAccentFooter>{remainingPct}% disponibil</SummaryAccentFooter>,
             },
             {
@@ -238,7 +239,7 @@ export default function AnalizaPage() {
                     {topRoom?.name ?? "—"}
                   </span>
                   <span className="text-[13px] font-medium text-muted">
-                    {formatMoney(topRoom?.total ?? 0)}
+                    {money(topRoom?.total ?? 0)}
                   </span>
                 </div>
               </div>
@@ -284,7 +285,7 @@ export default function AnalizaPage() {
                     <div>
                       <div className="mb-2 flex flex-wrap items-end justify-between gap-x-2 gap-y-1">
                         <p className="whitespace-nowrap font-mono text-[15px] font-bold leading-none text-primary">
-                          {formatMoney(v.total)}
+                          {money(v.total)}
                         </p>
                         <span className="shrink-0 text-xs font-bold text-primary">{pct}%</span>
                       </div>
@@ -314,7 +315,7 @@ export default function AnalizaPage() {
                   Optimizare Recomandată
                 </h4>
                 <p className="text-[13px] leading-relaxed text-muted">
-                  Elementele „În așteptare” însumează {formatMoney(pendingTotal)}. Compară
+                  Elementele „În așteptare” însumează {money(pendingTotal)}. Compară
                   prețurile între surse înainte de achiziție.
                 </p>
               </div>
@@ -342,8 +343,8 @@ export default function AnalizaPage() {
                 </h4>
                 <p className="text-[13px] leading-relaxed text-muted">
                   {overBudget
-                    ? `Cheltuielile depășesc bugetul alocat cu ${formatMoney(spent - project.totalBudget)}.`
-                    : `Mai ai ${formatMoney(remaining)} disponibili din bugetul total.`}
+                    ? `Cheltuielile depășesc bugetul alocat cu ${money(spent - project.totalBudget)}.`
+                    : `Mai ai ${money(remaining)} disponibili din bugetul total.`}
                 </p>
               </div>
             </div>
@@ -359,7 +360,7 @@ export default function AnalizaPage() {
                   Status Proiect
                 </h4>
                 <p className="text-[13px] leading-relaxed text-muted">
-                  Total estimat al proiectului: {formatMoney(estimated)} — {items.length}{" "}
+                  Total estimat al proiectului: {money(estimated)} — {items.length}{" "}
                   elemente în {rooms.length} camere.
                 </p>
               </div>
@@ -404,7 +405,7 @@ export default function AnalizaPage() {
                 />
                 <div className="absolute inset-4 flex items-center justify-center rounded-full bg-surface p-1 text-center">
                   <span className="font-mono text-[10px] leading-tight text-primary">
-                    {formatMoney(estimated)}
+                    {money(estimated)}
                   </span>
                 </div>
               </div>
@@ -439,7 +440,7 @@ export default function AnalizaPage() {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-foreground">{cat}</span>
                     <span className="font-mono font-bold text-primary">
-                      {formatMoney(v.total)}
+                      {money(v.total)}
                     </span>
                   </div>
                   <div className="flex items-center gap-4">
@@ -474,7 +475,7 @@ export default function AnalizaPage() {
                 Optimizare Costuri
               </h4>
               <p className="text-[14px] text-muted">
-                Elementele „În așteptare” însumează {formatMoney(pendingTotal)}. Compară
+                Elementele „În așteptare” însumează {money(pendingTotal)}. Compară
                 prețurile între surse înainte de achiziție.
               </p>
             </div>
@@ -500,8 +501,8 @@ export default function AnalizaPage() {
               </h4>
               <p className="text-[14px] text-muted">
                 {overBudget
-                  ? `Cheltuielile depășesc bugetul alocat cu ${formatMoney(spent - project.totalBudget)}.`
-                  : `Mai ai ${formatMoney(remaining)} disponibili din bugetul total.`}
+                  ? `Cheltuielile depășesc bugetul alocat cu ${money(spent - project.totalBudget)}.`
+                  : `Mai ai ${money(remaining)} disponibili din bugetul total.`}
               </p>
             </div>
           </div>
@@ -515,7 +516,7 @@ export default function AnalizaPage() {
             <div className="space-y-1">
               <h4 className="text-[12px] font-bold uppercase text-primary">Status Proiect</h4>
               <p className="text-[14px] text-muted">
-                Total estimat al proiectului: {formatMoney(estimated)} — {items.length} elemente
+                Total estimat al proiectului: {money(estimated)} — {items.length} elemente
                 în {rooms.length} camere.
               </p>
             </div>
