@@ -111,3 +111,9 @@ export const TECHNICAL_ICONS = {
   totalArea: "square_foot",
   info: "info",
 } as const;
+
+/** Iconițe pentru „Setări Proiect" (ecran Stitch „Setări Proiect - Configurare Monedă"). */
+export const SETTINGS_ICONS = {
+  currencyExchange: "currency_exchange",
+  verifiedUser: "verified_user",
+} as const;

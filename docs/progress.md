@@ -525,3 +525,18 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/shared/useLockBodyScroll.ts` (nou), `src/components/Drawer.tsx`, `src/components/ConfirmDialog.tsx`, `src/components/Sidebar.tsx`, `docs/progress.md`.
 
 **Branch:** `005-padding-mobil-fundal-sectiuni`.
+
+### 2026-07-13 — Pagina nouă `/setari` — Configurare Monedă (ecran Stitch „Setări Proiect - Configurare Monedă")
+**De ce:** userul a cerut crearea paginii de Setări (existentă doar ca link dezactivat în sidebar până acum) cu conținutul exact al ecranului Stitch dedicat — doar cardul „Configurare Monedă", nu întregul mockup de admin generic (sidebar/topbar proprii din Stitch, irelevante — aplicația are deja `Sidebar`/`PageHeader`).
+
+- **Pagină nouă** `src/app/setari/page.tsx`: card „Configurare Monedă" (toggle segmentat RON/EUR, câmp „Curs Valutar" vizibil doar la EUR — decorativ, nu există încă sursă reală de curs, backlog item 6), card lateral „De Reținut" (fundal `bg-primary`, text alb) și card „Istoric Curs" (2 rânduri exemplu, marcate explicit „Exemplu — istoric real, neimplementat încă").
+- **Toggle-ul de monedă e real, nu doar decorativ**: `Project.currency` există deja în model — butonul „Salvează Setările" apelează `updateProject({ currency })` din store (stare locală „pending" până la salvare, ca în design, nu se scrie live la fiecare click pe toggle).
+- **Sidebar**: linkul „Setări" (înainte `<span>` needitabil, `cursor-not-allowed`, opacity-50) devine `<Link href="/setari">` real, cu stare activă (highlight) ca restul navigării; adăugat și în array-ul `nav` folosit de dropdown-ul mobil, plus în calculul titlului din bara mobilă.
+- **`PageHeader`**: prop nou opțional `showSearch` (implicit `true`) — bara de căutare nu are sens pe Setări, deci pagina o dezactivează explicit (`showSearch={false}`), fără să afecteze restul paginilor.
+- **Iconițe noi** în `icons.ts`: `SETTINGS_ICONS.currencyExchange`, `SETTINGS_ICONS.verifiedUser`.
+- **Bug descoperit, NEATINS (în afara scopului „doar UI" cerut explicit)**: toate apelurile `formatMoney()` din `/configurare`, `/elemente`, `/centralizator`, `/analiza` sunt fără al doilea argument (`currency`), deci ignoră mereu `project.currency` și afișează implicit EUR — schimbarea monedei din Setări nu are niciun efect vizibil în restul aplicației până nu se corectează toate aceste apeluri (~30 locuri, în 4 fișiere). Semnalat userului, nu corectat acum.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat). Testat vizual desktop (1440px) și mobil (375px): layout identic cu mockup-ul, toggle funcțional (RON ascunde corect câmpul de curs), buton salvează scrie real în store (`updateProject`, confirmat prin navigare SPA — currency se schimbă în state, deși neafișat corect din cauza bug-ului de mai sus).
+
+**Fișiere atinse:** `src/app/setari/page.tsx` (nou), `src/components/Sidebar.tsx`, `src/components/PageHeader.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
+
+**Branch:** `007-pagina-setari-configurare-moneda`.
