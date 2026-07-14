@@ -20,6 +20,15 @@ const EXCHANGE_RATE_HISTORY = [
 export default function SetariPage() {
   const { project, updateProject } = useStore();
   const [pendingCurrency, setPendingCurrency] = useState(project.currency);
+  // `project.currency` poate fi actualizat asincron la montare (store-ul citește din localStorage
+  // într-un efect propriu, după primul render) — sincronizăm starea locală „pending" fără useEffect,
+  // comparând cu valoarea anterioară ținută în state (pattern „adjusting state during render", vezi
+  // ItemFormDrawer/RoomFormDrawer pt. exemplul original al regulii din CLAUDE.md).
+  const [prevCurrency, setPrevCurrency] = useState(project.currency);
+  if (project.currency !== prevCurrency) {
+    setPrevCurrency(project.currency);
+    setPendingCurrency(project.currency);
+  }
   const [exchangeRate, setExchangeRate] = useState("4.97");
   const [saved, setSaved] = useState(false);
 

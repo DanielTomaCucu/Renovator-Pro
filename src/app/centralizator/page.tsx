@@ -51,7 +51,8 @@ const STATUS_DOT: Record<ItemStatus, { icon: string; className: string }> = {
 };
 
 export default function CentralizatorPage() {
-  const { rooms, items } = useStore();
+  const { project, rooms, items } = useStore();
+  const money = (value: number) => formatMoney(value, project.currency);
   const [showSubtotals, setShowSubtotals] = useState(true);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -78,7 +79,7 @@ export default function CentralizatorPage() {
           metrics={[
             {
               label: "Total Estimat Proiect",
-              value: formatMoney(estimated),
+              value: money(estimated),
               footer: (
                 <SummaryAccentFooter dotClassName="bg-emerald-400" textClassName="text-emerald-400">
                   Buget de referință
@@ -87,7 +88,7 @@ export default function CentralizatorPage() {
             },
             {
               label: "Total Cheltuit la Zi",
-              value: formatMoney(spent),
+              value: money(spent),
               footer: <SummaryAccentFooter>{efficiency}% din total estimat</SummaryAccentFooter>,
             },
             {
@@ -238,10 +239,10 @@ export default function CentralizatorPage() {
                               {item.quantity}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px]">
-                              {formatMoney(item.unitPrice)}
+                              {money(item.unitPrice)}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px] font-medium">
-                              {formatMoney(itemTotal(item))}
+                              {money(itemTotal(item))}
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex justify-center">
@@ -264,7 +265,7 @@ export default function CentralizatorPage() {
                               Subtotal {room.name}
                             </span>
                             <span className="font-mono font-bold text-primary">
-                              {formatMoney(subtotal)}
+                              {money(subtotal)}
                             </span>
                           </div>
                         </td>
@@ -288,7 +289,7 @@ export default function CentralizatorPage() {
                   </td>
                   <td className="px-6 py-8 text-right sm:px-8" colSpan={2}>
                     <span className="font-mono text-[32px] font-extrabold tracking-tight">
-                      {formatMoney(estimated)}
+                      {money(estimated)}
                     </span>
                   </td>
                 </tr>
@@ -397,10 +398,10 @@ export default function CentralizatorPage() {
                                   {item.quantity}
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
-                                  {formatMoney(item.unitPrice)}
+                                  {money(item.unitPrice)}
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
-                                  {formatMoney(itemTotal(item))}
+                                  {money(itemTotal(item))}
                                 </td>
                                 <td className="px-3 py-3">
                                   <div className="flex justify-center">
@@ -422,7 +423,7 @@ export default function CentralizatorPage() {
                               Total {room.name}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-[14px] text-muted">
-                              {formatMoney(subtotal)}
+                              {money(subtotal)}
                             </td>
                             <td />
                           </tr>
@@ -442,7 +443,7 @@ export default function CentralizatorPage() {
             <span className="text-[11px] font-bold uppercase text-muted">
               Total General Estimat
             </span>
-            <span className="font-mono text-[20px] text-primary">{formatMoney(estimated)}</span>
+            <span className="font-mono text-[20px] text-primary">{money(estimated)}</span>
           </div>
           <button
             onClick={() => window.print()}

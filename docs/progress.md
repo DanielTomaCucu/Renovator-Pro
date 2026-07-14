@@ -540,3 +540,16 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/setari/page.tsx` (nou), `src/components/Sidebar.tsx`, `src/components/PageHeader.tsx`, `src/shared/icons.ts`, `docs/progress.md`.
 
 **Branch:** `007-pagina-setari-configurare-moneda`.
+
+### 2026-07-13 — Bani fără zecimale peste tot + conversia RON/EUR chiar funcțională (persistă în localStorage)
+**De ce:** userul a cerut două reparații globale: (1) sumele afișate cu `,00` la final (ex. „3.585,00") ocupă spațiu inutil — vrea doar „3.585"; (2) toggle-ul de monedă din Setări (sesiunea trecută) nu avea niciun efect vizibil altundeva în aplicație, și oricum nu ținea minte alegerea userului între sesiuni.
+
+- **`formatMoney()`** (`shared/functions/money.ts`): `minimumFractionDigits`/`maximumFractionDigits` de la 2 la 0 — toate sumele se afișează acum ca întregi (`3.585 EUR`, nu `3.585,00 EUR`).
+- **Bug real reparat**: toate apelurile `formatMoney()` din `/configurare`, `/elemente`, `/centralizator`, `/analiza` (identificat în sesiunea trecută, ~30 de locuri) nu primeau `project.currency` — foloseau mereu implicit EUR. Fiecare pagină primește acum un helper local `money = (value) => formatMoney(value, project.currency)`, iar toate apelurile brute `formatMoney(` au fost înlocuite cu `money(`. `centralizator/page.tsx` nu avea `project` deloc în destructurarea `useStore()` — adăugat.
+- **Persistare în `localStorage`** (`shared/store.tsx`): cheie `renovator-pro:currency`. La montare, un `useEffect` citește valoarea salvată și actualizează `project.currency` (citire doar client-side, ca să nu difere de randarea server — SSR pornește mereu cu `mockProject.currency`, evită mismatch de hidratare). `updateProject()` scrie în `localStorage` de fiecare dată când patch-ul conține `currency`.
+- **Fix conex găsit în timpul testării**: pagina `/setari` își inițializa `pendingCurrency` local din `project.currency` direct la montare (`useState(project.currency)`) — dar store-ul citește din `localStorage` puțin mai târziu (efectul lui rulează după montare), deci toggle-ul rămânea vizual pe EUR chiar și când `localStorage` avea RON salvat. Reparat cu pattern-ul „adjusting state during render" deja folosit în `ItemFormDrawer`/`RoomFormDrawer` (comparare cu valoarea anterioară ținută în state, fără `useEffect` suplimentar).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (warning preexistent nelegat, plus un `eslint-disable-next-line react-hooks/set-state-in-effect` documentat în `store.tsx` — sincronizare legitimă cu un sistem extern, nu anti-pattern-ul de randare interzis). Testat end-to-end în browser: schimbat moneda în Setări → RON, salvat, verificat `localStorage.getItem('renovator-pro:currency') === 'RON'`, navigat SPA la `/elemente` → toate sumele afișate corect în RON; refresh complet al paginii (`navigate`) → RON persistă corect din `localStorage`, toggle-ul din Setări arată selecția corectă (nu revine la EUR).
+
+**Fișiere atinse:** `src/shared/functions/money.ts`, `src/shared/store.tsx`, `src/app/setari/page.tsx`, `src/app/configurare/page.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/analiza/page.tsx`, `docs/progress.md`.
+
+**Branch:** `008-bani-fara-zecimale-si-conversie-functionala`.

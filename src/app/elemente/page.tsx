@@ -24,6 +24,7 @@ import { ItemDrawerState } from "./ItemDrawerState";
 
 export default function ElementePage() {
   const { project, rooms, items, addItem, deleteItem, deleteRoom } = useStore();
+  const money = (value: number) => formatMoney(value, project.currency);
 
   const [itemDrawer, setItemDrawer] = useState<ItemDrawerState>({ open: false });
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
@@ -89,10 +90,10 @@ export default function ElementePage() {
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
         <DashboardSummaryCard
           metrics={[
-            { label: "Buget total estimat", value: formatMoney(project.totalBudget) },
+            { label: "Buget total estimat", value: money(project.totalBudget) },
             {
               label: "Total cheltuit",
-              value: formatMoney(spent),
+              value: money(spent),
               footer: (
                 <SummaryProgressFooter
                   percent={project.totalBudget ? (spent / project.totalBudget) * 100 : 0}
@@ -211,7 +212,7 @@ export default function ElementePage() {
                           Buget utilizat
                         </span>
                         <span className="font-mono text-xs text-primary">
-                          {formatMoney(spentInRoom)} / {formatMoney(room.allocatedBudget)}
+                          {money(spentInRoom)} / {money(room.allocatedBudget)}
                         </span>
                       </div>
                       <button
@@ -292,10 +293,10 @@ export default function ElementePage() {
                               {item.quantity}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
-                              {formatMoney(item.unitPrice)}
+                              {money(item.unitPrice)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right font-mono font-semibold text-primary">
-                              {formatMoney(itemTotal(item))}
+                              {money(itemTotal(item))}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3">
                               <StatusChip status={item.status} size="sm" />
@@ -519,7 +520,7 @@ export default function ElementePage() {
                           {roomBought} din {roomItems.length} cumpărate
                         </p>
                         <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-secondary">
-                          Total: {formatMoney(roomTotal)}
+                          Total: {money(roomTotal)}
                         </p>
                       </div>
                     </div>
@@ -579,7 +580,7 @@ export default function ElementePage() {
                                 {item.name}
                               </h4>
                               <p className="font-mono text-sm text-muted">
-                                {formatMoney(item.unitPrice)}
+                                {money(item.unitPrice)}
                               </p>
                             </div>
                             <div className="flex items-center justify-center gap-2">
