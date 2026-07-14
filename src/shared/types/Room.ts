@@ -7,6 +7,7 @@ import { WallTiling } from "./WallTiling";
 import { WallFinish } from "./WallFinish";
 import { Wall } from "./Wall";
 import { RoomWindow } from "./RoomWindow";
+import { RoomShape } from "./RoomShape";
 
 /**
  * O cameră a apartamentului, cu buget alocat propriu.
@@ -28,6 +29,12 @@ export interface Room {
   doors?: Partial<Record<Wall, RoomDoor>>;
   /** Înălțimea plintei (m) — doar la Gresie: plinta e tăiată din plăci de gresie, deci consumă din același material. */
   baseboardHeight?: number;
+  /**
+   * Forma asumată a camerei — controlează câte lungimi de perete cere UI-ul (Pătrat: 1, Dreptunghi: 2,
+   * Neregulată: 4) la `wallTiling`/`wallFinish` și limitează superior lungimile introduse, ca suprafața
+   * rezultată din pereți să nu depășească niciodată `floorArea`.
+   */
+  wallShape?: RoomShape;
   /** Placare faianță pe pereți — doar la pardoseală Gresie (zonă umedă). */
   wallTiling?: WallTiling;
   /** Finisaj pereți (vopsea/tapet) — doar la pardoseală Parchet/Mochetă, alternativă la `wallTiling`. */

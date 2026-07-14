@@ -51,6 +51,7 @@ export const ACTION_ICONS = {
   image: "image",
   sortIndicator: "unfold_more",
   photoCamera: "photo_camera",
+  checkCircle: "check_circle",
 } as const;
 
 export const STATUS_ICONS: Record<ItemStatus, string> = {
@@ -126,6 +127,9 @@ export const TECHNICAL_ICONS = {
   addRoomEmpty: "add_circle",
   totalArea: "square_foot",
   info: "info",
+  shapeSquare: "crop_square",
+  shapeRectangle: "crop_landscape",
+  shapeIrregular: "gesture",
 } as const;
 
 /** Iconițe pentru „Setări Proiect" (ecran Stitch „Setări Proiect - Configurare Monedă"). */

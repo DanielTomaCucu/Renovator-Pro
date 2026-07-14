@@ -17,6 +17,7 @@ export * from "./WallTiling";
 export * from "./WallFinishType";
 export * from "./WallFinish";
 export * from "./RoomWindow";
+export * from "./RoomShape";
 export * from "./Room";
 export * from "./Item";
 export * from "./Project";

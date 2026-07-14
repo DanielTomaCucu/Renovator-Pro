@@ -6,6 +6,7 @@ import {
   FlooringType,
   InstallationType,
   Room,
+  RoomShape,
   RoomType,
   TileSize,
   Wall,
@@ -21,17 +22,10 @@ import {
   TILE_SIZE_ICONS,
 } from "@/shared/icons";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import {
-  baseboardLength,
-  baseboardTileArea,
-  estimatedSquareWallSide,
-  floorMaterialNeeded,
-  hasFloorConfig,
-  totalDoorWidth,
-  wallFinishArea,
-  wallTilingArea,
-  windowTrimLength,
-} from "@/shared/functions";
+import RoomSketch from "./RoomSketch";
+import { RoomShapeSelect, RoomShapeLengthInputs } from "./RoomShapeWallsEditor";
+import { buildRoomCalcRows } from "./roomCalcRows";
+import { baseboardLength, estimatedSquareWallSide, hasFloorConfig, wallTilingArea } from "@/shared/functions";
 
 const floorMaterials = Object.values(FlooringType);
 const tileSizes = Object.values(TileSize);
@@ -52,7 +46,7 @@ const installationTypeOptions = installationTypes.map((t) => ({
 }));
 
 /** Nume complet per perete — afișat în loc de codul cu o literă (N/E/S/V), mai clar pt. userul final. */
-const WALL_LABELS: Record<Wall, string> = {
+export const WALL_LABELS: Record<Wall, string> = {
   [Wall.Nord]: "Nord",
   [Wall.Est]: "Est",
   [Wall.Sud]: "Sud",
@@ -60,7 +54,7 @@ const WALL_LABELS: Record<Wall, string> = {
 };
 
 /** Descriere scurtă per tip de cameră — afișată sub numele camerei în card. */
-const ROOM_TYPE_DESCRIPTION: Record<RoomType, string> = {
+export const ROOM_TYPE_DESCRIPTION: Record<RoomType, string> = {
   [RoomType.Dormitor]: "Zona de odihnă",
   [RoomType.Baie]: "Zona umedă",
   [RoomType.Living]: "Zona de zi",
@@ -71,9 +65,9 @@ const ROOM_TYPE_DESCRIPTION: Record<RoomType, string> = {
 
 const selectCls =
   "w-full appearance-none rounded-lg border border-line bg-surface px-4 py-3 text-sm font-medium outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20";
-const inputCls =
+export const inputCls =
   "w-full rounded-lg border border-line bg-surface px-4 py-3 font-mono text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20";
-const labelCls = "block text-[10px] font-bold uppercase text-muted";
+export const labelCls = "block text-[10px] font-bold uppercase text-muted";
 
 /** Select cu iconiță chevron custom — distinge vizual selectoarele de inputurile numerice. */
 function SelectField({
@@ -105,7 +99,7 @@ function SelectField({
  * dropdown-ul quando depășește înălțimea vizibilă a cardului. Înălțimea proprie e limitată + scroll
  * intern, ca lista să rămână complet accesibilă chiar dacă are mai multe opțiuni decât încap pe ecran.
  */
-function IconSelectField<T extends string>({
+export function IconSelectField<T extends string>({
   label,
   value,
   onChange,
@@ -144,15 +138,15 @@ function IconSelectField<T extends string>({
       >
         {current ? (
           <>
-            <span className="material-symbols-outlined text-lg text-secondary">
+            <span className="material-symbols-outlined shrink-0 text-lg text-secondary">
               {current.icon}
             </span>
-            <span>{current.label}</span>
+            <span className="min-w-0 flex-1 truncate">{current.label}</span>
           </>
         ) : (
-          <span className="text-muted">{placeholder}</span>
+          <span className="min-w-0 flex-1 truncate text-muted">{placeholder}</span>
         )}
-        <span className="material-symbols-outlined icon-btn ml-auto text-muted">
+        <span className="material-symbols-outlined icon-btn ml-auto shrink-0 text-muted">
           {ACTION_ICONS.expandMore}
         </span>
       </button>
@@ -187,8 +181,8 @@ function IconSelectField<T extends string>({
                     o.value === value ? "bg-secondary/10 font-semibold text-secondary" : ""
                   }`}
                 >
-                  <span className="material-symbols-outlined text-lg">{o.icon}</span>
-                  {o.label}
+                  <span className="material-symbols-outlined shrink-0 text-lg">{o.icon}</span>
+                  <span className="min-w-0 flex-1 truncate">{o.label}</span>
                 </button>
               ))}
             </div>
@@ -199,35 +193,40 @@ function IconSelectField<T extends string>({
   );
 }
 
-/** Sub-secțiune colapsabilă în corpul unui card de cameră (accordion nativ `<details>`), numerotată. */
+/** Sub-secțiune colapsabilă în corpul unui card de cameră (accordion `<details>` controlat), numerotată. */
 function TechnicalSection({
   number,
   icon,
   title,
   action,
-  defaultOpen = true,
+  open,
+  onToggle,
   children,
 }: {
   number: number;
   icon: string;
   title: string;
   action?: ReactNode;
-  defaultOpen?: boolean;
+  open: boolean;
+  onToggle: () => void;
   children: ReactNode;
 }) {
   return (
-    <details
-      open={defaultOpen}
-      className="group/section overflow-hidden rounded-xl border border-line/50"
-    >
-      <summary className="flex cursor-pointer list-none items-center justify-between border-b border-line bg-surface p-4">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-primary">{icon}</span>
-          <h5 className="text-xs font-bold uppercase tracking-wider text-primary">
+    <details open={open} className="group/section overflow-hidden rounded-xl border border-line/50">
+      <summary
+        onClick={(e) => {
+          e.preventDefault();
+          onToggle();
+        }}
+        className="flex cursor-pointer list-none items-center justify-between border-b border-line bg-surface p-4"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="material-symbols-outlined shrink-0 text-primary">{icon}</span>
+          <h5 className="truncate text-xs font-bold uppercase tracking-wider text-primary">
             {number}. {title}
           </h5>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-4">
           {action}
           <span className="material-symbols-outlined text-muted transition-transform group-open/section:rotate-180">
             {ACTION_ICONS.expandMore}
@@ -269,27 +268,52 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
   const { updateRoom, deleteRoom } = useStore();
   const [open, setOpen] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // Bugetul alocat e opțional — vizibil implicit doar dacă are deja o valoare completată.
-  const [budgetOpen, setBudgetOpen] = useState(room.allocatedBudget > 0);
 
-  const patch = (p: Partial<Room>) => updateRoom(room.id, p);
+  // Draft local — toate editările din card scriu aici, NU direct în store. Nimic nu se propagă către
+  // celelalte pagini/calcule globale până la apăsarea explicită a „Salvează" (buton la finalul cardului).
+  const [draft, setDraft] = useState<Room>(room);
+  const [sectionsOpen, setSectionsOpen] = useState({
+    floor: true,
+    walls: true,
+    windows: Object.keys(room.windows ?? {}).length > 0,
+    doors: Object.keys(room.doors ?? {}).length > 0,
+  });
+  const toggleSection = (key: keyof typeof sectionsOpen) =>
+    setSectionsOpen((s) => ({ ...s, [key]: !s[key] }));
+
+  // Indicator subtil în header: bifă verde dacă ultima editare a fost salvată, ascunsă imediat ce
+  // draftul diverge din nou de ce e în store — ca userul să vadă rapid la care camere a lucrat deja.
+  const [saved, setSaved] = useState(false);
+
+  const patch = (p: Partial<Room>) => {
+    setDraft((prev) => ({ ...prev, ...p }));
+    setSaved(false);
+  };
+
+  const handleSave = () => {
+    updateRoom(room.id, draft);
+    setOpen(false);
+    setSectionsOpen({ floor: false, walls: false, windows: false, doors: false });
+    setSaved(true);
+  };
 
   // Faianța (wallTiling) e disponibilă doar la Gresie — la Parchet/Mochetă alternativa e vopsea/tapet (wallFinish).
-  const isGresie = room.floorMaterial === FlooringType.Gresie;
-  const wallTilingEnabled = isGresie && !!room.wallTiling;
-  const wallFinishEnabled = !isGresie && !!room.wallFinish;
+  const isGresie = draft.floorMaterial === FlooringType.Gresie;
+  const wallTilingEnabled = isGresie && !!draft.wallTiling;
+  const wallFinishEnabled = !isGresie && !!draft.wallFinish;
 
   // Pornim pereții de la o lungime estimată (√suprafață, adică am presupune camera pătrată), ca userul
   // să nu completeze de la 0 fiecare perete — rămâne complet editabilă după activare, nu se resincronizează.
-  const estimatedSide = Number(estimatedSquareWallSide(room).toFixed(2));
+  const estimatedSide = Number(estimatedSquareWallSide(draft).toFixed(2));
 
   const toggleWallTiling = () => {
     if (wallTilingEnabled) {
       patch({ wallTiling: undefined });
     } else {
       patch({
+        wallShape: draft.wallShape ?? RoomShape.Patrat,
         wallTiling: {
-          tiledWallsCount: 0,
+          tiledWallsCount: 4,
           tileHeight: 0,
           wallLengths: {
             [Wall.Nord]: estimatedSide,
@@ -307,6 +331,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
       patch({ wallFinish: undefined });
     } else {
       patch({
+        wallShape: draft.wallShape ?? RoomShape.Patrat,
         wallFinish: {
           wallHeight: 0,
           wallLengths: {
@@ -324,70 +349,74 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
   // Fereastră — max. 1 per perete, indiferent de tipul de pardoseală. Reprezentate ca o listă de
   // ferestre (perete + dimensiuni), nu ca 4 sloturi fixe — mai puțin aglomerat, mai mult spațiu per câmp.
   const windowEntries = walls
-    .filter((w) => room.windows?.[w])
-    .map((w) => [w, room.windows![w]!] as const);
-  const availableWalls = walls.filter((w) => !room.windows?.[w]);
+    .filter((w) => draft.windows?.[w])
+    .map((w) => [w, draft.windows![w]!] as const);
+  const availableWalls = walls.filter((w) => !draft.windows?.[w]);
 
   const addWindow = () => {
     const nextWall = availableWalls[0];
     if (!nextWall) return;
-    patch({ windows: { ...room.windows, [nextWall]: { width: 0, height: 0 } } });
+    patch({ windows: { ...draft.windows, [nextWall]: { width: 0, height: 0 } } });
   };
 
   const removeWindow = (wall: Wall) => {
-    const windows = { ...room.windows };
+    const windows = { ...draft.windows };
     delete windows[wall];
     patch({ windows });
   };
 
+  const removeAllWindows = () => patch({ windows: {} });
+
   const changeWindowWall = (oldWall: Wall, newWall: Wall) => {
     if (oldWall === newWall) return;
-    const current = room.windows?.[oldWall];
+    const current = draft.windows?.[oldWall];
     if (!current) return;
-    const windows = { ...room.windows };
+    const windows = { ...draft.windows };
     delete windows[oldWall];
     windows[newWall] = current;
     patch({ windows });
   };
 
   const updateWindow = (wall: Wall, patchWindow: Partial<{ width: number; height: number }>) => {
-    const current = room.windows?.[wall];
+    const current = draft.windows?.[wall];
     if (!current) return;
-    patch({ windows: { ...room.windows, [wall]: { ...current, ...patchWindow } } });
+    patch({ windows: { ...draft.windows, [wall]: { ...current, ...patchWindow } } });
   };
 
   // Ușă — max. 1 per perete, aceeași logică ca la ferestre (listă, nu 4 sloturi fixe).
   const doorEntries = walls
-    .filter((w) => room.doors?.[w])
-    .map((w) => [w, room.doors![w]!] as const);
-  const availableDoorWalls = walls.filter((w) => !room.doors?.[w]);
+    .filter((w) => draft.doors?.[w])
+    .map((w) => [w, draft.doors![w]!] as const);
+  const availableDoorWalls = walls.filter((w) => !draft.doors?.[w]);
 
   const addDoor = () => {
     const nextWall = availableDoorWalls[0];
     if (!nextWall) return;
-    patch({ doors: { ...room.doors, [nextWall]: { width: 0, height: 0 } } });
+    patch({ doors: { ...draft.doors, [nextWall]: { width: 0, height: 0 } } });
   };
 
   const removeDoor = (wall: Wall) => {
-    const doors = { ...room.doors };
+    const doors = { ...draft.doors };
     delete doors[wall];
     patch({ doors });
   };
 
+  const removeAllDoors = () => patch({ doors: {} });
+
   const changeDoorWall = (oldWall: Wall, newWall: Wall) => {
     if (oldWall === newWall) return;
-    const current = room.doors?.[oldWall];
+    const current = draft.doors?.[oldWall];
     if (!current) return;
-    const doors = { ...room.doors };
+    const doors = { ...draft.doors };
     delete doors[oldWall];
     doors[newWall] = current;
     patch({ doors });
   };
 
   const updateDoor = (wall: Wall, patchDoor: Partial<{ width: number; height: number }>) => {
-    const current = room.doors?.[wall];
+    const current = draft.doors?.[wall];
     if (!current) return;
-    patch({ doors: { ...room.doors, [wall]: { ...current, ...patchDoor } } });
+    patch({ doors: { ...draft.doors, [wall]: { ...current, ...patchDoor } } });
   };
 
   // Schimbarea materialului de pardoseală elimină configurarea specifică celuilalt tip de pereți —
@@ -397,20 +426,16 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
     const nowGresie = floorMaterial === FlooringType.Gresie;
     patch({
       floorMaterial,
-      wallTiling: nowGresie ? room.wallTiling : undefined,
-      wallFinish: nowGresie ? undefined : room.wallFinish,
+      wallTiling: nowGresie ? draft.wallTiling : undefined,
+      wallFinish: nowGresie ? undefined : draft.wallFinish,
     });
   };
 
-  const baseboard = baseboardLength(room);
-  const baseboardTiles = baseboardTileArea(room);
-  const materialNeeded = floorMaterialNeeded(room);
-  const tilingArea = wallTilingArea(room);
-  const paintArea = wallFinishArea(room, WallFinishType.Vopsea);
-  const wallpaperArea = wallFinishArea(room, WallFinishType.Tapet);
-  const windowTrim = windowTrimLength(room);
-  const windowCount = Object.keys(room.windows ?? {}).length;
-  const doorCount = Object.keys(room.doors ?? {}).length;
+  const baseboard = baseboardLength(draft);
+  const tilingArea = wallTilingArea(draft);
+  const calcRows = buildRoomCalcRows(draft);
+  const windowCount = Object.keys(draft.windows ?? {}).length;
+  const doorCount = Object.keys(draft.doors ?? {}).length;
   // Numerotarea secțiunilor se ajustează dinamic — „Ferestre" ocupă locul 2 sau 3 după cum e activată
   // placarea/finisajul pereților, iar „Uși" vine imediat după ea (vezi Baie vs. Living în Stitch).
   const windowsSectionNumber = wallTilingEnabled || wallFinishEnabled ? 3 : 2;
@@ -428,7 +453,18 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
             {ROOM_TYPE_ICONS[room.type]}
           </span>
           <div className="flex min-w-0 flex-col">
-            <h3 className="truncate font-heading text-xl font-bold">{room.name}</h3>
+            <span className="flex items-center gap-1.5">
+              <h3 className="truncate font-heading text-xl font-bold">{room.name}</h3>
+              {saved && (
+                <span
+                  className="material-symbols-outlined icon-btn shrink-0 text-emerald-500/70"
+                  title="Salvat"
+                  aria-label="Salvat"
+                >
+                  {ACTION_ICONS.checkCircle}
+                </span>
+              )}
+            </span>
             <span className="text-[10px] font-bold uppercase text-muted">
               {ROOM_TYPE_DESCRIPTION[room.type]}
             </span>
@@ -439,17 +475,17 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
           <div className="hidden flex-1 items-center gap-x-4 px-4 text-[11px] font-medium text-muted lg:flex">
             {wallTilingEnabled ? (
               <>
-                <span className="whitespace-nowrap">{(room.floorArea ?? 0).toFixed(2)} mp pardoseală</span>
+                <span className="whitespace-nowrap">{(draft.floorArea ?? 0).toFixed(2)} mp pardoseală</span>
                 <span className="whitespace-nowrap">{tilingArea.toFixed(2)} mp faianță</span>
                 <span className="whitespace-nowrap">
-                  placare {(room.wallTiling?.tileHeight ?? 0).toFixed(2)}m
+                  placare {(draft.wallTiling?.tileHeight ?? 0).toFixed(2)}m
                 </span>
               </>
             ) : (
               <>
-                <span className="whitespace-nowrap">{(room.floorArea ?? 0).toFixed(2)} mp</span>
-                {room.floorMaterial && (
-                  <span className="whitespace-nowrap">{room.floorMaterial}</span>
+                <span className="whitespace-nowrap">{(draft.floorArea ?? 0).toFixed(2)} mp</span>
+                {draft.floorMaterial && (
+                  <span className="whitespace-nowrap">{draft.floorMaterial}</span>
                 )}
                 <span className="whitespace-nowrap">{baseboard.toFixed(2)} ml plintă</span>
               </>
@@ -478,50 +514,20 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
         </div>
       </button>
 
-      {budgetOpen ? (
-        <label className="flex items-center justify-between border-b border-line bg-surface px-6 py-3 text-sm text-muted">
-          Buget alocat (€)
-          <span className="flex items-center gap-2">
-            <input
-              type="number"
-              min={0}
-              placeholder="ex: 1200"
-              value={room.allocatedBudget || ""}
-              onChange={(e) => patch({ allocatedBudget: Number(e.target.value) || 0 })}
-              className="w-32 rounded-lg border border-line px-3 py-2 text-right font-mono text-sm text-foreground outline-none focus:border-secondary"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                patch({ allocatedBudget: 0 });
-                setBudgetOpen(false);
-              }}
-              className="text-muted hover:text-tertiary"
-              aria-label="Elimină buget alocat"
-            >
-              <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.close}</span>
-            </button>
-          </span>
-        </label>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setBudgetOpen(true)}
-          className="flex w-full items-center gap-1 border-b border-line bg-surface px-6 py-2.5 text-[11px] font-bold uppercase text-secondary hover:bg-surface-low"
-        >
-          <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
-          Adaugă buget alocat
-        </button>
-      )}
-
       {open && (
         <div className="flex flex-col gap-6 p-3 sm:gap-8 sm:p-6">
           <div className="space-y-4">
-            <TechnicalSection number={1} icon={TECHNICAL_ICONS.floorAndWalls} title="Pardoseală">
+            <TechnicalSection
+              number={1}
+              icon={TECHNICAL_ICONS.floorAndWalls}
+              title="Pardoseală"
+              open={sectionsOpen.floor}
+              onToggle={() => toggleSection("floor")}
+            >
               <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
                 <IconSelectField
                   label="Tip Material"
-                  value={room.floorMaterial ?? ""}
+                  value={draft.floorMaterial ?? ""}
                   onChange={(v) => changeFloorMaterial(v)}
                   options={floorMaterialOptions}
                   placeholder="— Alege material —"
@@ -534,7 +540,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                     min={0}
                     placeholder="ex: 5.40"
                     className={inputCls}
-                    value={room.floorArea ?? ""}
+                    value={draft.floorArea ?? ""}
                     onChange={(e) =>
                       patch({ floorArea: e.target.value ? Number(e.target.value) : undefined })
                     }
@@ -543,7 +549,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 {isGresie && (
                   <IconSelectField
                     label="Mărime plăci"
-                    value={room.tileSize ?? ""}
+                    value={draft.tileSize ?? ""}
                     onChange={(v) => patch({ tileSize: (v || undefined) as TileSize })}
                     options={tileSizeOptions}
                   />
@@ -557,7 +563,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       min={0}
                       placeholder="ex: 8"
                       className={inputCls}
-                      value={room.baseboardHeight ? Math.round(room.baseboardHeight * 100) : ""}
+                      value={draft.baseboardHeight ? Math.round(draft.baseboardHeight * 100) : ""}
                       onChange={(e) =>
                         patch({
                           baseboardHeight: e.target.value ? Number(e.target.value) / 100 : undefined,
@@ -569,7 +575,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 <IconSelectField
                   label="Tip montaj"
                   wrapperClassName="md:col-span-2"
-                  value={room.installationType ?? ""}
+                  value={draft.installationType ?? ""}
                   onChange={(v) => patch({ installationType: (v || undefined) as InstallationType })}
                   options={installationTypeOptions}
                 />
@@ -582,11 +588,14 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                   number={2}
                   icon={TECHNICAL_ICONS.wallTilingConfig}
                   title="Pereți"
+                  open={sectionsOpen.walls}
+                  onToggle={() => toggleSection("walls")}
                   action={
                     <button
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         toggleWallTiling();
                       }}
                       className="text-xs font-bold text-secondary hover:underline"
@@ -597,24 +606,15 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 >
                   <>
                     <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
-                      <SelectField
-                        label="Număr pereți placați"
-                        value={room.wallTiling!.tiledWallsCount}
-                        onChange={(e) =>
-                          patch({
-                            wallTiling: {
-                              ...room.wallTiling!,
-                              tiledWallsCount: Number(e.target.value),
-                            },
-                          })
+                      <RoomShapeSelect
+                        shape={draft.wallShape}
+                        wallLengths={draft.wallTiling!.wallLengths}
+                        floorArea={draft.floorArea}
+                        onChangeShape={(wallShape) => patch({ wallShape })}
+                        onChangeLengths={(wallLengths) =>
+                          patch({ wallTiling: { ...draft.wallTiling!, wallLengths } })
                         }
-                      >
-                        {[0, 1, 2, 3, 4].map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </SelectField>
+                      />
                       <label className="space-y-1">
                         <span className={labelCls}>Înălțime Placare (M)</span>
                         <input
@@ -623,11 +623,11 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                           min={0}
                           placeholder="ex: 2.40"
                           className={inputCls}
-                          value={room.wallTiling!.tileHeight || ""}
+                          value={draft.wallTiling!.tileHeight || ""}
                           onChange={(e) =>
                             patch({
                               wallTiling: {
-                                ...room.wallTiling!,
+                                ...draft.wallTiling!,
                                 tileHeight: Number(e.target.value) || 0,
                               },
                             })
@@ -635,34 +635,16 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                         />
                       </label>
                     </div>
-                    {room.wallTiling!.tiledWallsCount > 0 && (
-                      <div className="grid grid-cols-2 gap-3 pt-2 md:grid-cols-4">
-                        {walls.slice(0, room.wallTiling!.tiledWallsCount).map((w) => (
-                          <label key={w} className="space-y-1">
-                            <span className={labelCls}>{WALL_LABELS[w]} — Lungime (m)</span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min={0}
-                              placeholder="ex: 2.25"
-                              className={inputCls}
-                              value={room.wallTiling!.wallLengths[w] || ""}
-                              onChange={(e) =>
-                                patch({
-                                  wallTiling: {
-                                    ...room.wallTiling!,
-                                    wallLengths: {
-                                      ...room.wallTiling!.wallLengths,
-                                      [w]: Number(e.target.value) || 0,
-                                    },
-                                  },
-                                })
-                              }
-                            />
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                    <div className="pt-2">
+                      <RoomShapeLengthInputs
+                        shape={draft.wallShape}
+                        wallLengths={draft.wallTiling!.wallLengths}
+                        floorArea={draft.floorArea}
+                        onChangeLengths={(wallLengths) =>
+                          patch({ wallTiling: { ...draft.wallTiling!, wallLengths } })
+                        }
+                      />
+                    </div>
                     <p className="text-[10px] italic text-muted">
                       * Aceste dimensiuni sunt utilizate pentru calculul exact al necesarului de
                       faianță și plintă.
@@ -684,11 +666,14 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 number={2}
                 icon={TECHNICAL_ICONS.wallTilingConfig}
                 title="Pereți"
+                open={sectionsOpen.walls}
+                onToggle={() => toggleSection("walls")}
                 action={
                   <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
                       toggleWallFinish();
                     }}
                     className="text-xs font-bold text-secondary hover:underline"
@@ -698,75 +683,79 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 }
               >
                 <>
-                  <label className="block max-w-xs space-y-1">
-                    <span className={labelCls}>Înălțime Pereți (M)</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      placeholder="ex: 2.50"
-                      className={inputCls}
-                      value={room.wallFinish!.wallHeight || ""}
-                      onChange={(e) =>
-                        patch({
-                          wallFinish: {
-                            ...room.wallFinish!,
-                            wallHeight: Number(e.target.value) || 0,
-                          },
-                        })
+                  <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
+                    <RoomShapeSelect
+                      shape={draft.wallShape}
+                      wallLengths={draft.wallFinish!.wallLengths}
+                      floorArea={draft.floorArea}
+                      onChangeShape={(wallShape) => patch({ wallShape })}
+                      onChangeLengths={(wallLengths) =>
+                        patch({ wallFinish: { ...draft.wallFinish!, wallLengths } })
                       }
                     />
-                  </label>
-                  <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-4">
-                    {walls.map((w) => (
-                      <div key={w} className="space-y-2 rounded-lg border border-line/50 p-3">
-                        <span className={labelCls}>{WALL_LABELS[w]} — Lungime (m)</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          placeholder="ex: 3.00"
-                          className={inputCls}
-                          value={room.wallFinish!.wallLengths[w] || ""}
-                          onChange={(e) =>
-                            patch({
-                              wallFinish: {
-                                ...room.wallFinish!,
-                                wallLengths: {
-                                  ...room.wallFinish!.wallLengths,
-                                  [w]: Number(e.target.value) || 0,
-                                },
-                              },
-                            })
-                          }
-                        />
-                        <select
-                          className={selectCls}
-                          value={room.wallFinish!.finishes[w] ?? ""}
-                          onChange={(e) =>
-                            patch({
-                              wallFinish: {
-                                ...room.wallFinish!,
-                                finishes: {
-                                  ...room.wallFinish!.finishes,
-                                  [w]: (e.target.value || undefined) as
-                                    | WallFinishType
-                                    | undefined,
-                                },
-                              },
-                            })
-                          }
-                        >
-                          <option value="">— Fără —</option>
-                          {wallFinishTypes.map((t) => (
-                            <option key={t} value={t}>
-                              {t}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
+                    <label className="space-y-1">
+                      <span className={labelCls}>Înălțime Pereți (M)</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        placeholder="ex: 2.50"
+                        className={inputCls}
+                        value={draft.wallFinish!.wallHeight || ""}
+                        onChange={(e) =>
+                          patch({
+                            wallFinish: {
+                              ...draft.wallFinish!,
+                              wallHeight: Number(e.target.value) || 0,
+                            },
+                          })
+                        }
+                      />
+                    </label>
                   </div>
+                  <RoomShapeLengthInputs
+                    shape={draft.wallShape}
+                    wallLengths={draft.wallFinish!.wallLengths}
+                    floorArea={draft.floorArea}
+                    onChangeLengths={(wallLengths) =>
+                      patch({ wallFinish: { ...draft.wallFinish!, wallLengths } })
+                    }
+                  />
+                  {draft.wallShape && (
+                    <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-4">
+                      {walls.map((w) => (
+                        <div key={w} className="space-y-2 rounded-lg border border-line/50 p-3">
+                          <span className={labelCls}>
+                            {WALL_LABELS[w]} ({(draft.wallFinish!.wallLengths[w] || 0).toFixed(2)} m)
+                          </span>
+                          <select
+                            className={selectCls}
+                            value={draft.wallFinish!.finishes[w] ?? ""}
+                            onChange={(e) =>
+                              patch({
+                                wallFinish: {
+                                  ...draft.wallFinish!,
+                                  finishes: {
+                                    ...draft.wallFinish!.finishes,
+                                    [w]: (e.target.value || undefined) as
+                                      | WallFinishType
+                                      | undefined,
+                                  },
+                                },
+                              })
+                            }
+                          >
+                            <option value="">— Fără —</option>
+                            {wallFinishTypes.map((t) => (
+                              <option key={t} value={t}>
+                                {t}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-[10px] italic text-muted">
                     * Alege Vopsea sau Tapet independent, per perete — golul ușii se scade automat de
                     pe peretele ei.
@@ -788,7 +777,23 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               number={windowsSectionNumber}
               icon={TECHNICAL_ICONS.windowConfig}
               title="Ferestre"
-              defaultOpen={windowCount > 0}
+              open={sectionsOpen.windows}
+              onToggle={() => toggleSection("windows")}
+              action={
+                windowCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeAllWindows();
+                    }}
+                    className="text-xs font-bold text-secondary hover:underline"
+                  >
+                    Elimină ferestre
+                  </button>
+                ) : undefined
+              }
             >
               {windowEntries.length > 0 && (
                 <div className="space-y-4">
@@ -872,7 +877,23 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               number={doorSectionNumber}
               icon={TECHNICAL_ICONS.doorConfig}
               title="Uși"
-              defaultOpen={doorCount > 0}
+              open={sectionsOpen.doors}
+              onToggle={() => toggleSection("doors")}
+              action={
+                doorCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeAllDoors();
+                    }}
+                    className="text-xs font-bold text-secondary hover:underline"
+                  >
+                    Elimină uși
+                  </button>
+                ) : undefined
+              }
             >
               {doorEntries.length > 0 && (
                 <div className="space-y-4">
@@ -953,16 +974,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               Schiță &amp; Rezultat
             </h4>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-line bg-surface-low p-4">
-                <div className="text-center">
-                  <span className="material-symbols-outlined mb-2 text-4xl text-muted">
-                    {TECHNICAL_ICONS.blueprintPlaceholder}
-                  </span>
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted">
-                    Schiță Tehnică Generată
-                  </p>
-                </div>
-              </div>
+              <RoomSketch room={draft} />
 
               <div className="space-y-3 rounded-xl border border-line bg-surface p-4">
                 <div className="flex items-center justify-between border-b border-line/50 pb-2 text-sm font-bold">
@@ -973,75 +985,17 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 </div>
 
                 <div className="space-y-3">
-                  {hasFloorConfig(room) && (
-                    <ResultRow
-                      label={`${room.floorMaterial} (Pardoseală${baseboardTiles > 0 ? " + Plintă" : ""})`}
-                      value={`${materialNeeded.toFixed(2)} mp`}
-                      formula={
-                        baseboardTiles > 0
-                          ? `(${room.floorArea!.toFixed(2)} mp + 10% pierdere) + (plintă ${baseboard.toFixed(2)} ml × ${Math.round(room.baseboardHeight! * 100)} cm)`
-                          : `${room.floorArea!.toFixed(2)} mp + 10% pierdere`
-                      }
-                      math={
-                        baseboardTiles > 0
-                          ? `${(room.floorArea! * 1.1).toFixed(2)} + ${baseboardTiles.toFixed(2)} = ${materialNeeded.toFixed(2)} mp`
-                          : `${room.floorArea!.toFixed(2)} × 1.10 = ${materialNeeded.toFixed(2)} mp`
-                      }
-                    />
-                  )}
+                  {calcRows.map((row) => (
+                    <ResultRow key={row.label} {...row} />
+                  ))}
 
-                  {isGresie && !!room.perimeter && !room.baseboardHeight && (
+                  {isGresie && !!draft.perimeter && !draft.baseboardHeight && (
                     <p className="text-[10px] italic text-tertiary">
                       Completează câmpul Înălțime plintă pentru a include plinta în necesarul de gresie.
                     </p>
                   )}
 
-                  {!isGresie && !!room.perimeter && (
-                    <ResultRow
-                      label="Plintă"
-                      value={`${baseboard.toFixed(2)} ml`}
-                      formula="(Perimetru − Σ lățime uși) + 5% pierdere"
-                      math={`(${room.perimeter.toFixed(2)} − ${totalDoorWidth(room).toFixed(2)}) × 1.05 = ${baseboard.toFixed(2)} ml`}
-                    />
-                  )}
-
-                  {isGresie && room.wallTiling && room.wallTiling.tiledWallsCount > 0 && (
-                    <ResultRow
-                      label={`Faianță (${room.wallTiling.tiledWallsCount} pereți)`}
-                      value={`${tilingArea.toFixed(2)} mp`}
-                      formula="(Σ lungime pereți placați × înălțime − gol ușă) + 10% pierdere"
-                      math={`${tilingArea.toFixed(2)} mp`}
-                    />
-                  )}
-
-                  {!isGresie && paintArea > 0 && (
-                    <ResultRow
-                      label="Vopsea"
-                      value={`${paintArea.toFixed(2)} mp`}
-                      formula="(Σ lungime pereți cu vopsea × înălțime − gol ușă) + 10% pierdere"
-                      math={`${paintArea.toFixed(2)} mp`}
-                    />
-                  )}
-
-                  {!isGresie && wallpaperArea > 0 && (
-                    <ResultRow
-                      label="Tapet"
-                      value={`${wallpaperArea.toFixed(2)} mp`}
-                      formula="(Σ lungime pereți cu tapet × înălțime − gol ușă) + 15% pierdere"
-                      math={`${wallpaperArea.toFixed(2)} mp`}
-                    />
-                  )}
-
-                  {windowTrim > 0 && (
-                    <ResultRow
-                      label={`Glaf Fereastră (${windowCount} ${windowCount === 1 ? "fereastră" : "ferestre"})`}
-                      value={`${windowTrim.toFixed(2)} ml`}
-                      formula="Σ perimetru ferestre (2×(lățime+înălțime)) + 5% pierdere"
-                      math={`${windowTrim.toFixed(2)} ml`}
-                    />
-                  )}
-
-                  {!hasFloorConfig(room) && !room.perimeter && (
+                  {!hasFloorConfig(draft) && !draft.perimeter && (
                     <p className="text-sm text-muted">
                       Completează pardoseala pentru a vedea calculele.
                     </p>
@@ -1050,6 +1004,14 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+          >
+            Salvează
+          </button>
         </div>
       )}
 

@@ -63,7 +63,8 @@ _(niciuna momentan — `dimensions.ts` a fost promovat în `shared/functions/` d
 | `WallFinishType` | `WallFinishType.ts` | enum (Vopsea / Tapet) |
 | `WallFinish` | `WallFinish.ts` | interface (wallHeight, wallLengths per `Wall`, finishes: `Partial<Record<Wall, WallFinishType>>`) — doar la Parchet/Mochetă, alternativa la `WallTiling` |
 | `RoomWindow` | `RoomWindow.ts` | interface (width, height) — o fereastră, max. 1 per perete |
-| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `doors?: Partial<Record<Wall, RoomDoor>>`, `baseboardHeight?: number`, `wallTiling?: WallTiling`, `wallFinish?: WallFinish`, `windows?: Partial<Record<Wall, RoomWindow>>`) |
+| `RoomShape` | `RoomShape.ts` | enum (Pătrat / Dreptunghi / Neregulată) — controlează câte lungimi de perete cere UI-ul la `wallTiling`/`wallFinish` |
+| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `doors?: Partial<Record<Wall, RoomDoor>>`, `baseboardHeight?: number`, `wallShape?: RoomShape`, `wallTiling?: WallTiling`, `wallFinish?: WallFinish`, `windows?: Partial<Record<Wall, RoomWindow>>`) |
 | `Item` | `Item.ts` | interface (extins cu `origin: ItemOrigin`) |
 | `Project` | `Project.ts` | interface (extins cu `totalArea?: number`) |
 | `RenovationStore` | `RenovationStore.ts` | interface |
@@ -662,5 +663,74 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 - Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat în browser: „Tip Material” deschis pe cameră cu card scurt — dropdown-ul apare complet, cu toate cele 3 opțiuni vizibile (nu mai e tăiat); „Tip montaj” arată iconiță (`straighten`) + „Drept”; secțiunea Pereți arată „NORD — LUNGIME (M)” etc.; secțiunea Uși arată „Vest” (nu „V”) în select-ul Perete.
 
 **Fișiere atinse:** `src/shared/icons.ts`, `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Formă cameră (Pătrat/Dreptunghi/Neregulată) la secțiunea Pereți + validare suprafață
+**De ce:** userul a semnalat un bug real: la secțiunea „Pereți" (faianță/vopsea-tapet) puteai introduce o lungime de perete oricât de mare, fără nicio legătură cu suprafața (mp) introdusă la Pardoseală — rezultatul: schița generată (`RoomSketch`) și necesarul de faianță/plintă divergeau silențios de mp-ii reali ai camerei. Cerința: alege întâi forma camerei (Pătrat/Dreptunghi/Neregulată), completează doar câte dimensiuni sunt necesare pentru acea formă (1/2/4), și nu permite ca suprafața rezultată din pereți să depășească `floorArea`.
+
+- **Enum nou** `RoomShape` (`src/shared/types/RoomShape.ts`): `Patrat` / `Dreptunghi` / `Neregulata`.
+- **`Room.wallShape?: RoomShape`** (nou, `Room.ts`) — o singură alegere de formă, partajată între `wallTiling` și `wallFinish` (mutual exclusive oricum, în funcție de `floorMaterial`).
+- **Component nou** `src/app/configurare/RoomShapeWallsEditor.tsx`: select „Formă cameră” + input(uri) specifice formei — Pătrat: 1 input (Latura), clamped la `√floorArea`; Dreptunghi: 2 inputuri (Lungime N–S / Lățime E–V), clamped ca produsul lor să nu depășească `floorArea` (dimensiunea tocmai editată se reduce automat, cealaltă rămâne); Neregulată: 4 inputuri per perete (comportamentul vechi, fără validare — formă liberă, fără geometrie de validat). La schimbarea formei, valorile existente se renormalizează imediat (nu doar la următoarea editare), ca schița să reflecte instant noua formă.
+- **`RoomTechnicalCard.tsx`**: secțiunea „Pereți" (atât la Gresie/faianță cât și la Parchet-Mochetă/vopsea-tapet) folosește acum `RoomShapeWallsEditor` pentru lungimi, în loc de grila veche (la faianță: doar primele N pereți din `tiledWallsCount`; la vopsea/tapet: toate cele 4, întotdeauna). La vopsea/tapet, select-ul de finisaj per perete rămâne, dar arată lungimea calculată read-only în loc de un input separat. `toggleWallTiling`/`toggleWallFinish` setează `wallShape: Patrat` implicit la prima activare (păstrând comportamentul anterior de estimare pătrată), fără să suprascrie o alegere existentă.
+- Exportate din `RoomTechnicalCard.tsx` (`IconSelectField`, `WALL_LABELS`, `labelCls`, `inputCls`) pentru reutilizare în noul component.
+- **Iconițe noi** (`icons.ts` → `TECHNICAL_ICONS`): `shapeSquare` (`crop_square`), `shapeRectangle` (`crop_landscape`), `shapeIrregular` (`gesture`).
+- Fix precizie flotantă la clamp (`5.4/2.25` → `2.4000000000000004` în input) — rotunjire la 2 zecimale (`round2`) pe toate valorile calculate din clamp.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual: fără formă aleasă → mesaj + niciun input; Dreptunghi cu lungime introdusă prea mare → clamp automat la `floorArea / lățime`, afișat curat (2 zecimale); Pătrat ales direct → schița se actualizează instant la o formă pătrată corectă, fără a necesita o editare manuală suplimentară.
+
+**Fișiere atinse:** `src/shared/types/RoomShape.ts` (nou), `src/shared/types/Room.ts`, `src/shared/types/index.ts`, `src/shared/icons.ts`, `src/app/configurare/RoomShapeWallsEditor.tsx` (nou), `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Ajustări formă cameră: schiță SVG cu formă neregulată reală, layout, avertisment vizibil
+**De ce:** trei fix-uri cerute de user pe funcționalitatea de mai sus: (1) schița SVG desena mereu un dreptunghi (medie Nord/Sud, medie Est/Vest), deci „Formă neregulată" cu un perete mai lung nu se vedea deloc ca atare; (2) depășirea suprafeței era doar clampată silențios, fără notificare vizibilă; (3) „Număr pereți placați" (selector separat) nu mai are sens lângă noul selector de formă — cerința a fost să dispară, iar „Formă cameră" să-i ia locul în grid; inputurile Dreptunghi trebuiau responsive și pe toată lățimea cardului.
+
+- **`RoomSketch.tsx` rescris**: `roomDimensions()` (dreptunghi mediat) înlocuit cu `roomQuad()` — un patrulater real, calculat direct din cele 4 lungimi de perete (Nord/Sud/Est/Vest), rezolvând un sistem de 2 ecuații (2 necunoscute: decalaj orizontal + înălțime) din lungimile laturilor Est/Vest. La Pătrat/Dreptunghi, Nord=Sud și Est=Vest (impuse de editor) → rezultă exact dreptunghiul de dinainte; la Neregulată, un perete Est mai lung ca Vest se vede acum ca latură oblică reală (trapez), nu mai e „ascuns" într-o medie. Fiecare perete are acum și o etichetă cu lungimea lui reală (nu doar o singură etichetă globală „lățime × înălțime").
+- **`RoomShapeWallsEditor.tsx` despărțit în 2 componente** (`RoomShapeSelect` + `RoomShapeLengthInputs`, logica de calcul/clamp extrasă în hook-ul intern `useShapeHandlers`) — ca selectorul de formă să poată sta ÎN grid-ul cu „Înălțime Placare"/„Înălțime Pereți", iar inputurile de dimensiuni să stea separat, pe rândul următor, pe toată lățimea cardului.
+- **Eliminat selectorul „Număr pereți placați"** din secțiunea Pereți (faianță) — `tiledWallsCount` e acum fix `4` la activare (toți cei 4 pereți ai formei sunt placați, nu mai există alegere manuală de „câți"). `RoomShapeSelect` ia locul lui în grid, lângă „Înălțime Placare (M)". La fel la vopsea/tapet: `RoomShapeSelect` lângă „Înălțime Pereți (M)”.
+- **Avertisment vizibil la atingerea maximului** (nu doar text neutru): când suprafața implicată de dimensiuni (latură² la Pătrat, lungime×lățime la Dreptunghi) atinge/depășește `floorArea`, textul devine bold, culoare `text-tertiary`, cu iconiță `warning` — „Ai atins maximul — suprafața ... nu poate depăși pardoseala (...)".
+- **Responsive real la Dreptunghi**: grid `grid-cols-1 sm:grid-cols-2` (fără `max-w-md`) — inputurile stau pe toată lățimea cardului, stivuite complet pe mobil (375px), side-by-side de la breakpoint `sm`.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat vizual: Neregulată cu perete Est 4.50m vs. Vest 2.25m → schiță afișează un patrulater vizibil asimetric (nu dreptunghi), cu etichetă per perete; Dreptunghi la limită (5.40 mp) → avertisment portocaliu cu iconiță; mobil 375px → cele 2 inputuri Dreptunghi complet stivuite, full width.
+
+**Fișiere atinse:** `src/app/configurare/RoomSketch.tsx` (rescris), `src/app/configurare/RoomShapeWallsEditor.tsx` (restructurat: 2 exporturi în loc de 1), `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Export PDF „Configurare Apartament" (raport dedicat, nu print al paginii)
+**De ce:** userul a cerut un PDF descărcabil cu datele tehnice completate (nu un screenshot/print al paginii) — per cameră, cotele introduse (pardoseală/pereți/uși/ferestre), schița tehnică și calculele de necesar de materiale, afișate simplu, ușor de citit de un constructor pe șantier. Buton „Export PDF" lângă „+ Adaugă Cameră".
+
+- **Dependință nouă**: `@react-pdf/renderer` (generare PDF vectorial client-side, din componente React cu primitive proprii — `Document`, `Page`, `View`, `Text`, `Svg`, `Line`, `Path`).
+- **Geometria schiței extrasă** în `src/app/configurare/roomSketchGeometry.ts` (funcții pure, fără JSX: `buildRoomSketch`, `arcPath`) — folosită acum de AMBELE randări: `RoomSketch.tsx` (DOM `<svg>`, în UI) și noul `RoomSketchPdf.tsx` (primitivele `@react-pdf/renderer`). Aceeași schiță, aceleași cifre, în UI și în PDF — nu două implementări care pot diverge.
+- **Calculele extrase** în `src/app/configurare/roomCalcRows.ts` (`buildRoomCalcRows`, funcție pură) — mutate din JSX-ul inline din `RoomTechnicalCard.tsx` (panoul „Calcule Detaliate") într-o funcție reutilizabilă, folosită acum și de PDF. `RoomTechnicalCard.tsx` simplificat: randează `calcRows.map(...)` în loc de 6 blocuri `<ResultRow>` condiționale duplicate.
+- **`ApartmentPdfDocument.tsx`** (nou): 1 pagină de sumar (titlu proiect, suprafață/buget/status, cuprins camere) + câte 1 pagină per cameră (nume + zonă, buget alocat, specificații tehnice grupate pe secțiuni — Pardoseală/Pereți/Uși/Ferestre, schiță tehnică, tabel „Calcule Detaliate" cu formulă + calcul per rând, exact ca în UI). Camere fără configurare tehnică → mesaj explicit, nu pagină goală.
+- **Buton „Export PDF"** (`configurare/page.tsx`, lângă „+ Adaugă Cameră", pe același rând): `@react-pdf/renderer` și `ApartmentPdfDocument` importate dinamic (`import()`) doar la apăsare — nu îngreunează bundle-ul inițial al paginii. Generează blob-ul PDF (`pdf(<Document/>).toBlob()`), declanșează descărcarea printr-un `<a download>` temporar. Dezactivat dacă nu există nicio cameră; text „Se generează..." + iconiță alternativă cât timp durează generarea.
+- Export-uri noi din `RoomTechnicalCard.tsx` pentru reutilizare: `ROOM_TYPE_DESCRIPTION`.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori, `npm run build` → succes (build de producție complet, fără erori de bundling pt. `@react-pdf/renderer`). Testat efectiv generarea: blob rezultat `application/pdf`, ~11.7 KB pentru un proiect cu o cameră configurată.
+
+**Fișiere atinse:** `package.json`/`package-lock.json` (dependință nouă), `src/app/configurare/roomSketchGeometry.ts` (nou), `src/app/configurare/RoomSketch.tsx` (refactorizat pe geometria partajată), `src/app/configurare/RoomSketchPdf.tsx` (nou), `src/app/configurare/roomCalcRows.ts` (nou), `src/app/configurare/ApartmentPdfDocument.tsx` (nou), `src/app/configurare/RoomTechnicalCard.tsx` (refactorizat pe `buildRoomCalcRows`), `src/app/configurare/page.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Fix Export PDF: diacritice, camere goale ascunse, layout compact tip factură
+**De ce:** userul a semnalat 3 probleme reale la PDF-ul din sesiunea anterioară: (1) diacriticele românești (ă/â/î/ș/ț) nu se afișau deloc (fontul implicit al PDF-ului, Helvetica, nu le are); (2) o cameră fără nicio dată tehnică completată tot apărea în PDF (cu mesaj „nu are configurare”) — nu trebuie afișată deloc; (3) design cu prea mult spațiu gol și culoare — cerere explicită: „ca o factură”, simplu, alb-negru, compact.
+
+- **Font `Inter` (subset `latin-ext`, are ă/â/î/ș/ț)** auto-hostat în `public/fonts/` (2 fișiere `.woff`, 400/700, extrase din `@fontsource/inter` — pachetul a fost dezinstalat după, nu e nevoie de el la runtime, doar fișierele rămase în `public/`). Înregistrat cu `Font.register` în `ApartmentPdfDocument.tsx`, aplicat pe toate paginile (`fontFamily: "Inter"` pe stilul de pagină) + explicit pe `RoomSketchPdf.tsx` (siguranță, textul din `<Svg>` nu moștenește garantat).
+- **Camere fără nicio dată tehnică → excluse complet din PDF** (nu doar ascunse cu un mesaj): `ApartmentPdfDocument` filtrează `rooms` cu `buildRoomSpecs(r).length > 0` înainte de cuprins ȘI înainte de generarea paginilor — o cameră netratată încă nu ocupă nicio pagină.
+- **Design rescris „tip factură”**: eliminate fundalurile colorate (`headerCard`/`sketchWrap` cu `COLOR_SURFACE_LOW`) și accentul albastru de pe procent — acum alb-negru/gri, linii subțiri (`COLOR_LINE`), tabele cu chenar simplu. Singura culoare rămasă e cea funcțională din schiță (simbolurile ușă/fereastră, care trebuie să rămână distinctă vizual). Spațieri reduse global (margini/padding-uri înjumătățite aprox.) — conținutul stă mai aproape, mai puțin spațiu gol.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori, `npm run build` → succes. Testat efectiv: extras blob-ul PDF generat (capturat `URL.createObjectURL` din consolă), convertit în data-URL și inspectat brut — `/Pages /Count 3` (1 sumar + 2 camere configurate, a treia cameră mock fără date exclusă corect), fonturile `Inter-Regular`/`Inter-Bold` înglobate ca `CIDFontType2` (nu `Helvetica`).
+
+**Fișiere atinse:** `public/fonts/inter-latin-ext-400-normal.woff` (nou), `public/fonts/inter-latin-ext-700-normal.woff` (nou), `package.json`/`package-lock.json` (dependință temporară adăugată și eliminată), `src/app/configurare/ApartmentPdfDocument.tsx` (rescris), `src/app/configurare/RoomSketchPdf.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Fix `DashboardSummaryCard`: linii despărțitoare centrate corect + prag desktop la 768px
+**De ce:** userul a semnalat că liniile verticale dintre metrici (card negru de sumar, pe toate paginile) nu „porneau din centru” când cardul avea 2 rânduri de metrici (mobil/tabletă) — cauza reală: `border-r` pe o grilă cu `gap` lasă linia lipită de coloana din stânga, nu exact la mijlocul spațiului dintre coloane. Pe `/centralizator` (3 metrici), la o lățime „de desktop” (~810–900px) a treia metrică tot sărea pe un rând nou, pentru că pragul vechi de comutare la un singur rând era `lg` (1024px), nu `md` (768px) — pragul „desktop” real al aplicației, conform CLAUDE.md.
+
+- **Rescris layout-ul** din CSS Grid (`grid-cols-2 lg:grid-cols-N` + `border-r`/`border-b` calculate manual pe index) în flexbox cu `divide-x`/`divide-y` (`MetricRow`, `MetricContent`) — `divide-x` pe coloane `flex-1` egale garantează geometric că linia cade exact la mijlocul spațiului dintre 2 elemente, indiferent de conținut.
+- **Prag de comutare mutat de la `lg` (1024px) la `md` (768px)** — sub 768px, metricile stau în perechi de câte 2 (linie verticală per rând + linie orizontală subțire între rânduri, în loc de linii „rupte” care arătau inconsecvent); de la 768px în sus, toate metricile stau pe un singur rând.
+- **Fix regresie**: mutarea pragului la 768px a scos la iveală trunchiere de text („12.500 RO…”) la lățimi „laptop” (768–1024px) cu 4 metrici (coloane mai multe, mai înguste, la o lățime mai mică decât înainte). Rezolvat cu un prop nou `compact` pe `MetricRow`/`MetricContent`: font mai mic (`text-sm`→`text-2xl` pe trepte `md`/`lg`/`xl`, în loc de un singur `clamp()` bazat pe viewport width, care nu ținea cont de lățimea reală a coloanei) + padding mai mic la `md`, crescând progresiv spre `xl`.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori, `npm run build` → succes. Testat vizual la 375px (mobil, 2 rânduri + linie orizontală), 853px și 900px (desktop îngust — toate metricile pe un rând, fără trunchiere, teste cu 3 și 4 metrici), 1400px (desktop larg) — linii verticale corect centrate la toate lățimile.
+
+**Fișiere atinse:** `src/components/DashboardSummaryCard.tsx` (rescris), `docs/progress.md`.
 
 **Branch:** `009-sync-configurare-elemente-cumparat`.
