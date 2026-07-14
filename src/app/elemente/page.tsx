@@ -188,6 +188,40 @@ export default function ElementePage() {
               </button>
             </div>
           </div>
+
+          {/* Poză element — aceeași funcționalitate ca pe mobil (capture cameră), disponibilă acum
+              și pe tabletă/desktop, nu doar sub 768px. */}
+          <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center">
+            <label className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-white/70">
+              Poză element
+            </label>
+            {qaImage ? (
+              <div className="flex items-center gap-3 rounded-lg border border-white/20 bg-white/10 p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qaImage} alt="Poză element" className="h-12 w-12 rounded object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setQaImage(undefined)}
+                  className="flex items-center gap-1 text-[11px] font-bold uppercase text-tertiary"
+                >
+                  <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
+                  Elimină
+                </button>
+              </div>
+            ) : (
+              <label className="flex w-full max-w-xs cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-white/30 bg-white/10 p-2.5 text-[12px] font-bold uppercase text-white/70 transition-colors hover:bg-white/20">
+                <span className="material-symbols-outlined">{ACTION_ICONS.photoCamera}</span>
+                Fă o poză
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleQaPhoto}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
         </form>
 
         {/* Camere */}
@@ -589,16 +623,26 @@ export default function ElementePage() {
                                 : ""
                             }`}
                           >
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-heading text-[15px] font-bold text-foreground">
-                                  {item.name}
-                                </h4>
-                                <OriginBadge origin={item.origin} />
+                            <div className="flex min-w-0 items-center gap-3">
+                              {item.imageUrl && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.name}
+                                  className="h-10 w-10 shrink-0 rounded border border-line object-cover"
+                                />
+                              )}
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="truncate font-heading text-[15px] font-bold text-foreground">
+                                    {item.name}
+                                  </h4>
+                                  <OriginBadge origin={item.origin} />
+                                </div>
+                                <p className="font-mono text-sm text-muted">
+                                  {money(item.unitPrice)}
+                                </p>
                               </div>
-                              <p className="font-mono text-sm text-muted">
-                                {money(item.unitPrice)}
-                              </p>
                             </div>
                             <div className="flex items-center justify-center gap-2">
                               <button
