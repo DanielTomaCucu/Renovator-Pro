@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import StatusChip from "@/components/StatusChip";
+import OriginBadge from "@/components/OriginBadge";
 import DashboardSummaryCard, { SummaryProgressFooter } from "@/components/DashboardSummaryCard";
 import ItemFormDrawer from "@/components/ItemFormDrawer";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
@@ -17,7 +18,7 @@ import {
   roomSpent,
   totalSpent,
 } from "@/shared/functions";
-import { ItemStatus, MaterialType } from "@/shared/types";
+import { ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { DeleteTarget } from "./DeleteTarget";
 import { ItemDrawerState } from "./ItemDrawerState";
@@ -76,6 +77,7 @@ export default function ElementePage() {
       quantity: 1,
       unitPrice: Number(qaPrice) || 0,
       imageUrl: qaImage,
+      origin: ItemOrigin.Manual,
     });
     setQaName("");
     setQaPrice("");
@@ -272,7 +274,14 @@ export default function ElementePage() {
                       </thead>
                       <tbody className="divide-y divide-line">
                         {roomItems.map((item) => (
-                          <tr key={item.id} className="transition-colors hover:bg-surface-low/40">
+                          <tr
+                            key={item.id}
+                            className={`transition-colors hover:bg-surface-low/40 ${
+                              item.origin === ItemOrigin.Configurare
+                                ? "bg-secondary/5 border-l-2 border-l-secondary"
+                                : ""
+                            }`}
+                          >
                             <td className="whitespace-nowrap px-6 py-3">
                               <div className="flex items-center gap-3">
                                 {item.imageUrl && (
@@ -284,6 +293,7 @@ export default function ElementePage() {
                                   />
                                 )}
                                 <span className="font-medium text-primary">{item.name}</span>
+                                <OriginBadge origin={item.origin} />
                               </div>
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-muted">
@@ -573,12 +583,19 @@ export default function ElementePage() {
                         roomItems.map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-center justify-between px-4 py-4"
+                            className={`flex items-center justify-between px-4 py-4 ${
+                              item.origin === ItemOrigin.Configurare
+                                ? "bg-secondary/5 border-l-2 border-l-secondary"
+                                : ""
+                            }`}
                           >
                             <div className="space-y-1">
-                              <h4 className="font-heading text-[15px] font-bold text-foreground">
-                                {item.name}
-                              </h4>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-heading text-[15px] font-bold text-foreground">
+                                  {item.name}
+                                </h4>
+                                <OriginBadge origin={item.origin} />
+                              </div>
                               <p className="font-mono text-sm text-muted">
                                 {money(item.unitPrice)}
                               </p>

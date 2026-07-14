@@ -5,6 +5,7 @@
  */
 export * from "./RoomType";
 export * from "./ItemStatus";
+export * from "./ItemOrigin";
 export * from "./MaterialType";
 export * from "./Currency";
 export * from "./FlooringType";
@@ -13,6 +14,9 @@ export * from "./InstallationType";
 export * from "./Wall";
 export * from "./RoomDoor";
 export * from "./WallTiling";
+export * from "./WallFinishType";
+export * from "./WallFinish";
+export * from "./RoomWindow";
 export * from "./Room";
 export * from "./Item";
 export * from "./Project";

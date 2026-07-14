@@ -26,17 +26,24 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `costPerRoom(rooms, items)` | `shared/functions/charts.ts` | distribuție cost pe cameră, sortată desc, fără camere goale | `analiza` (donut chart) |
 | `costPerCategory(items)` | `shared/functions/charts.ts` | agregare {total, spent} per `MaterialType`, sortată desc | `analiza` (progress bars) |
 | `donutSegments(data)` | `shared/functions/charts.ts` | transformă `{name, total}[]` în `DonutSegment[]` cumulative (start/end 0–1) pt. SVG donut | `analiza` |
+| `hasFloorConfig(room)` | `shared/functions/dimensions.ts` | `true` dacă material + suprafață pardoseală sunt completate | `configurare`, `auto-items.ts` |
+| `totalDoorWidth(room)` | `shared/functions/dimensions.ts` | suma lățimilor tuturor ușilor camerei (indiferent de perete) | intern în `baseboardLength`; `configurare` (afișaj calcul) |
+| `doorArea(room, wall)` | `shared/functions/dimensions.ts` | aria ușii unui perete dat (0 dacă nu are ușă) | intern în `wallTilingArea`/`wallFinishArea` |
+| `baseboardLength(room)` | `shared/functions/dimensions.ts` | plintă (ml) = (perimetru − Σ lățime uși) + 5% pierdere | `configurare`, `auto-items.ts`, intern (`baseboardTileArea`, `projectTechnicalSummary`) |
+| `baseboardTileArea(room)` | `shared/functions/dimensions.ts` | suprafață de plintă (mp) tăiată din plăcile de gresie — 0 dacă pardoseala nu e Gresie sau nu are `baseboardHeight` completat | `configurare`, intern în `floorMaterialNeeded` |
+| `floorMaterialNeeded(room)` | `shared/functions/dimensions.ts` | necesar material pardoseală (+10% pierdere) — la Gresie include și `baseboardTileArea` (plinta consumă din același material) | `configurare`, `auto-items.ts` |
+| `wallTilingArea(room)` | `shared/functions/dimensions.ts` | suprafață faianță pe pereții placați, minus golurile ușilor și ferestrelor de pe acei pereți — doar la Gresie (0 la Parchet/Mochetă) | `configurare`, `auto-items.ts` |
+| `wallFinishArea(room, type)` | `shared/functions/dimensions.ts` | suprafață vopsea/tapet pe pereții cu finisajul `type`, minus golurile ușilor și ferestrelor de pe acei pereți — doar la Parchet/Mochetă (alternativa la faianță); pierdere 10% (vopsea) sau 15% (tapet) | `configurare`, `auto-items.ts` |
+| `estimatedSquareWallSide(room)` | `shared/functions/dimensions.ts` | lungime sugerată de perete (√suprafață, presupunând camera pătrată) — doar valoare implicită la activarea faianței/finisajului, nu resincronizată după | `configurare` |
+| `windowArea(room, wall)` | `shared/functions/dimensions.ts` | aria ferestrei unui perete dat (0 dacă nu are fereastră) | intern în `wallTilingArea`/`wallFinishArea` |
+| `windowTrimLength(room)` | `shared/functions/dimensions.ts` | lungime totală de glaf/bordură pt. toate ferestrele camerei (Σ perimetru fereastră) + 5% pierdere — indiferent de pardoseală | `configurare`, `auto-items.ts` |
+| `projectTechnicalSummary(rooms)` | `shared/functions/dimensions.ts` | suprafață utilă totală + % camere complet configurate | `configurare` (card „Sumar Proiect”, bara de progres) |
+| `generateAutoItems(room)` | `shared/functions/auto-items.ts` | construiește elementele „de cumpărat" derivate din pardoseală (+ plintă la Gresie), plintă separată/faianță/vopsea/tapet/glaf fereastră (după caz), fără preț, `origin: ItemOrigin.Configurare` | `store.tsx` (intern, prin `syncAutoItemsForRoom`) |
+| `syncAutoItemsForRoom(items, room, createId)` | `shared/functions/auto-items.ts` | reconciliază elementele auto-generate ale unei camere cu noua configurare tehnică — păstrează id/preț/status editate manual, adaugă/actualizează/elimină după caz; nu atinge elementele `ItemOrigin.Manual` | `store.tsx` (`updateRoom`) |
 
 ### Funcții locale de pagină
 
-| Funcție | Fișier / Locație | Ce face | Folosită în |
-|---|---|---|---|
-| `hasFloorConfig(room)` | `app/configurare/dimensions.ts` | `true` dacă material + suprafață pardoseală sunt completate | `configurare`, intern în `dimensions.ts` |
-| `floorMaterialNeeded(room)` | `app/configurare/dimensions.ts` | necesar material pardoseală, +10% pierdere tăiere | `configurare` |
-| `baseboardLength(room)` | `app/configurare/dimensions.ts` | plintă = (perimetru − lățime ușă) + 5% pierdere | `configurare` |
-| `wallTilingArea(room)` | `app/configurare/dimensions.ts` | suprafață faianță pe pereții placați, minus golul ușii dacă e pe un perete placat, +10% pierdere | `configurare` |
-| `doorWallBaseboardLength(room)` | `app/configurare/dimensions.ts` | plintă specifică peretelui cu ușă (relevant doar cu placare pereți) | `configurare` |
-| `projectTechnicalSummary(rooms)` | `app/configurare/dimensions.ts` | suprafață utilă totală + % camere complet configurate | `configurare` (card „Sumar Proiect”, bara de progres) |
+_(niciuna momentan — `dimensions.ts` a fost promovat în `shared/functions/` de îndată ce a devenit necesar și din `store.tsx`, nu doar din pagina `configurare`)_
 
 ## Registru de tipuri (`src/shared/types/`, un fișier per tip)
 
@@ -44,16 +51,20 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 |---|---|---|
 | `RoomType` | `RoomType.ts` | enum |
 | `ItemStatus` | `ItemStatus.ts` | enum |
-| `MaterialType` | `MaterialType.ts` | enum |
+| `ItemOrigin` | `ItemOrigin.ts` | enum (Manual / Configurare — proveniența unui element) |
+| `MaterialType` | `MaterialType.ts` | enum (extins cu `Plinta`, `Tapet`, `GlafFereastra`) |
 | `Currency` | `Currency.ts` | enum |
 | `FlooringType` | `FlooringType.ts` | enum (Parchet Laminat / Gresie / Mochetă) |
 | `TileSize` | `TileSize.ts` | enum |
 | `InstallationType` | `InstallationType.ts` | enum |
 | `Wall` | `Wall.ts` | enum (N/E/S/V) |
-| `RoomDoor` | `RoomDoor.ts` | interface (width, height, wall) |
-| `WallTiling` | `WallTiling.ts` | interface (tiledWallsCount, tileHeight, wallLengths per `Wall`) |
-| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `door?: RoomDoor`, `wallTiling?: WallTiling`) |
-| `Item` | `Item.ts` | interface |
+| `RoomDoor` | `RoomDoor.ts` | interface (width, height) — o ușă, max. 1 per perete |
+| `WallTiling` | `WallTiling.ts` | interface (tiledWallsCount, tileHeight, wallLengths per `Wall`) — doar la Gresie |
+| `WallFinishType` | `WallFinishType.ts` | enum (Vopsea / Tapet) |
+| `WallFinish` | `WallFinish.ts` | interface (wallHeight, wallLengths per `Wall`, finishes: `Partial<Record<Wall, WallFinishType>>`) — doar la Parchet/Mochetă, alternativa la `WallTiling` |
+| `RoomWindow` | `RoomWindow.ts` | interface (width, height) — o fereastră, max. 1 per perete |
+| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `doors?: Partial<Record<Wall, RoomDoor>>`, `baseboardHeight?: number`, `wallTiling?: WallTiling`, `wallFinish?: WallFinish`, `windows?: Partial<Record<Wall, RoomWindow>>`) |
+| `Item` | `Item.ts` | interface (extins cu `origin: ItemOrigin`) |
 | `Project` | `Project.ts` | interface (extins cu `totalArea?: number`) |
 | `RenovationStore` | `RenovationStore.ts` | interface |
 | `DonutSegment` | `DonutSegment.ts` | interface |
@@ -553,3 +564,103 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/shared/functions/money.ts`, `src/shared/store.tsx`, `src/app/setari/page.tsx`, `src/app/configurare/page.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/app/analiza/page.tsx`, `docs/progress.md`.
 
 **Branch:** `008-bani-fara-zecimale-si-conversie-functionala`.
+
+### 2026-07-14 — Sincronizare automată „Configurare Apartament" → „Elemente de Cumpărat"
+**De ce:** userul a cerut ca elementele de pardoseală/plintă/faianță calculate în `/configurare` să apară automat în `/elemente` (fără preț, doar cantitate) de îndată ce sunt măsurate, vizual distincte de intrările adăugate manual — ca să nu le uite la calculul bugetului. A confirmat separat că adăugarea unei camere noi propagă deja peste tot: `rooms` vine dintr-un singur `useStore()` global (React Context), nu există liste de camere separate per pagină — deci acea parte a cerinței era deja satisfăcută de arhitectura existentă, fără cod nou.
+
+- **Enum nou** `ItemOrigin` (`src/shared/types/ItemOrigin.ts`): `Manual` / `Configurare`. Adăugat ca prop obligatorie pe `Item` (`origin: ItemOrigin`) — toate punctele de creare (`quickAdd` în `elemente/page.tsx`, `ItemFormDrawer.tsx`, `mock-data.ts`) setează explicit `ItemOrigin.Manual`.
+- **`MaterialType`** extins cu `Plinta = "Plintă"` — categorie nouă, nu exista deloc înainte (plinta nu avea nicio reprezentare în lista de cumpărături).
+- **`dimensions.ts` promovat din `app/configurare/` în `shared/functions/`** (regula „a doua utilizare → shared" din `CLAUDE.md`): acum e folosit și din `store.tsx`, nu doar din pagina `configurare`. Toate importurile actualizate (`RoomTechnicalCard.tsx`, `configurare/page.tsx`).
+- **Funcție nouă** `generateAutoItems(room)` (`shared/functions/auto-items.ts`): din câmpurile tehnice ale unei camere (`floorMaterial`/`floorArea`, `perimeter`/`door`, `wallTiling`) generează până la 3 elemente — pardoseală (Gresie/Parchet, mapat din `FlooringType`; `Mochetă` cade pe `MaterialType.Altele`, nu are categorie proprie), Plintă, Faianță — toate cu `unitPrice: 0`, `origin: ItemOrigin.Configurare`.
+- **Funcție nouă** `syncAutoItemsForRoom(items, room, createId)`: reconciliază elementele auto ale unei camere cu configurarea curentă — elementele existente (identificate după `roomId` + `materialType`, `origin: Configurare`) își păstrează `id`/`unitPrice`/`status` (userul poate completa prețul manual în `/elemente` fără să fie suprascris la următoarea editare din `/configurare`), doar numele/cantitatea se actualizează; elementele noi apărute se creează, cele a căror măsurătoare a fost ștearsă dispar. Elementele `ItemOrigin.Manual` nu sunt niciodată atinse.
+- **`store.tsx` → `updateRoom`**: după ce aplică patch-ul pe `rooms`, apelează `syncAutoItemsForRoom` pe `items` — orice modificare tehnică din `RoomTechnicalCard` (care scrie mereu prin `updateRoom`) declanșează sincronizarea, fără cod nou în pagina `configurare` însăși. `store.tsx` rămâne orchestrare CRUD (regula „store fără calcule" respectată — calculul propriu-zis trăiește în `auto-items.ts`).
+- **Component nou** `OriginBadge.tsx` (`src/components/`): capsulă mică „Din Configurare" (culoare `secondary`, iconiță `calculate`), randată doar când `item.origin === ItemOrigin.Configurare`. Folosit în `/elemente` lângă numele elementului (desktop + mobil); rândul respectiv primește și un fundal `bg-secondary/5` + bordură stângă `border-l-secondary` pt. evidențiere suplimentară în tabel/listă.
+- Verificat: `npx tsc --noEmit` → 0 erori (a necesitat completarea `MATERIAL_BADGE_STYLES` din `centralizator/page.tsx` cu noua cheie `Plinta`), `npm run lint` → 0 erori (warning preexistent nelegat, `no-img-element`). Testat end-to-end în browser: modificat suprafața pardoselii la „Baie Principală" în `/configurare` → în `/elemente` au apărut instant 3 rânduri noi („Gresie (Pardoseală)", „Plintă", „Faianță (3 pereți)") cu badge „Din Configurare", evidențiere vizuală, cantități corecte, preț 0 RON editabil; total elemente cameră 3→6 confirmat.
+
+**Fișiere atinse:** `src/shared/types/ItemOrigin.ts` (nou), `src/shared/types/Item.ts`, `src/shared/types/MaterialType.ts`, `src/shared/types/index.ts`, `src/shared/functions/dimensions.ts` (mutat din `app/configurare/dimensions.ts`), `src/shared/functions/auto-items.ts` (nou), `src/shared/functions/index.ts`, `src/shared/store.tsx`, `src/shared/mock-data.ts`, `src/app/configurare/page.tsx`, `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/elemente/page.tsx`, `src/app/centralizator/page.tsx`, `src/components/ItemFormDrawer.tsx`, `src/components/OriginBadge.tsx` (nou), `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Placeholder-uri reale în loc de `0` pe toate inputurile numerice fără date
+**De ce:** userul a semnalat că orice input numeric fără valoare încă (suprafață, buget, lățime ușă etc.) afișa `0` ca valoare reală controlată — trebuia să apeși Delete înainte de a scrie, și nu exista niciun indiciu de format așteptat (ex: la lățime ușă, „ce bag acolo, 08 sau 0.8?”).
+
+- Toate inputurile numerice fără o valoare reală încă (optionale pe `Room`, sau state local de formular fără prefill din date existente) au trecut de la `value={x ?? 0}` la `value={x ?? ""}` (sau `value={x || ""}` pt. câmpuri unde 0 nu are sens fizic — lățime/înălțime/suprafață), cu `placeholder="ex: <valoare tipică, formatul corect>"`. La blur/schimbare, string gol → `undefined` (pt. câmpuri opționale pe `Room`) sau `0` (pt. sub-structuri obligatorii ca `door`/`wallTiling`).
+- Atinse: `RoomTechnicalCard.tsx` (buget alocat, suprafață, înălțime placare, lungimi pereți, lățime/înălțime ușă), `RoomFormDrawer.tsx` (buget cameră nouă — stare locală trecută din `number` în `string`), `ItemFormDrawer.tsx` (cantitate, preț unitar — idem, parsate la submit cu fallback `1`/`0`). `/elemente` (adăugare rapidă), `/configurare` (suprafață totală apartament) și `/setari` (curs valutar) erau deja implementate corect — folosite ca referință.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat în browser: câmpul „Lățime (m)” de la o cameră neconfigurată arată acum `ex: 0.80` (nu `0`), scris direct fără Delete în prealabil.
+
+**Fișiere atinse:** `src/app/configurare/RoomTechnicalCard.tsx`, `src/components/RoomFormDrawer.tsx`, `src/components/ItemFormDrawer.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Corectare logică de calcul: plintă inclusă în gresie, faianță doar la Gresie, vopsea/tapet la Parchet/Mochetă
+**De ce:** userul a semnalat că logica de calcul tehnic era „extraordinar de greșită”: (1) la Gresie, plinta era tratată ca produs separat, deși în realitate se taie din aceleași plăci — deci trebuie adăugată la necesarul total de gresie, cu pierderile ei proprii; (2) faianța nu are sens la Parchet (nu poți placa cu faianță un perete lângă parchet fără sens tehnic) — trebuia eliminată complet din UI la Parchet; (3) la Parchet, userul vrea în schimb vopsea și/sau tapet, calculate pe mp, alese independent per perete (poate vrea tapet doar pe un perete, vopsea pe restul). Confirmat cu userul (3 întrebări clarificatoare): înălțime plintă editabilă per cameră, config per-perete pt. vopsea/tapet (ca la faianță), Mochetă se comportă ca Parchet.
+
+- **Model de date** (`Room.ts`): câmp nou `baseboardHeight?: number` (m) — înălțimea plintei, folosită doar la Gresie pt. a calcula suprafața ei. Câmp nou `wallFinish?: WallFinish` — alternativa la `wallTiling`, disponibilă doar la Parchet/Mochetă.
+- **Tipuri noi**: `WallFinishType` (enum: Vopsea/Tapet), `WallFinish` (interface: `wallHeight`, `wallLengths` per `Wall`, `finishes: Partial<Record<Wall, WallFinishType>>` — fiecare perete independent, poate fi Vopsea, Tapet, sau neconfigurat). `MaterialType` extins cu `Tapet` (`Vopsea` exista deja).
+- **`dimensions.ts` rescris**:
+  - `baseboardTileArea(room)` (nou) — `baseboardLength(room) × baseboardHeight`, doar dacă `floorMaterial === Gresie` și `baseboardHeight` completat; altfel 0 (plinta la Parchet/Mochetă rămâne produs separat, nu se face din parchet).
+  - `floorMaterialNeeded(room)` — acum include `baseboardTileArea` când e Gresie (suma celor două componente, fiecare cu propria pierdere aplicată deja — nu se dublează pierderea).
+  - `wallTilingArea`/`doorWallBaseboardLength` — întorc explicit 0 dacă `floorMaterial !== Gresie` (siguranță suplimentară, chiar dacă UI-ul deja nu permite combinația).
+  - `wallFinishArea(room, type)` (nou) — suprafață vopsea/tapet pe pereții cu `finishes[wall] === type`, minus golul ușii dacă e pe un perete cu acel finisaj; pierdere 10% la Vopsea, 15% la Tapet (tapetul are pierdere mai mare din potrivirea modelului la îmbinări).
+- **`auto-items.ts` actualizat**: la Gresie, elementul de pardoseală se numește „Gresie (Pardoseală + Plintă)” când plinta e inclusă, și NU mai generează un element „Plintă” separat (era dublare de cantitate înainte de fix). La Parchet/Mochetă, plinta rămâne element separat ca înainte; apar elemente noi „Vopsea (N pereți)”/„Tapet (N pereți)” quando `wallFinish` are pereți configurați cu aria > 0.
+- **`RoomTechnicalCard.tsx` rescris semnificativ**: câmp nou „Înălțime plintă (m)” (doar la Gresie, lângă „Mărime plăci”). Secțiunea 2 (`Placări Detaliate`/`Finisaj Pereți`) e acum condiționată de `isGresie`: la Gresie rămâne UI-ul de faianță neschimbat; la Parchet/Mochetă apare un UI nou — un `select` „Tip Material” schimbă automat între cele două (funcția `changeFloorMaterial` curăță `wallTiling`/`wallFinish` la comutare, ca să nu rămână date orfane invizibile), grid de 4 pereți (N/E/S/V) fiecare cu lungime + `select` „— Fără —”/Vopsea/Tapet independent, plus o înălțime comună a pereților. Panoul „Calcule Detaliate” actualizat: rândul de pardoseală arată formula compusă (bază + plintă) când e cazul, rând „Plintă” apare doar la Parchet/Mochetă, rândurile de Faianță doar la Gresie, rânduri noi Vopsea/Tapet doar la Parchet/Mochetă cu aria > 0.
+- Verificat: `npx tsc --noEmit` → 0 erori (a necesitat completarea `MATERIAL_BADGE_STYLES` din `centralizator/page.tsx` cu noua cheie `Tapet`), `npm run lint` → 0 erori. Testat end-to-end în browser: Baie Principală (Gresie) — completat „Înălțime plintă” 0.08m → rândul „Gresie (Pardoseală + Plintă)” a devenit 6.65 mp = (5.40×1.10) + (8.93 ml × 0.08 m) = 5.94 + 0.71, verificat manual; „Elemente de Cumpărat” nu mai are un rând „Plintă” separat pt. această cameră. Living & Dining (Parchet) — activat „Finisaj Pereți”, perete N 5m Vopsea + perete E 4m Tapet, înălțime 2.5m, ușă pe peretele N (0.9×2.1m): Vopsea calculat 11.67 mp = (5×2.5 − 0.9×2.1) × 1.10, Tapet 11.50 mp = (4×2.5) × 1.15 — ambele confirmate manual și reflectate identic în „Elemente de Cumpărat” cu badge „Din Configurare”, plus „Plintă” 21.11 ml ca element separat (corect, Parchet nu consumă plinta din parchet).
+
+**Fișiere atinse:** `src/shared/types/WallFinishType.ts` (nou), `src/shared/types/WallFinish.ts` (nou), `src/shared/types/Room.ts`, `src/shared/types/MaterialType.ts`, `src/shared/types/index.ts`, `src/shared/functions/dimensions.ts`, `src/shared/functions/auto-items.ts`, `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/centralizator/page.tsx`, `docs/progress.md`, `docs/api-contract.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Auto-completare lungime pereți (√suprafață) + ferestre cu calcul de arie și glaf
+**De ce:** userul a semnalat două lucruri: (1) la activarea faianței (Gresie) sau a finisajului (Parchet/Mochetă), toate cele 4 câmpuri de lungime perete porneau de la 0 — voia o valoare implicită plauzibilă, pornind de la ipoteza „cameră pătrată" derivată din suprafața pardoselii, ca să nu completeze de la zero fiecare perete; (2) voia să poată adăuga ferestre (max. 1 per perete, cu lățime+înălțime), care să scadă aria geamului din necesarul de faianță/vopsea/tapet al peretelui respectiv, PLUS să adauge un calcul separat pt. „colțurile de unire perete-fereastră" (glaful/bordura din jurul ferestrei) — confirmat cu userul: glaf ca o cantitate separată în ml (analog plintei), nu doar scăderea ariei.
+
+- **`estimatedSquareWallSide(room)`** (nou, `dimensions.ts`): `√floorArea`, folosită DOAR ca valoare implicită la `toggleWallTiling`/`toggleWallFinish` (momentul activării) — nu se resincronizează ulterior dacă userul schimbă suprafața, exact ca să nu suprascrie o editare manuală a lungimilor.
+- **Tip nou `RoomWindow`** (`width`, `height`) și câmp nou `Room.windows?: Partial<Record<Wall, RoomWindow>>` — max. o fereastră per perete (N/E/S/V), indiferent de tipul de pardoseală (fereastra există independent de faianță/vopsea/tapet).
+- **`windowArea(room, wall)`** (nou) — scăzută acum în `wallTilingArea` și `wallFinishArea` la fel ca golul ușii (pe lângă ușă, nu în locul ei — pot coexista pe același perete).
+- **`windowTrimLength(room)`** (nou) — Σ perimetrul fiecărei ferestre (2×(lățime+înălțime)) + 5% pierdere la tăiere, indiferent de pardoseală; generează un element nou de cumpărat „Glaf Fereastră (N ferestre)”, `MaterialType.GlafFereastra` (enum nou), în `auto-items.ts`.
+- **`RoomTechnicalCard.tsx`**: secțiune nouă „Ferestre” (întotdeauna prezentă, numerotare dinamică — locul 2 sau 3 după cum e activă faianța/finisajul), grid de 4 pereți cu buton „+ Fereastră”/„Elimină” per perete și, când activă, 2 inputuri (lățime/înălțime). Panoul „Calcule Detaliate” are un rând nou „Glaf Fereastră” (ml) când există cel puțin o fereastră.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat end-to-end în browser: Bucătărie (Gresie, 10 mp) — activat faianța pe 4 pereți → toate lungimile s-au completat automat cu 3.16 (√10); adăugat fereastră pe Perete N (1.2×1.4 m, înălțime placare 2.5m) → „Faianță (4 pereți)” = 32.91 mp = ((4×3.16×2.5) − 1.2×1.4) × 1.10, verificat manual; „Glaf Fereastră (1 fereastră)” = 5.46 ml = 2×(1.2+1.4)×1.05, verificat manual.
+
+**Fișiere atinse:** `src/shared/types/RoomWindow.ts` (nou), `src/shared/types/Room.ts`, `src/shared/types/MaterialType.ts`, `src/shared/types/index.ts`, `src/shared/functions/dimensions.ts`, `src/shared/functions/auto-items.ts`, `src/app/configurare/RoomTechnicalCard.tsx`, `src/app/centralizator/page.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Fix: eliminat calcul „Plintă (Perete X)” rămas orfan la Gresie + UI ferestre îmbunătățit
+**De ce:** userul a semnalat o eroare de calcul: la o cameră cu Gresie și faianță pe toți pereții, tot mai apărea un rând „Plintă (Perete V)” separat, deși plinta e deja inclusă integral în necesarul de gresie de la fix-ul sesiunii anterioare — acel rând nu se aduna nicăieri, era doar un calcul afișat rămas din modelul vechi (dinainte de folosirea plintei în gresie) și devenise confuz/incorect conceptual. A cerut și clarificarea UI-ului la ferestre: label-uri explicite (nu se știa dacă „lățime” înseamnă `08` sau `0.8`) și înlocuirea celor 4 sloturi fixe de perete cu un buton unic „+ Adaugă fereastră”, cu mai mult spațiu pe mobil (nu 2 câmpuri înghesuite pe un rând).
+
+- **Șters `doorWallBaseboardLength()`** din `dimensions.ts` — funcția nu alimenta niciun total real (nici `floorMaterialNeeded`, nici vreun item din `auto-items.ts`), era folosită DOAR pentru acel rând de afișaj acum eliminat. Verificat cu `grep -rn` înainte de ștergere — un singur loc de apel, în `RoomTechnicalCard.tsx`.
+- **`RoomTechnicalCard.tsx`**: eliminat rândul `ResultRow` „Plintă (Perete X)” + variabila `doorBaseboard`.
+- **Ferestre — UI rescris**: din grid de 4 carduri fixe (unul per perete, mereu vizibile) într-o listă de ferestre existente + un singur buton „+ Adaugă fereastră” (ca la restul secțiunilor toggle-abile). Fiecare fereastră din listă are acum: `select` „Perete” (poate fi schimbat, opțiunile exclud pereții deja ocupați), label explicit „Lățime (m) — L” și „Înălțime (m) — H” (deci nu mai există ambiguitatea „08 sau 0.8”), buton de ștergere dedicat. Layout `grid-cols-1` pe mobil (fiecare câmp pe lățime completă, nu 2 pe rând) → `sm:grid-cols-[1fr_1fr_1fr_auto]` pe ecrane mai late.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat în browser (viewport îngust): Baie Principală — rândul „Plintă (Perete V)” a dispărut din Calcule Detaliate; adăugat o fereastră 1×1.2m pe peretele N prin noul buton „+ Adaugă fereastră” → „Faianță (3 pereți)” a scăzut corect de la 18.61 la 17.29 mp, „Glaf Fereastră (1 fereastră)” = 4.62 ml = 2×(1+1.2)×1.05, verificat manual.
+
+**Fișiere atinse:** `src/shared/functions/dimensions.ts`, `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Uși multiple (ca ferestrele), redenumire secțiuni, plintă în cm, select-uri cu iconițe
+**De ce:** userul a cerut cinci modificări: (1) redenumirea secțiunilor din card-ul de cameră pentru claritate — „Pardoseală & Pereți" → „Pardoseală", „Placări Detaliate"/„Finisaj Pereți" → „Pereți", „Configurare Ușă" → „Uși"; (2) posibilitatea de a adăuga mai multe uși per cameră (până acum era o singură ușă per cameră, nu per perete) — la fel ca la ferestre; (3) „Înălțime plintă" în cm, nu în m (valorile tipice sunt 6–10, nu 0.06–0.10 — mai natural în cm); (4) iconițe sugestive în select-urile „Tip Material" și „Mărime plăci", cu iconiță înainte de text, mai vizual.
+
+- **Model de date**: `RoomDoor` simplificat — a pierdut câmpul `wall` (nu mai are sens ca proprietate a ușii, e cheia din record acum). `Room.door?: RoomDoor` (o singură ușă) → `Room.doors?: Partial<Record<Wall, RoomDoor>>` (până la 4 uși, una per perete) — exact simetric cu `Room.windows` de la sesiunea trecută.
+- **`dimensions.ts`**: `totalDoorWidth(room)` (nou) — suma lățimilor tuturor ușilor, folosită acum în `baseboardLength` (înainte scădea o singură `door.width`). `doorArea(room, wall)` (nou), extras din logica dublă anterioară (`doorOnTiledWall`/`doorOnFinishedWall`) — `wallTilingArea`/`wallFinishArea` scad acum suma golurilor de uși ȘI ferestre de pe fiecare perete (`openingsArea`, funcție internă), nu doar fereastra sau doar ușa.
+- **`RoomTechnicalCard.tsx`**:
+  - Secțiunea „Uși" rescrisă complet după modelul „Ferestre" (aceeași structură de listă + „+ Adaugă ușă", select Perete, `Lățime (m) — L` / `Înălțime (m) — H`, buton de ștergere per ușă, max. 4).
+  - „Înălțime plintă" — input afișează/editează în cm (`Math.round(baseboardHeight×100)`), convertește la submit (`/100`) — `Room.baseboardHeight` rămâne stocat în metri intern (fără schimbare de tip/contract), doar UI-ul e în cm.
+  - **`IconSelectField`** (component nou) — select custom (buton + listă absolută cu iconiță+text per opțiune), pentru că `<option>` nativ nu poate reda iconițe cross-browser. Folosit la „Tip Material" (`FLOORING_TYPE_ICONS`) și „Mărime plăci" (`TILE_SIZE_ICONS`, mapare nouă în `icons.ts` — iconițe cu mărime vizuală crescândă: `grid_on`→`grid_view`→`crop_square`→`crop_din`). `FLOORING_TYPE_ICONS` rafinat (Parchet Laminat și Mochetă foloseau amândouă `texture`, acum distincte: `view_column`/`texture`).
+  - Adăugat `TECHNICAL_ICONS.windowConfig` (`window`) — secțiunea Ferestre nu mai reutilizează iconița de ușă.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat în browser: titluri renumerotate/redenumite corect (1. Pardoseală, 2. Pereți, 3. Ferestre, 4. Uși), „Tip Material" arată iconiță+text și dropdown-ul custom cu iconiță pe fiecare rând, „Înălțime plintă (cm)" afișează „8" (nu „0.08"), adăugat o a doua ușă pe cameră (Perete N) pe lângă cea existentă (Perete V) prin „+ Adaugă ușă" — funcțional, fără conflict.
+
+**Fișiere atinse:** `src/shared/types/RoomDoor.ts`, `src/shared/types/Room.ts`, `src/shared/functions/dimensions.ts`, `src/shared/mock-data.ts`, `src/shared/icons.ts`, `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Fix-uri UI: nume complete de perete, iconițe la Tip montaj, dropdown tăiat de overflow, label-uri de lungime
+**De ce:** userul a semnalat patru probleme mici la `RoomTechnicalCard`: (1) codurile de perete (N/E/S/V) sunt greu de citit, voia numele complete (Nord/Est/Sud/Vest); (2) select-ul „Tip montaj" nu avea iconițe ca „Tip Material"/„Mărime plăci"; (3) **bug real**: dropdown-ul `IconSelectField` (introdus sesiunea trecută) era tăiat de `overflow-hidden` al cardului/secțiunii părinte quando avea mai multe opțiuni decât spațiul rămas vizibil, deci nu se mai vedeau toate opțiunile; (4) label-urile câmpurilor de lungime perete („Perete N” etc.) nu spuneau explicit că e vorba de lungime.
+
+- **`WALL_LABELS`** (nou, local în `RoomTechnicalCard.tsx`) — mapare `Wall` → nume complet („N" → „Nord" etc.). Aplicată peste tot unde apărea codul brut: label-urile de lungime perete din secțiunile Pereți (Gresie/Parchet), și opțiunile select-ului „Perete” din Ferestre/Uși.
+- **Label-uri de lungime**: „Perete N” → „Nord — Lungime (m)” (și analog pt. celelalte 3 pereți), în ambele secțiuni „Pereți” (faianță la Gresie, vopsea/tapet la Parchet/Mochetă) — acum e explicit ce reprezintă cifra.
+- **`INSTALLATION_TYPE_ICONS`** (nou, `icons.ts`): `Drept` → `straighten` (riglă), `Diagonal` → `north_east` (săgeată diagonală), `Herringbone` → `grain` (textură cu model). „Tip montaj" convertit din `SelectField` (text simplu) în `IconSelectField` (icon + text), la fel ca „Tip Material”/„Mărime plăci”.
+- **Fix bug overflow dropdown** — cauza reală: `IconSelectField` randa lista de opțiuni `position: absolute` în interiorul unui `<details>` cu `overflow-hidden` (pt. colțuri rotunjite), la rândul lui în cardul camerei care are TOT `overflow-hidden` (pt. colțurile lui rotunjite) — orice conținut absolut ce depășea înălțimea vizibilă curentă a cardului era pur și simplu tăiat, indiferent de propriul scroll intern. Rezolvat randând dropdown-ul într-un **portal** (`createPortal` pe `document.body`), poziționat `fixed` după coordonatele reale ale butonului (`getBoundingClientRect`) — scapă complet de orice `overflow-hidden` ancestor. Adăugat și `max-h-64 overflow-y-auto` pe lista propriu-zisă, ca să rămână complet accesibilă (scroll intern) chiar și cu multe opțiuni.
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori. Testat în browser: „Tip Material” deschis pe cameră cu card scurt — dropdown-ul apare complet, cu toate cele 3 opțiuni vizibile (nu mai e tăiat); „Tip montaj” arată iconiță (`straighten`) + „Drept”; secțiunea Pereți arată „NORD — LUNGIME (M)” etc.; secțiunea Uși arată „Vest” (nu „V”) în select-ul Perete.
+
+**Fișiere atinse:** `src/shared/icons.ts`, `src/app/configurare/RoomTechnicalCard.tsx`, `docs/progress.md`.
+
+**Branch:** `009-sync-configurare-elemente-cumparat`.

@@ -1,3 +1,4 @@
+import { ItemOrigin } from "./ItemOrigin";
 import { ItemStatus } from "./ItemStatus";
 import { MaterialType } from "./MaterialType";
 
@@ -13,4 +14,6 @@ export interface Item {
   unitPrice: number;
   productUrl?: string;
   imageUrl?: string;
+  /** Manual (adăugat de user) sau Configurare (generat automat din pardoseală/plintă/faianță). */
+  origin: ItemOrigin;
 }

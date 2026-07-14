@@ -8,9 +8,8 @@ import DashboardSummaryCard, {
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
 import { useStore } from "@/shared/store";
-import { formatMoney } from "@/shared/functions";
+import { formatMoney, projectTechnicalSummary } from "@/shared/functions";
 import { TECHNICAL_ICONS } from "@/shared/icons";
-import { projectTechnicalSummary } from "./dimensions";
 import RoomTechnicalCard from "./RoomTechnicalCard";
 
 export default function ConfigurarePage() {

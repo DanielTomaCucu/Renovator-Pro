@@ -36,13 +36,17 @@
 }
 ```
 
+**Câmpuri tehnice** (`floorMaterial`, `floorArea`, `perimeter`, `tileSize`, `installationType`, `doors`, `baseboardHeight`, `wallTiling`, `wallFinish`, `windows`) — vezi `src/shared/types/Room.ts` pentru shape-ul complet, omis aici din motive istorice (contractul nu a fost actualizat la fiecare extindere a modelului tehnic; sursa de adevăr rămâne codul TS, regula #1 de mai sus). `doors`/`windows` sunt ambele `Partial<Record<Wall, { width, height }>>` — max. o ușă ȘI o fereastră per perete (pot coexista pe același perete).
+
+**Regulă de business critică pt. backend** (`shared/functions/dimensions.ts`): `wallTiling` (faianță) și `wallFinish` (vopsea/tapet) sunt **mutual exclusive**, determinate de `floorMaterial` — `wallTiling` doar când `floorMaterial === "Gresie"`, `wallFinish` doar altfel (Parchet Laminat/Mochetă). La Gresie, plinta (`baseboardHeight × perimetru`) se adaugă la necesarul de gresie (nu e produs separat); la celelalte pardoseli, plinta rămâne element `MaterialType.Plintă` separat. `windows` (max. o fereastră per perete, `width`/`height`) se scade din aria de faianță/vopsea/tapet a peretelui respectiv (pe lângă golul ușii, nu în locul lui) și generează separat un element `MaterialType.GlafFereastra` (Σ perimetrul ferestrelor, +5% pierdere). Orice implementare server-side a recalculării trebuie să replice exact aceste ramificații — nu doar formulele individuale.
+
 ### `Item`
 ```ts
 {
   id: string;
   roomId: string;
   name: string;
-  materialType: MaterialType; // enum: "Gresie" | "Faianță" | "Parchet" | "Vopsea" | "Sanitare"
+  materialType: MaterialType; // enum: "Gresie" | "Faianță" | "Plintă" | "Parchet" | "Vopsea" | "Tapet" | "Glaf Fereastră" | "Sanitare"
                                //     | "Mobilă" | "Electrocasnice" | "Corpuri de iluminat" | "Altele"
   source: string;
   status: ItemStatus;         // enum: "În așteptare" | "Planificat" | "Cumpărat"
@@ -50,8 +54,11 @@
   unitPrice: number;
   productUrl?: string;
   imageUrl?: string;
+  origin: ItemOrigin;         // enum: "Manual" | "Din Configurare" — proveniența elementului
 }
 ```
+
+**`origin: ItemOrigin.Configurare`** marchează elemente generate automat de server (sau client, până la migrare) din configurarea tehnică a unei camere (`Room.floorMaterial`/`floorArea`/`perimeter`/`wallTiling`) — vezi `shared/functions/auto-items.ts`. Backend-ul trebuie să recreeze aceeași reconciliere la fiecare `PATCH /api/rooms/{id}` (nu doar clientul): elementele existente cu `origin: "Din Configurare"` pentru acea cameră își păstrează `id`/`unitPrice`/`status`, doar `name`/`quantity` se recalculează; cele fără corespondent nou se șterg; elementele `origin: "Manual"` nu sunt niciodată atinse de acest proces.
 
 ## Endpoint-uri planificate
 

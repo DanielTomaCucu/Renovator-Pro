@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useRef, useState, type ReactNode, type SelectHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import {
   FlooringType,
   InstallationType,
@@ -8,22 +9,55 @@ import {
   RoomType,
   TileSize,
   Wall,
+  WallFinishType,
 } from "@/shared/types";
 import { useStore } from "@/shared/store";
-import { ACTION_ICONS, ROOM_TYPE_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
+import {
+  ACTION_ICONS,
+  FLOORING_TYPE_ICONS,
+  INSTALLATION_TYPE_ICONS,
+  ROOM_TYPE_ICONS,
+  TECHNICAL_ICONS,
+  TILE_SIZE_ICONS,
+} from "@/shared/icons";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   baseboardLength,
-  doorWallBaseboardLength,
+  baseboardTileArea,
+  estimatedSquareWallSide,
   floorMaterialNeeded,
   hasFloorConfig,
+  totalDoorWidth,
+  wallFinishArea,
   wallTilingArea,
-} from "./dimensions";
+  windowTrimLength,
+} from "@/shared/functions";
 
 const floorMaterials = Object.values(FlooringType);
 const tileSizes = Object.values(TileSize);
 const installationTypes = Object.values(InstallationType);
 const walls = Object.values(Wall);
+const wallFinishTypes = Object.values(WallFinishType);
+
+const floorMaterialOptions = floorMaterials.map((m) => ({
+  value: m,
+  label: m,
+  icon: FLOORING_TYPE_ICONS[m],
+}));
+const tileSizeOptions = tileSizes.map((s) => ({ value: s, label: s, icon: TILE_SIZE_ICONS[s] }));
+const installationTypeOptions = installationTypes.map((t) => ({
+  value: t,
+  label: t,
+  icon: INSTALLATION_TYPE_ICONS[t],
+}));
+
+/** Nume complet per perete — afișat în loc de codul cu o literă (N/E/S/V), mai clar pt. userul final. */
+const WALL_LABELS: Record<Wall, string> = {
+  [Wall.Nord]: "Nord",
+  [Wall.Est]: "Est",
+  [Wall.Sud]: "Sud",
+  [Wall.Vest]: "Vest",
+};
 
 /** Descriere scurtă per tip de cameră — afișată sub numele camerei în card. */
 const ROOM_TYPE_DESCRIPTION: Record<RoomType, string> = {
@@ -60,6 +94,108 @@ function SelectField({
         </span>
       </div>
     </label>
+  );
+}
+
+/**
+ * Select custom cu iconiță per opțiune (native `<option>` nu poate reda iconițe) — buton care deschide
+ * o listă simplă cu iconiță + text pe fiecare rând, mai vizual decât un `<select>` simplu de text.
+ * Lista se randează într-un portal pe `document.body`, poziționată `fixed` după coordonatele reale ale
+ * butonului — altfel un ancestor cu `overflow-hidden` (cardul camerei, secțiunea colapsabilă) ar tăia
+ * dropdown-ul quando depășește înălțimea vizibilă a cardului. Înălțimea proprie e limitată + scroll
+ * intern, ca lista să rămână complet accesibilă chiar dacă are mai multe opțiuni decât încap pe ecran.
+ */
+function IconSelectField<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "— Alege —",
+  wrapperClassName,
+}: {
+  label: string;
+  value: T | "";
+  onChange: (value: T | "") => void;
+  options: { value: T; label: string; icon: string }[];
+  placeholder?: string;
+  wrapperClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const current = options.find((o) => o.value === value);
+
+  const toggleOpen = () => {
+    if (!open && buttonRef.current) {
+      const r = buttonRef.current.getBoundingClientRect();
+      setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    setOpen((v) => !v);
+  };
+
+  return (
+    <div className={`space-y-1 ${wrapperClassName ?? ""}`}>
+      <span className={labelCls}>{label}</span>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggleOpen}
+        className={`${selectCls} flex items-center gap-2 text-left`}
+      >
+        {current ? (
+          <>
+            <span className="material-symbols-outlined text-lg text-secondary">
+              {current.icon}
+            </span>
+            <span>{current.label}</span>
+          </>
+        ) : (
+          <span className="text-muted">{placeholder}</span>
+        )}
+        <span className="material-symbols-outlined icon-btn ml-auto text-muted">
+          {ACTION_ICONS.expandMore}
+        </span>
+      </button>
+      {open &&
+        rect &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div
+              style={{ top: rect.top, left: rect.left, width: rect.width }}
+              className="fixed z-50 max-h-64 overflow-y-auto rounded-lg border border-line bg-surface shadow-lg"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-muted hover:bg-surface-low"
+              >
+                {placeholder}
+              </button>
+              {options.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-surface-low ${
+                    o.value === value ? "bg-secondary/10 font-semibold text-secondary" : ""
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-lg">{o.icon}</span>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body
+        )}
+    </div>
   );
 }
 
@@ -138,7 +274,15 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
 
   const patch = (p: Partial<Room>) => updateRoom(room.id, p);
 
-  const wallTilingEnabled = !!room.wallTiling;
+  // Faianța (wallTiling) e disponibilă doar la Gresie — la Parchet/Mochetă alternativa e vopsea/tapet (wallFinish).
+  const isGresie = room.floorMaterial === FlooringType.Gresie;
+  const wallTilingEnabled = isGresie && !!room.wallTiling;
+  const wallFinishEnabled = !isGresie && !!room.wallFinish;
+
+  // Pornim pereții de la o lungime estimată (√suprafață, adică am presupune camera pătrată), ca userul
+  // să nu completeze de la 0 fiecare perete — rămâne complet editabilă după activare, nu se resincronizează.
+  const estimatedSide = Number(estimatedSquareWallSide(room).toFixed(2));
+
   const toggleWallTiling = () => {
     if (wallTilingEnabled) {
       patch({ wallTiling: undefined });
@@ -147,19 +291,130 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
         wallTiling: {
           tiledWallsCount: 0,
           tileHeight: 0,
-          wallLengths: { [Wall.Nord]: 0, [Wall.Est]: 0, [Wall.Sud]: 0, [Wall.Vest]: 0 },
+          wallLengths: {
+            [Wall.Nord]: estimatedSide,
+            [Wall.Est]: estimatedSide,
+            [Wall.Sud]: estimatedSide,
+            [Wall.Vest]: estimatedSide,
+          },
         },
       });
     }
   };
 
+  const toggleWallFinish = () => {
+    if (wallFinishEnabled) {
+      patch({ wallFinish: undefined });
+    } else {
+      patch({
+        wallFinish: {
+          wallHeight: 0,
+          wallLengths: {
+            [Wall.Nord]: estimatedSide,
+            [Wall.Est]: estimatedSide,
+            [Wall.Sud]: estimatedSide,
+            [Wall.Vest]: estimatedSide,
+          },
+          finishes: {},
+        },
+      });
+    }
+  };
+
+  // Fereastră — max. 1 per perete, indiferent de tipul de pardoseală. Reprezentate ca o listă de
+  // ferestre (perete + dimensiuni), nu ca 4 sloturi fixe — mai puțin aglomerat, mai mult spațiu per câmp.
+  const windowEntries = walls
+    .filter((w) => room.windows?.[w])
+    .map((w) => [w, room.windows![w]!] as const);
+  const availableWalls = walls.filter((w) => !room.windows?.[w]);
+
+  const addWindow = () => {
+    const nextWall = availableWalls[0];
+    if (!nextWall) return;
+    patch({ windows: { ...room.windows, [nextWall]: { width: 0, height: 0 } } });
+  };
+
+  const removeWindow = (wall: Wall) => {
+    const windows = { ...room.windows };
+    delete windows[wall];
+    patch({ windows });
+  };
+
+  const changeWindowWall = (oldWall: Wall, newWall: Wall) => {
+    if (oldWall === newWall) return;
+    const current = room.windows?.[oldWall];
+    if (!current) return;
+    const windows = { ...room.windows };
+    delete windows[oldWall];
+    windows[newWall] = current;
+    patch({ windows });
+  };
+
+  const updateWindow = (wall: Wall, patchWindow: Partial<{ width: number; height: number }>) => {
+    const current = room.windows?.[wall];
+    if (!current) return;
+    patch({ windows: { ...room.windows, [wall]: { ...current, ...patchWindow } } });
+  };
+
+  // Ușă — max. 1 per perete, aceeași logică ca la ferestre (listă, nu 4 sloturi fixe).
+  const doorEntries = walls
+    .filter((w) => room.doors?.[w])
+    .map((w) => [w, room.doors![w]!] as const);
+  const availableDoorWalls = walls.filter((w) => !room.doors?.[w]);
+
+  const addDoor = () => {
+    const nextWall = availableDoorWalls[0];
+    if (!nextWall) return;
+    patch({ doors: { ...room.doors, [nextWall]: { width: 0, height: 0 } } });
+  };
+
+  const removeDoor = (wall: Wall) => {
+    const doors = { ...room.doors };
+    delete doors[wall];
+    patch({ doors });
+  };
+
+  const changeDoorWall = (oldWall: Wall, newWall: Wall) => {
+    if (oldWall === newWall) return;
+    const current = room.doors?.[oldWall];
+    if (!current) return;
+    const doors = { ...room.doors };
+    delete doors[oldWall];
+    doors[newWall] = current;
+    patch({ doors });
+  };
+
+  const updateDoor = (wall: Wall, patchDoor: Partial<{ width: number; height: number }>) => {
+    const current = room.doors?.[wall];
+    if (!current) return;
+    patch({ doors: { ...room.doors, [wall]: { ...current, ...patchDoor } } });
+  };
+
+  // Schimbarea materialului de pardoseală elimină configurarea specifică celuilalt tip de pereți —
+  // faianța și vopsea/tapet sunt mutual exclusive, ca să nu rămână date orfane invizibile în UI.
+  const changeFloorMaterial = (value: string) => {
+    const floorMaterial = (value || undefined) as FlooringType | undefined;
+    const nowGresie = floorMaterial === FlooringType.Gresie;
+    patch({
+      floorMaterial,
+      wallTiling: nowGresie ? room.wallTiling : undefined,
+      wallFinish: nowGresie ? undefined : room.wallFinish,
+    });
+  };
+
   const baseboard = baseboardLength(room);
+  const baseboardTiles = baseboardTileArea(room);
   const materialNeeded = floorMaterialNeeded(room);
   const tilingArea = wallTilingArea(room);
-  const doorBaseboard = doorWallBaseboardLength(room);
-  // Numerotarea secțiunilor se ajustează dinamic — „Configurare Ușă" e a 2-a secțiune dacă
-  // placarea pereților nu e activată pt. cameră, sau a 3-a dacă e activată (vezi Baie vs. Living în Stitch).
-  const doorSectionNumber = wallTilingEnabled ? 3 : 2;
+  const paintArea = wallFinishArea(room, WallFinishType.Vopsea);
+  const wallpaperArea = wallFinishArea(room, WallFinishType.Tapet);
+  const windowTrim = windowTrimLength(room);
+  const windowCount = Object.keys(room.windows ?? {}).length;
+  const doorCount = Object.keys(room.doors ?? {}).length;
+  // Numerotarea secțiunilor se ajustează dinamic — „Ferestre" ocupă locul 2 sau 3 după cum e activată
+  // placarea/finisajul pereților, iar „Uși" vine imediat după ea (vezi Baie vs. Living în Stitch).
+  const windowsSectionNumber = wallTilingEnabled || wallFinishEnabled ? 3 : 2;
+  const doorSectionNumber = windowsSectionNumber + 1;
 
   return (
     <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm transition-shadow hover:shadow-md">
@@ -230,8 +485,9 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
             <input
               type="number"
               min={0}
-              value={room.allocatedBudget}
-              onChange={(e) => patch({ allocatedBudget: Number(e.target.value) })}
+              placeholder="ex: 1200"
+              value={room.allocatedBudget || ""}
+              onChange={(e) => patch({ allocatedBudget: Number(e.target.value) || 0 })}
               className="w-32 rounded-lg border border-line px-3 py-2 text-right font-mono text-sm text-foreground outline-none focus:border-secondary"
             />
             <button
@@ -261,236 +517,433 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
       {open && (
         <div className="flex flex-col gap-6 p-3 sm:gap-8 sm:p-6">
           <div className="space-y-4">
-            <TechnicalSection number={1} icon={TECHNICAL_ICONS.floorAndWalls} title="Pardoseală & Pereți">
+            <TechnicalSection number={1} icon={TECHNICAL_ICONS.floorAndWalls} title="Pardoseală">
               <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
-                <SelectField
+                <IconSelectField
                   label="Tip Material"
                   value={room.floorMaterial ?? ""}
-                  onChange={(e) =>
-                    patch({ floorMaterial: (e.target.value || undefined) as FlooringType })
-                  }
-                >
-                  <option value="">— Alege material —</option>
-                  {floorMaterials.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </SelectField>
+                  onChange={(v) => changeFloorMaterial(v)}
+                  options={floorMaterialOptions}
+                  placeholder="— Alege material —"
+                />
                 <label className="space-y-1">
                   <span className={labelCls}>Suprafață (MP)</span>
                   <input
                     type="number"
                     step="0.01"
                     min={0}
+                    placeholder="ex: 5.40"
                     className={inputCls}
-                    value={room.floorArea ?? 0}
-                    onChange={(e) => patch({ floorArea: Number(e.target.value) })}
+                    value={room.floorArea ?? ""}
+                    onChange={(e) =>
+                      patch({ floorArea: e.target.value ? Number(e.target.value) : undefined })
+                    }
                   />
                 </label>
-                {room.floorMaterial === FlooringType.Gresie && (
-                  <SelectField
+                {isGresie && (
+                  <IconSelectField
                     label="Mărime plăci"
                     value={room.tileSize ?? ""}
-                    onChange={(e) =>
-                      patch({ tileSize: (e.target.value || undefined) as TileSize })
-                    }
-                  >
-                    <option value="">— Alege —</option>
-                    {tileSizes.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </SelectField>
+                    onChange={(v) => patch({ tileSize: (v || undefined) as TileSize })}
+                    options={tileSizeOptions}
+                  />
                 )}
-                <SelectField
+                {isGresie && (
+                  <label className="space-y-1">
+                    <span className={labelCls}>Înălțime plintă (cm)</span>
+                    <input
+                      type="number"
+                      step="1"
+                      min={0}
+                      placeholder="ex: 8"
+                      className={inputCls}
+                      value={room.baseboardHeight ? Math.round(room.baseboardHeight * 100) : ""}
+                      onChange={(e) =>
+                        patch({
+                          baseboardHeight: e.target.value ? Number(e.target.value) / 100 : undefined,
+                        })
+                      }
+                    />
+                  </label>
+                )}
+                <IconSelectField
                   label="Tip montaj"
                   wrapperClassName="md:col-span-2"
                   value={room.installationType ?? ""}
-                  onChange={(e) =>
-                    patch({
-                      installationType: (e.target.value || undefined) as InstallationType,
-                    })
-                  }
-                >
-                  <option value="">— Alege —</option>
-                  {installationTypes.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </SelectField>
+                  onChange={(v) => patch({ installationType: (v || undefined) as InstallationType })}
+                  options={installationTypeOptions}
+                />
               </div>
             </TechnicalSection>
 
-            {wallTilingEnabled ? (
+            {isGresie ? (
+              wallTilingEnabled ? (
+                <TechnicalSection
+                  number={2}
+                  icon={TECHNICAL_ICONS.wallTilingConfig}
+                  title="Pereți"
+                  action={
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toggleWallTiling();
+                      }}
+                      className="text-xs font-bold text-secondary hover:underline"
+                    >
+                      Elimină placare
+                    </button>
+                  }
+                >
+                  <>
+                    <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
+                      <SelectField
+                        label="Număr pereți placați"
+                        value={room.wallTiling!.tiledWallsCount}
+                        onChange={(e) =>
+                          patch({
+                            wallTiling: {
+                              ...room.wallTiling!,
+                              tiledWallsCount: Number(e.target.value),
+                            },
+                          })
+                        }
+                      >
+                        {[0, 1, 2, 3, 4].map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </SelectField>
+                      <label className="space-y-1">
+                        <span className={labelCls}>Înălțime Placare (M)</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="ex: 2.40"
+                          className={inputCls}
+                          value={room.wallTiling!.tileHeight || ""}
+                          onChange={(e) =>
+                            patch({
+                              wallTiling: {
+                                ...room.wallTiling!,
+                                tileHeight: Number(e.target.value) || 0,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    {room.wallTiling!.tiledWallsCount > 0 && (
+                      <div className="grid grid-cols-2 gap-3 pt-2 md:grid-cols-4">
+                        {walls.slice(0, room.wallTiling!.tiledWallsCount).map((w) => (
+                          <label key={w} className="space-y-1">
+                            <span className={labelCls}>{WALL_LABELS[w]} — Lungime (m)</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              placeholder="ex: 2.25"
+                              className={inputCls}
+                              value={room.wallTiling!.wallLengths[w] || ""}
+                              onChange={(e) =>
+                                patch({
+                                  wallTiling: {
+                                    ...room.wallTiling!,
+                                    wallLengths: {
+                                      ...room.wallTiling!.wallLengths,
+                                      [w]: Number(e.target.value) || 0,
+                                    },
+                                  },
+                                })
+                              }
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] italic text-muted">
+                      * Aceste dimensiuni sunt utilizate pentru calculul exact al necesarului de
+                      faianță și plintă.
+                    </p>
+                  </>
+                </TechnicalSection>
+              ) : (
+                <button
+                  type="button"
+                  onClick={toggleWallTiling}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold uppercase text-secondary hover:bg-surface-low"
+                >
+                  <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
+                  Adaugă placare pereți
+                </button>
+              )
+            ) /* Parchet/Mochetă — nu au faianță, doar vopsea/tapet pe pereți selectați individual */ : wallFinishEnabled ? (
               <TechnicalSection
                 number={2}
                 icon={TECHNICAL_ICONS.wallTilingConfig}
-                title="Placări Detaliate"
+                title="Pereți"
                 action={
                   <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
-                      toggleWallTiling();
+                      toggleWallFinish();
                     }}
                     className="text-xs font-bold text-secondary hover:underline"
                   >
-                    Elimină placare
+                    Elimină finisaj
                   </button>
                 }
               >
                 <>
-                  <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
-                    <SelectField
-                      label="Număr pereți placați"
-                      value={room.wallTiling!.tiledWallsCount}
+                  <label className="block max-w-xs space-y-1">
+                    <span className={labelCls}>Înălțime Pereți (M)</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      placeholder="ex: 2.50"
+                      className={inputCls}
+                      value={room.wallFinish!.wallHeight || ""}
                       onChange={(e) =>
                         patch({
-                          wallTiling: {
-                            ...room.wallTiling!,
-                            tiledWallsCount: Number(e.target.value),
+                          wallFinish: {
+                            ...room.wallFinish!,
+                            wallHeight: Number(e.target.value) || 0,
                           },
                         })
                       }
-                    >
-                      {[0, 1, 2, 3, 4].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </SelectField>
-                    <label className="space-y-1">
-                      <span className={labelCls}>Înălțime Placare (M)</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        className={inputCls}
-                        value={room.wallTiling!.tileHeight}
-                        onChange={(e) =>
-                          patch({
-                            wallTiling: {
-                              ...room.wallTiling!,
-                              tileHeight: Number(e.target.value),
-                            },
-                          })
-                        }
-                      />
-                    </label>
-                  </div>
-                  {room.wallTiling!.tiledWallsCount > 0 && (
-                    <div className="grid grid-cols-2 gap-3 pt-2 md:grid-cols-4">
-                      {walls.slice(0, room.wallTiling!.tiledWallsCount).map((w) => (
-                        <label key={w} className="space-y-1">
-                          <span className={labelCls}>Perete {w}</span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            className={inputCls}
-                            value={room.wallTiling!.wallLengths[w]}
-                            onChange={(e) =>
-                              patch({
-                                wallTiling: {
-                                  ...room.wallTiling!,
-                                  wallLengths: {
-                                    ...room.wallTiling!.wallLengths,
-                                    [w]: Number(e.target.value),
-                                  },
+                    />
+                  </label>
+                  <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {walls.map((w) => (
+                      <div key={w} className="space-y-2 rounded-lg border border-line/50 p-3">
+                        <span className={labelCls}>{WALL_LABELS[w]} — Lungime (m)</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="ex: 3.00"
+                          className={inputCls}
+                          value={room.wallFinish!.wallLengths[w] || ""}
+                          onChange={(e) =>
+                            patch({
+                              wallFinish: {
+                                ...room.wallFinish!,
+                                wallLengths: {
+                                  ...room.wallFinish!.wallLengths,
+                                  [w]: Number(e.target.value) || 0,
                                 },
-                              })
-                            }
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                              },
+                            })
+                          }
+                        />
+                        <select
+                          className={selectCls}
+                          value={room.wallFinish!.finishes[w] ?? ""}
+                          onChange={(e) =>
+                            patch({
+                              wallFinish: {
+                                ...room.wallFinish!,
+                                finishes: {
+                                  ...room.wallFinish!.finishes,
+                                  [w]: (e.target.value || undefined) as
+                                    | WallFinishType
+                                    | undefined,
+                                },
+                              },
+                            })
+                          }
+                        >
+                          <option value="">— Fără —</option>
+                          {wallFinishTypes.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
                   <p className="text-[10px] italic text-muted">
-                    * Aceste dimensiuni sunt utilizate pentru calculul exact al necesarului de
-                    faianță și plintă.
+                    * Alege Vopsea sau Tapet independent, per perete — golul ușii se scade automat de
+                    pe peretele ei.
                   </p>
                 </>
               </TechnicalSection>
             ) : (
               <button
                 type="button"
-                onClick={toggleWallTiling}
+                onClick={toggleWallFinish}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold uppercase text-secondary hover:bg-surface-low"
               >
                 <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
-                Adaugă placare pereți
+                Adaugă finisaj pereți
               </button>
             )}
 
             <TechnicalSection
+              number={windowsSectionNumber}
+              icon={TECHNICAL_ICONS.windowConfig}
+              title="Ferestre"
+              defaultOpen={windowCount > 0}
+            >
+              {windowEntries.length > 0 && (
+                <div className="space-y-4">
+                  {windowEntries.map(([w, win]) => (
+                    <div
+                      key={w}
+                      className="grid grid-cols-1 items-end gap-3 rounded-lg border border-line/50 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:gap-4"
+                    >
+                      <SelectField
+                        label="Perete"
+                        value={w}
+                        onChange={(e) => changeWindowWall(w, e.target.value as Wall)}
+                      >
+                        <option value={w}>{WALL_LABELS[w]}</option>
+                        {availableWalls.map((aw) => (
+                          <option key={aw} value={aw}>
+                            {WALL_LABELS[aw]}
+                          </option>
+                        ))}
+                      </SelectField>
+                      <label className="space-y-1">
+                        <span className={labelCls}>Lățime (m) — L</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="ex: 1.20"
+                          className={inputCls}
+                          value={win.width || ""}
+                          onChange={(e) =>
+                            updateWindow(w, { width: Number(e.target.value) || 0 })
+                          }
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className={labelCls}>Înălțime (m) — H</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="ex: 1.40"
+                          className={inputCls}
+                          value={win.height || ""}
+                          onChange={(e) =>
+                            updateWindow(w, { height: Number(e.target.value) || 0 })
+                          }
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeWindow(w)}
+                        className="rounded-lg p-3 text-muted hover:text-tertiary sm:self-end"
+                        aria-label={`Elimină fereastra de pe peretele ${w}`}
+                      >
+                        <span className="material-symbols-outlined icon-btn">
+                          {ACTION_ICONS.delete}
+                        </span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {availableWalls.length > 0 && (
+                <button
+                  type="button"
+                  onClick={addWindow}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold uppercase text-secondary hover:bg-surface-low"
+                >
+                  <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
+                  Adaugă fereastră
+                </button>
+              )}
+              <p className="text-[10px] italic text-muted">
+                * Maxim o fereastră per perete (4 în total). L = lățime, H = înălțime. Aria ferestrei
+                se scade din faianța/vopseaua/tapetul peretelui respectiv, iar glaful de bordură din
+                jurul ei se adaugă separat, la fel ca plinta.
+              </p>
+            </TechnicalSection>
+
+            <TechnicalSection
               number={doorSectionNumber}
               icon={TECHNICAL_ICONS.doorConfig}
-              title="Configurare Ușă"
+              title="Uși"
+              defaultOpen={doorCount > 0}
             >
-              <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-3">
-                <label className="space-y-1">
-                  <span className={labelCls}>Lățime (m)</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    className={inputCls}
-                    value={room.door?.width ?? 0}
-                    onChange={(e) =>
-                      patch({
-                        door: {
-                          width: Number(e.target.value),
-                          height: room.door?.height ?? 0,
-                          wall: room.door?.wall ?? Wall.Nord,
-                        },
-                      })
-                    }
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className={labelCls}>Înălțime (m)</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    className={inputCls}
-                    value={room.door?.height ?? 0}
-                    onChange={(e) =>
-                      patch({
-                        door: {
-                          width: room.door?.width ?? 0,
-                          height: Number(e.target.value),
-                          wall: room.door?.wall ?? Wall.Nord,
-                        },
-                      })
-                    }
-                  />
-                </label>
-                <SelectField
-                  label="Perete"
-                  value={room.door?.wall ?? Wall.Nord}
-                  onChange={(e) =>
-                    patch({
-                      door: {
-                        width: room.door?.width ?? 0,
-                        height: room.door?.height ?? 0,
-                        wall: e.target.value as Wall,
-                      },
-                    })
-                  }
-                >
-                  {walls.map((w) => (
-                    <option key={w} value={w}>
-                      {w}
-                    </option>
+              {doorEntries.length > 0 && (
+                <div className="space-y-4">
+                  {doorEntries.map(([w, d]) => (
+                    <div
+                      key={w}
+                      className="grid grid-cols-1 items-end gap-3 rounded-lg border border-line/50 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:gap-4"
+                    >
+                      <SelectField
+                        label="Perete"
+                        value={w}
+                        onChange={(e) => changeDoorWall(w, e.target.value as Wall)}
+                      >
+                        <option value={w}>{WALL_LABELS[w]}</option>
+                        {availableDoorWalls.map((aw) => (
+                          <option key={aw} value={aw}>
+                            {WALL_LABELS[aw]}
+                          </option>
+                        ))}
+                      </SelectField>
+                      <label className="space-y-1">
+                        <span className={labelCls}>Lățime (m) — L</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="ex: 0.80"
+                          className={inputCls}
+                          value={d.width || ""}
+                          onChange={(e) => updateDoor(w, { width: Number(e.target.value) || 0 })}
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className={labelCls}>Înălțime (m) — H</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          placeholder="ex: 2.10"
+                          className={inputCls}
+                          value={d.height || ""}
+                          onChange={(e) => updateDoor(w, { height: Number(e.target.value) || 0 })}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeDoor(w)}
+                        className="rounded-lg p-3 text-muted hover:text-tertiary sm:self-end"
+                        aria-label={`Elimină ușa de pe peretele ${w}`}
+                      >
+                        <span className="material-symbols-outlined icon-btn">
+                          {ACTION_ICONS.delete}
+                        </span>
+                      </button>
+                    </div>
                   ))}
-                </SelectField>
-              </div>
+                </div>
+              )}
+              {availableDoorWalls.length > 0 && (
+                <button
+                  type="button"
+                  onClick={addDoor}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold uppercase text-secondary hover:bg-surface-low"
+                >
+                  <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
+                  Adaugă ușă
+                </button>
+              )}
               <p className="text-[10px] italic text-secondary">
-                * Golul de ușă se scade automat din plintă / faianța peretelui selectat.
+                * Maxim o ușă per perete (4 în total). L = lățime, H = înălțime. Golul ușii se scade
+                automat din plintă / faianța / vopseaua / tapetul peretelui respectiv.
               </p>
             </TechnicalSection>
           </div>
@@ -522,23 +975,37 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 <div className="space-y-3">
                   {hasFloorConfig(room) && (
                     <ResultRow
-                      label={`${room.floorMaterial} (Pardoseală)`}
+                      label={`${room.floorMaterial} (Pardoseală${baseboardTiles > 0 ? " + Plintă" : ""})`}
                       value={`${materialNeeded.toFixed(2)} mp`}
-                      formula={`${room.floorArea!.toFixed(2)} mp + 10% pierdere`}
-                      math={`${room.floorArea!.toFixed(2)} × 1.10 = ${materialNeeded.toFixed(2)} mp`}
+                      formula={
+                        baseboardTiles > 0
+                          ? `(${room.floorArea!.toFixed(2)} mp + 10% pierdere) + (plintă ${baseboard.toFixed(2)} ml × ${Math.round(room.baseboardHeight! * 100)} cm)`
+                          : `${room.floorArea!.toFixed(2)} mp + 10% pierdere`
+                      }
+                      math={
+                        baseboardTiles > 0
+                          ? `${(room.floorArea! * 1.1).toFixed(2)} + ${baseboardTiles.toFixed(2)} = ${materialNeeded.toFixed(2)} mp`
+                          : `${room.floorArea!.toFixed(2)} × 1.10 = ${materialNeeded.toFixed(2)} mp`
+                      }
                     />
                   )}
 
-                  {!!room.perimeter && (
+                  {isGresie && !!room.perimeter && !room.baseboardHeight && (
+                    <p className="text-[10px] italic text-tertiary">
+                      Completează câmpul Înălțime plintă pentru a include plinta în necesarul de gresie.
+                    </p>
+                  )}
+
+                  {!isGresie && !!room.perimeter && (
                     <ResultRow
                       label="Plintă"
                       value={`${baseboard.toFixed(2)} ml`}
-                      formula="(Perimetru − lățime ușă) + 5% pierdere"
-                      math={`(${room.perimeter.toFixed(2)} − ${(room.door?.width ?? 0).toFixed(2)}) × 1.05 = ${baseboard.toFixed(2)} ml`}
+                      formula="(Perimetru − Σ lățime uși) + 5% pierdere"
+                      math={`(${room.perimeter.toFixed(2)} − ${totalDoorWidth(room).toFixed(2)}) × 1.05 = ${baseboard.toFixed(2)} ml`}
                     />
                   )}
 
-                  {room.wallTiling && room.wallTiling.tiledWallsCount > 0 && (
+                  {isGresie && room.wallTiling && room.wallTiling.tiledWallsCount > 0 && (
                     <ResultRow
                       label={`Faianță (${room.wallTiling.tiledWallsCount} pereți)`}
                       value={`${tilingArea.toFixed(2)} mp`}
@@ -547,12 +1014,30 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                     />
                   )}
 
-                  {room.wallTiling && room.door && room.wallTiling.wallLengths[room.door.wall] > 0 && (
+                  {!isGresie && paintArea > 0 && (
                     <ResultRow
-                      label={`Plintă (Perete ${room.door.wall})`}
-                      value={`${doorBaseboard.toFixed(2)} ml`}
-                      formula="(Lungime perete ușă − lățime ușă) + 5% pierdere"
-                      math={`(${room.wallTiling.wallLengths[room.door.wall].toFixed(2)} − ${room.door.width.toFixed(2)}) × 1.05 = ${doorBaseboard.toFixed(2)} ml`}
+                      label="Vopsea"
+                      value={`${paintArea.toFixed(2)} mp`}
+                      formula="(Σ lungime pereți cu vopsea × înălțime − gol ușă) + 10% pierdere"
+                      math={`${paintArea.toFixed(2)} mp`}
+                    />
+                  )}
+
+                  {!isGresie && wallpaperArea > 0 && (
+                    <ResultRow
+                      label="Tapet"
+                      value={`${wallpaperArea.toFixed(2)} mp`}
+                      formula="(Σ lungime pereți cu tapet × înălțime − gol ușă) + 15% pierdere"
+                      math={`${wallpaperArea.toFixed(2)} mp`}
+                    />
+                  )}
+
+                  {windowTrim > 0 && (
+                    <ResultRow
+                      label={`Glaf Fereastră (${windowCount} ${windowCount === 1 ? "fereastră" : "ferestre"})`}
+                      value={`${windowTrim.toFixed(2)} ml`}
+                      formula="Σ perimetru ferestre (2×(lățime+înălțime)) + 5% pierdere"
+                      math={`${windowTrim.toFixed(2)} ml`}
                     />
                   )}
 
