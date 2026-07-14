@@ -2,8 +2,11 @@
 export enum MaterialType {
   Gresie = "Gresie",
   Faianta = "Faianță",
+  Plinta = "Plintă",
   Parchet = "Parchet",
   Vopsea = "Vopsea",
+  Tapet = "Tapet",
+  GlafFereastra = "Glaf Fereastră",
   Sanitare = "Sanitare",
   Mobila = "Mobilă",
   Electrocasnice = "Electrocasnice",

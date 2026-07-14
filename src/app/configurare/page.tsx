@@ -8,20 +8,43 @@ import DashboardSummaryCard, {
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
 import { useStore } from "@/shared/store";
-import { formatMoney } from "@/shared/functions";
-import { TECHNICAL_ICONS } from "@/shared/icons";
-import { projectTechnicalSummary } from "./dimensions";
+import { formatMoney, projectTechnicalSummary } from "@/shared/functions";
+import { TECHNICAL_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
 import RoomTechnicalCard from "./RoomTechnicalCard";
 
 export default function ConfigurarePage() {
   const { project, rooms, updateProject } = useStore();
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const summary = projectTechnicalSummary(rooms);
   const progressPct = Math.round(summary.configuredRoomsRatio * 100);
   const status =
     progressPct === 0 ? "Neînceput" : progressPct === 100 ? "Finalizat" : "În Lucru";
   // Suprafață utilă afișată: valoarea manuală a proiectului dacă există, altfel suma camerelor configurate.
   const displayedArea = project.totalArea ?? summary.totalFloorArea;
+
+  // Import dinamic — @react-pdf/renderer e destul de greu, nu are rost în bundle-ul inițial al paginii,
+  // doar la apăsarea efectivă a butonului de export.
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const [{ pdf }, { default: ApartmentPdfDocument }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("./ApartmentPdfDocument"),
+      ]);
+      const blob = await pdf(
+        <ApartmentPdfDocument project={project} rooms={rooms} />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${project.title.replace(/[^\p{L}\p{N}]+/gu, "-")}-configurare-apartament.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   return (
     <div>
@@ -87,30 +110,32 @@ export default function ConfigurarePage() {
           </div>
         </section>
 
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={exportingPdf || rooms.length === 0}
+            className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-primary hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-lg">
+              {exportingPdf ? TECHNICAL_ICONS.calculatedResults : DOCUMENT_ICONS.exportPdf}
+            </span>
+            {exportingPdf ? "Se generează..." : "Export PDF"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setRoomDrawerOpen(true)}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+          >
+            + Adaugă Cameră
+          </button>
+        </div>
+
         {/* Listă camere cu configurare tehnică */}
         <section className="space-y-6">
           {rooms.map((room) => (
             <RoomTechnicalCard key={room.id} room={room} />
           ))}
-
-          {/* Adaugă cameră nouă — stare goală */}
-          <button
-            type="button"
-            onClick={() => setRoomDrawerOpen(true)}
-            className="group flex min-h-[160px] w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-line p-6 transition-all hover:border-secondary hover:bg-surface-low"
-          >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface-low text-primary transition-all group-hover:bg-secondary group-hover:text-white">
-              <span className="material-symbols-outlined text-3xl">
-                {TECHNICAL_ICONS.addRoomEmpty}
-              </span>
-            </div>
-            <span className="font-heading text-lg text-muted transition-colors group-hover:text-primary">
-              Adaugă Cameră Nouă
-            </span>
-            <span className="mt-1 text-xs font-bold uppercase tracking-widest text-muted">
-              Alege tipul: Dormitor, Bucătărie, Hol...
-            </span>
-          </button>
         </section>
       </main>
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Drawer from "./Drawer";
 import { Field, PrimaryButton, inputCls } from "./forms";
-import { Item, ItemStatus, MaterialType } from "@/shared/types";
+import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { useStore } from "@/shared/store";
 
 const materialTypes = Object.values(MaterialType);
@@ -27,8 +27,8 @@ export default function ItemFormDrawer({
   const [source, setSource] = useState("");
   const [status, setStatus] = useState<ItemStatus>(ItemStatus.InAsteptare);
   const [materialType, setMaterialType] = useState<MaterialType>(MaterialType.Altele);
-  const [quantity, setQuantity] = useState(1);
-  const [unitPrice, setUnitPrice] = useState(0);
+  const [quantity, setQuantity] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
   const [productUrl, setProductUrl] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [room, setRoom] = useState(roomId ?? "");
@@ -44,8 +44,8 @@ export default function ItemFormDrawer({
       setSource(item?.source ?? "");
       setStatus(item?.status ?? ItemStatus.InAsteptare);
       setMaterialType(item?.materialType ?? MaterialType.Altele);
-      setQuantity(item?.quantity ?? 1);
-      setUnitPrice(item?.unitPrice ?? 0);
+      setQuantity(item ? String(item.quantity) : "");
+      setUnitPrice(item ? String(item.unitPrice) : "");
       setProductUrl(item?.productUrl ?? "");
       setImageUrl(item?.imageUrl ?? "");
       setRoom(item?.roomId ?? roomId ?? rooms[0]?.id ?? "");
@@ -59,14 +59,14 @@ export default function ItemFormDrawer({
       source,
       status,
       materialType,
-      quantity,
-      unitPrice,
+      quantity: Number(quantity) || 1,
+      unitPrice: Number(unitPrice) || 0,
       productUrl: productUrl || undefined,
       imageUrl: imageUrl || undefined,
       roomId: room,
     };
     if (editing && item) updateItem(item.id, data);
-    else addItem(data);
+    else addItem({ ...data, origin: ItemOrigin.Manual });
     onClose();
   }
 
@@ -141,9 +141,10 @@ export default function ItemFormDrawer({
             <input
               type="number"
               min={1}
+              placeholder="ex: 1"
               className={`${inputCls} font-mono`}
               value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
+              onChange={(e) => setQuantity(e.target.value)}
             />
           </Field>
           <Field label="Preț unitar (€)">
@@ -151,9 +152,10 @@ export default function ItemFormDrawer({
               type="number"
               min={0}
               step="0.01"
+              placeholder="ex: 0.00"
               className={`${inputCls} font-mono`}
               value={unitPrice}
-              onChange={(e) => setUnitPrice(Number(e.target.value))}
+              onChange={(e) => setUnitPrice(e.target.value)}
             />
           </Field>
         </div>

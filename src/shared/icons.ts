@@ -8,7 +8,7 @@
  * singur loc de adevăr — restul aplicației importă din acest fișier, nu hardcodează.
  */
 
-import { FlooringType, ItemStatus, RoomType } from "./types";
+import { FlooringType, InstallationType, ItemStatus, RoomType, TileSize } from "./types";
 
 export const NAV_ICONS = {
   logo: "architecture",
@@ -51,6 +51,7 @@ export const ACTION_ICONS = {
   image: "image",
   sortIndicator: "unfold_more",
   photoCamera: "photo_camera",
+  checkCircle: "check_circle",
 } as const;
 
 export const STATUS_ICONS: Record<ItemStatus, string> = {
@@ -94,15 +95,31 @@ export const CENTRALIZATOR_ICONS = {
  * proiect Stitch 14594146001803528847, ecranul „Configurare Tehnică - Layout Optimizat Rezultate").
  */
 export const FLOORING_TYPE_ICONS: Record<FlooringType, string> = {
-  [FlooringType.ParchetLaminat]: "texture",
+  [FlooringType.ParchetLaminat]: "view_column",
   [FlooringType.Gresie]: "grid_view",
   [FlooringType.Mocheta]: "texture",
+};
+
+/** Iconițe pt. select-ul „Mărime plăci” — mărimea vizuală a iconiței crește odată cu dimensiunea plăcii. */
+export const TILE_SIZE_ICONS: Record<TileSize, string> = {
+  [TileSize.Mica]: "grid_on",
+  [TileSize.Medie]: "grid_view",
+  [TileSize.Mare]: "crop_square",
+  [TileSize.FoarteMare]: "crop_din",
+};
+
+/** Iconițe pt. select-ul „Tip montaj” — sugerează vizual orientarea plăcilor. */
+export const INSTALLATION_TYPE_ICONS: Record<InstallationType, string> = {
+  [InstallationType.Drept]: "straighten",
+  [InstallationType.Diagonal]: "north_east",
+  [InstallationType.Herringbone]: "grain",
 };
 
 export const TECHNICAL_ICONS = {
   projectEfficiency: "architecture",
   floorAndWalls: "layers",
   doorConfig: "door_front",
+  windowConfig: "window",
   wallTilingConfig: "grid_view",
   blueprintPlaceholder: "design_services",
   calculatedResults: "calculate",
@@ -110,6 +127,9 @@ export const TECHNICAL_ICONS = {
   addRoomEmpty: "add_circle",
   totalArea: "square_foot",
   info: "info",
+  shapeSquare: "crop_square",
+  shapeRectangle: "crop_landscape",
+  shapeIrregular: "gesture",
 } as const;
 
 /** Iconițe pentru „Setări Proiect" (ecran Stitch „Setări Proiect - Configurare Monedă"). */

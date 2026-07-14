@@ -178,19 +178,6 @@ export default function Sidebar() {
       </nav>
 
       <div className="space-y-2 border-t border-line pt-3">
-        <Link
-          href="/configurare"
-          title={collapsed ? "Adaugă Cameră" : undefined}
-          className={`flex w-full items-center rounded-lg bg-primary font-bold text-white shadow-md transition-all hover:bg-opacity-90 active:scale-95 ${
-            collapsed ? "justify-center py-2.5" : "justify-center gap-2 py-2.5"
-          }`}
-        >
-          <span className="material-symbols-outlined shrink-0 text-[20px]">
-            {NAV_ICONS.sidebarAddRoom}
-          </span>
-          {!collapsed && <span className="truncate text-sm font-medium">Adaugă Cameră</span>}
-        </Link>
-
         <div className="space-y-0.5">
           <Link
             href={secondaryNav.href}

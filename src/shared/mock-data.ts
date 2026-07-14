@@ -3,6 +3,7 @@ import {
   FlooringType,
   InstallationType,
   Item,
+  ItemOrigin,
   ItemStatus,
   MaterialType,
   Project,
@@ -31,7 +32,7 @@ export const mockRooms: Room[] = [
     perimeter: 9.3,
     tileSize: TileSize.Medie,
     installationType: InstallationType.Drept,
-    door: { width: 0.8, height: 2.1, wall: Wall.Vest },
+    doors: { [Wall.Vest]: { width: 0.8, height: 2.1 } },
     wallTiling: {
       tiledWallsCount: 3,
       tileHeight: 2.4,
@@ -49,7 +50,7 @@ export const mockRooms: Room[] = [
     perimeter: 21,
     tileSize: TileSize.Medie,
     installationType: InstallationType.Drept,
-    door: { width: 0.9, height: 2.1, wall: Wall.Nord },
+    doors: { [Wall.Nord]: { width: 0.9, height: 2.1 } },
   },
   { id: "r4", type: RoomType.Dormitor, name: "Dormitor Matrimonial", allocatedBudget: 2000 },
 ];
@@ -64,6 +65,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.Cumparat,
     quantity: 1,
     unitPrice: 215,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i2",
@@ -74,6 +76,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.Planificat,
     quantity: 1,
     unitPrice: 185,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i3",
@@ -84,6 +87,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.InAsteptare,
     quantity: 1,
     unitPrice: 890,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i4",
@@ -94,6 +98,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.Cumparat,
     quantity: 1,
     unitPrice: 1800,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i5",
@@ -104,6 +109,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.Cumparat,
     quantity: 1,
     unitPrice: 650,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i6",
@@ -114,6 +120,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.InAsteptare,
     quantity: 1,
     unitPrice: 3200,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i7",
@@ -124,6 +131,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.Cumparat,
     quantity: 45,
     unitPrice: 12,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i8",
@@ -134,6 +142,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.InAsteptare,
     quantity: 1,
     unitPrice: 1400,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i9",
@@ -144,6 +153,7 @@ export const mockItems: Item[] = [
     status: ItemStatus.Cumparat,
     quantity: 1,
     unitPrice: 380,
+    origin: ItemOrigin.Manual,
   },
   {
     id: "i10",
@@ -154,5 +164,6 @@ export const mockItems: Item[] = [
     status: ItemStatus.Planificat,
     quantity: 2,
     unitPrice: 95,
+    origin: ItemOrigin.Manual,
   },
 ];

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Currency, Item, Project, RenovationStore, Room } from "./types";
 import { mockItems, mockProject, mockRooms } from "./mock-data";
+import { syncAutoItemsForRoom } from "./functions/auto-items";
 
 const StoreContext = createContext<RenovationStore | null>(null);
 
@@ -47,9 +48,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRooms((prev) => [...prev, { ...room, id: nextId("r") }]);
   }, []);
 
-  const updateRoom = useCallback((id: string, patch: Partial<Room>) => {
-    setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-  }, []);
+  const updateRoom = useCallback(
+    (id: string, patch: Partial<Room>) => {
+      const current = rooms.find((r) => r.id === id);
+      if (!current) return;
+      const updatedRoom = { ...current, ...patch };
+      setRooms((prev) => prev.map((r) => (r.id === id ? updatedRoom : r)));
+      // Sincronizează elementele auto-generate din configurarea tehnică (pardoseală/plintă/faianță) cu noile măsurători.
+      setItems((prev) => syncAutoItemsForRoom(prev, updatedRoom, () => nextId("i")));
+    },
+    [rooms]
+  );
 
   const deleteRoom = useCallback((id: string) => {
     setRooms((prev) => prev.filter((r) => r.id !== id));

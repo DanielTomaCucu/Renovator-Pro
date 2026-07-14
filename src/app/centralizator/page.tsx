@@ -29,8 +29,11 @@ import DashboardSummaryCard, {
 const MATERIAL_BADGE_STYLES: Record<MaterialType, string> = {
   [MaterialType.Gresie]: "bg-emerald-50 text-emerald-700",
   [MaterialType.Faianta]: "bg-emerald-50 text-emerald-700",
+  [MaterialType.Plinta]: "bg-emerald-50 text-emerald-700",
   [MaterialType.Parchet]: "bg-tertiary/10 text-tertiary",
   [MaterialType.Vopsea]: "bg-surface-low text-muted",
+  [MaterialType.Tapet]: "bg-surface-low text-muted",
+  [MaterialType.GlafFereastra]: "bg-surface-low text-muted",
   [MaterialType.Sanitare]: "bg-secondary/10 text-secondary",
   [MaterialType.Mobila]: "bg-secondary/10 text-secondary",
   [MaterialType.Electrocasnice]: "bg-secondary/10 text-secondary",

@@ -29,7 +29,7 @@ export default function RoomFormDrawer({
   const { addRoom } = useStore();
   const [type, setType] = useState<RoomType>(RoomType.Dormitor);
   const [name, setName] = useState("");
-  const [budget, setBudget] = useState(0);
+  const [budget, setBudget] = useState("");
 
   // Resetează formularul de fiecare dată când drawerul se deschide.
   // Pattern React: "adjusting state during render" (nu useEffect) —
@@ -40,13 +40,13 @@ export default function RoomFormDrawer({
     if (open) {
       setType(RoomType.Dormitor);
       setName("");
-      setBudget(0);
+      setBudget("");
     }
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    addRoom({ type, name, allocatedBudget: budget });
+    addRoom({ type, name, allocatedBudget: Number(budget) || 0 });
     onClose();
   }
 
@@ -90,9 +90,10 @@ export default function RoomFormDrawer({
             type="number"
             min={0}
             step="0.01"
+            placeholder="ex: 1200"
             className={`${inputCls} font-mono`}
             value={budget}
-            onChange={(e) => setBudget(Number(e.target.value))}
+            onChange={(e) => setBudget(e.target.value)}
           />
         </Field>
 
