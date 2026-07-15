@@ -31,6 +31,8 @@
 | Enums | Java enum cu **valoare string identică cu TS** (cu diacritice: `"Cumpărat"`, `"Bucătărie"`) — cheie fără diacritice, valoare cu | regula de aur #1 din CLAUDE.md, oglindită în Java |
 | Teste | JUnit 5 + **Testcontainers** (Postgres real, nu H2) pentru adapters; domeniul se testează pur, fără Spring | H2 minte despre Postgres |
 | Rulare locală | **docker-compose** pentru Postgres; backend pe **port 8080** (3000/3001 sunt ocupate de frontend-uri) | — |
+| Deploy backend | **Render** (Web Service, plan free) — Root Directory `backend`, build `mvn -DskipTests clean package`, start `java -jar target/*.jar` | cerință user: alternativă gratuită la Vercel pentru un server Java de lungă durată; simplu de conectat direct la monorepo GitHub (Root Directory, ca la Vercel) |
+| Deploy DB (prod) | **Supabase Postgres** (plan free, nu expiră) | cerință user; alternativă la Postgres-ul gestionat de Render, care expiră la 90 zile pe planul free |
 
 ## 2. Structura monorepo (țintă)
 
@@ -216,8 +218,13 @@ Enum-urile se stochează ca VARCHAR cu valorile string din TS (cu diacritice) �
 **Task 7.1 — Suite de teste de securitate + revizie**
 - Rulează `/security-review` pe backend; verifică OWASP API Top 10 punct cu punct (BOLA/IDOR, mass assignment — PATCH-urile nu acceptă câmpuri interzise ca `id`/`projectId`/`origin` de la client, injection — doar query-uri parametrizate, excessive data exposure — DTO-uri, nu entități).
 
-**Task 7.2 — CI + deploy**
-- GitHub Actions: job frontend (lint+tsc+build) + job backend (mvn verify cu Testcontainers) pe fiecare PR. Deploy backend: containerizat (Dockerfile multi-stage, non-root user) — platforma exactă (Railway/Render/Fly/VPS) se decide cu userul la momentul respectiv; DB gestionată (nu în containerul aplicației).
+**Task 7.2 — CI + deploy (Render + Supabase)**
+- GitHub Actions: job frontend (lint+tsc+build) + job backend (mvn verify cu Testcontainers) pe fiecare PR.
+- **DB de producție — Supabase:** creează proiect Supabase (plan free), obține connection string-ul Postgres din Settings → Database. Nu se creează tabele manual din UI Supabase — schema rămâne exclusiv sub controlul Flyway (§1 „Migrări schema"); la primul boot al backend-ului contra acestei DB, Flyway aplică `V1__initial_schema.sql` automat.
+- **Backend — Render Web Service:** conectează repo-ul GitHub, **Root Directory: `backend`** (exact ca Root Directory-ul `frontend` de pe Vercel — Render suportă monorepo nativ, fără să separi în alt repo). Runtime: Java (sau Docker, dacă se preferă un `Dockerfile` multi-stage — de evaluat la implementare). Build command: `mvn -DskipTests clean package`. Start command: `java -jar target/*.jar` (numele exact al JAR-ului rezultă din `artifactId`/`version` din `pom.xml`).
+- **Variabile de mediu pe Render** (niciodată în git — vezi `.env.example` din backend): `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (din Supabase), plus `SPRING_PROFILES_ACTIVE` NESETAT sau absent (profilul implicit din `application.yml` e deja „safe pentru prod"; **nu** activa profilul `dev` pe Render — ar expune Swagger).
+- **CORS:** actualizează allowlist-ul (Task 4.2) cu domeniul real de pe Vercel al frontend-ului (ex. `https://renovator-pro.vercel.app`), pe lângă `localhost:3001` pentru dev.
+- **Limitare de reținut (plan free Render):** serviciul „adoarme" după ~15 minute de inactivitate; primul request după o pauză are cold-start de ordinul zecilor de secunde. Acceptabil pentru dezvoltare/demo; de reevaluat (plan plătit) dacă aplicația ajunge să aibă utilizatori reali cu așteptări de latență.
 
 ---
 
