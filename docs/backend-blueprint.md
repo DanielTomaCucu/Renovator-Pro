@@ -248,8 +248,8 @@ Enum-urile se stochează ca VARCHAR cu valorile string din TS (cu diacritice) �
 | 2 — Business logic domeniu | ✅ mergeat (PR #16) |
 | 3 — Use cases + persistență | ✅ mergeat (PR #17) |
 | 4 — API REST | 🟨 în review (PR deschis) |
-| 5 — Auth & autorizare | ⬜ |
-| 6 — Integrare frontend | ⬜ |
+| 5 — Auth & autorizare | ⬜ amânată intenționat (se face ultima) |
+| 6 — Integrare frontend | 🟨 în review (PR deschis) |
 | 7 — Hardening & CI/CD | ⬜ |
 
 *(Executorii actualizează tabelul la finalizarea fiecărui task: ⬜ → 🟨 în lucru → ✅ mergeat.)*

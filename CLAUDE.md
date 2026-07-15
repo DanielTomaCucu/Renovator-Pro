@@ -8,7 +8,7 @@
 
 Aplicație web de **management al bugetului pentru renovări de locuințe** (proprietari, contractori, arhitecți). UI-ul este implementat după design-urile generate în **Google Stitch** (proiect Stitch: `projects/14594146001803528847`, titlu "Planificator Buget Renovare"). Când e nevoie de referință vizuală, ecranele se pot prelua prin MCP-ul `stitch` (`get_screen` → screenshot + HTML).
 
-**Stadiu actual:** monorepo `frontend/` (Next.js cu date mock, client-side store) + `backend/` (Spring Boot + PostgreSQL, arhitectură hexagonală — planificat în `docs/backend-blueprint.md`, Faza 0 finalizată). Urmează și o aplicație mobilă Flutter (proiect separat).
+**Stadiu actual:** monorepo `frontend/` (Next.js, conectat la backend-ul real prin `store.tsx` — vezi `docs/backend-blueprint.md`) + `backend/` (Spring Boot + PostgreSQL, arhitectură hexagonală, Faza 6 finalizată; Faza 5 auth amânată intenționat, `currentUserId` rămâne stub). Urmează și o aplicație mobilă Flutter (proiect separat).
 
 ## Monorepo — unde stă ce
 
@@ -49,8 +49,9 @@ frontend/src/
       index.ts            — barrel de re-export; importă din „@/shared/types", nu din fișierele individuale
     functions/            — logica de business partajată, împărțită pe domeniu (nu un fișier gigant)
       money.ts, items.ts, budget.ts, charts.ts, index.ts
-    store.tsx             — StoreProvider (React context, DOAR CRUD in-memory, fără calcule)
-    mock-data.ts          — date de test
+    store.tsx             — StoreProvider (React context, DOAR CRUD, fără calcule); conectat la backend real via api-client.ts (NEXT_PUBLIC_USE_MOCK_DATA=true → fallback in-memory pe mock-data.ts)
+    api-client.ts          — fetch wrapper spre backend (NEXT_PUBLIC_API_URL) + DEFAULT_PROJECT_ID
+    mock-data.ts           — date de test (folosite doar în modul mock)
     icons.ts              — mapare centralizată nume-Material-Symbol (vezi secțiunea Iconițe)
   components/             — componente UI reutilizate în ≥2 pagini (Sidebar, StatCard, StatusChip, Drawer, ItemFormDrawer, RoomFormDrawer, ConfirmDialog, forms)
   app/
