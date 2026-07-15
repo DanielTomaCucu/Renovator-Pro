@@ -761,3 +761,17 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** mutare `frontend/**` (fost rădăcină), `.gitignore`, `README.md`, `CLAUDE.md`, `~/.claude/launch.json` (în afara repo), `docs/backend-blueprint.md` (nou, din sesiunea de planificare), `docs/progress.md`.
 
 **Branch:** `012-monorepo-frontend-backend-split`.
+
+### 2026-07-15 — Faza 1 backend: schelet Spring Boot + infrastructură DB + model de domeniu
+**De ce:** task-urile 1.1–1.3 din `docs/backend-blueprint.md` (Faza 1). Produce scheletul backend-ului: proiect care compilează și pornește, Postgres local reproductibil cu prima migrare, și modelul de domeniu pur (oglindă a `frontend/src/shared/types/`). Toate cele 3 task-uri într-un singur PR fiindcă sunt interdependente (1.2 și 1.3 nu compilează fără proiectul din 1.1).
+
+- **Task 1.1 — schelet:** proiect Maven (`backend/pom.xml`, Spring Boot 3.4.1, Java 21 ca nivel de limbaj, deps: web, validation, data-jpa, postgresql, flyway, actuator, springdoc). Structura hexagonală de pachete cu `package-info.java` care descrie regula de dependență (domain ← application ← adapter/config). Profiluri `dev`/`prod` (`application.yml` safe-pt-prod cu secrete din env + Swagger dezactivat; `application-dev.yml` cu Postgres local + Swagger). Port 8080, health check actuator. `backend/README.md`.
+- **Task 1.2 — DB:** `docker-compose.yml` (Postgres 16, port 5433 ca să nu ciocnească un Postgres existent), `.env.example`, `V1__initial_schema.sql` (users, projects, project_members, rooms, items — FK-uri cu ON DELETE CASCADE, structuri per-perete ca JSONB, enums ca VARCHAR cu valorile TS). Test `SchemaMigrationTest` (Testcontainers, `disabledWithoutDocker=true`).
+- **Task 1.3 — domeniu:** toate enums (Currency, ItemStatus, ItemOrigin, RoomType, MaterialType, FlooringType, InstallationType, TileSize, RoomShape, WallFinishType, Wall) cu cheie fără diacritice + `label` cu diacritice identic cu TS + `fromLabel`. Value objects (`Money` — BigDecimal 2 zecimale, non-negativ; RoomDoor, RoomWindow, WallTiling, WallFinish). Entități (Project, Item records; Room record cu builder pt. câmpurile tehnice opționale). `user/User` + `user/ProjectRole` (OWNER/EDITOR/VIEWER, folosite efectiv în Faza 5). Zero importuri de framework în `domain/`. Teste de invarianți (Money, domeniu, enum labels).
+- Verificat: `mvn verify` → **BUILD SUCCESS**, 12 teste de domeniu trec (`SchemaMigrationTest` dezactivat corect local — Docker daemon oprit). Testat efectiv boot-ul: `mvn spring-boot:run -Pdev` pe JDK 25 → Spring pornește complet (Tomcat pe 8080, Hikari, Flyway autoconfig), se oprește DOAR la conexiunea Postgres (localhost:5433 refuzat, fiindcă DB-ul nu rula) — deci wiring-ul de bean-uri e corect și versiunea Spring merge pe JDK-ul instalat. Cu `docker compose up -d` pornit, boot-ul se completează.
+
+**Nefăcut aici (conform blueprint):** `domain/service` (reguli de business) e gol — apare în Faza 2. Fără use cases (Faza 3), fără API (Faza 4), fără auth (Faza 5).
+
+**Fișiere atinse:** `backend/**` (nou: pom.xml, docker-compose.yml, .env.example, README.md, `src/main/java/ro/renovatorpro/**`, `src/main/resources/{application.yml,application-dev.yml,db/migration/V1__initial_schema.sql}`, `src/test/java/ro/renovatorpro/**`), `docs/backend-blueprint.md` (tabel stadiu), `docs/progress.md`.
+
+**Branch:** `013-faza1-schelet-backend-domeniu`.
