@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: renovator-pro-backend
+  # Profilul implicit e „safe pentru prod": totul din variabile de mediu, fără valori hardcodate.
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      # NICIODATĂ „update" în afara testelor — schema e gestionată exclusiv de Flyway.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+# Swagger/OpenAPI dezactivat implicit — activat doar pe profilul dev (vezi application-dev.yml).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

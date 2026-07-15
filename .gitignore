@@ -14,12 +14,12 @@ node_modules
 # testing
 coverage
 
-# next.js
+# next.js (ancorate la frontend/ — „out" ca nume generic ar prinde pachete Java ca application/port/out)
 .next/
-out/
+/frontend/out/
 
 # production / build output
-build/
+/frontend/build/
 target/
 
 # misc

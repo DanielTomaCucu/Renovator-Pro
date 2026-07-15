@@ -1,0 +1,22 @@
+# Postgres pentru dezvoltare locală. Pornește cu: docker compose up -d
+# Portul 5433 (nu 5432) ca să nu se ciocnească cu un Postgres deja instalat pe mașină.
+services:
+  postgres:
+    image: postgres:16
+    container_name: renovatorpro-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-renovatorpro}
+      POSTGRES_USER: ${POSTGRES_USER:-renovatorpro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-renovatorpro}
+    ports:
+      - "5433:5432"
+    volumes:
+      - renovatorpro_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-renovatorpro} -d ${POSTGRES_DB:-renovatorpro}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  renovatorpro_pgdata:
