@@ -838,3 +838,18 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `backend/src/main/java/ro/renovatorpro/adapter/in/web/**` (nou), `application/port/in/{AddRoomUseCase,UpdateRoomUseCase,GetProjectUseCase,GetRoomsUseCase,GetItemsUseCase}.java`, `application/usecase/{AddRoomService,UpdateRoomService,GetProjectService,GetRoomsService,GetItemsService,AddItemService}.java` (șters `GetProjectSnapshotUseCase`/`Service`), `application/port/out/RoomRepository.java` + `adapter/out/persistence/RoomRepositoryAdapter.java` (+`findProjectIdById`), `config/CorsConfig.java`, `application.yml`/`application-dev.yml`/`.env.example`, `docs/api-contract.md`, `docs/backend-blueprint.md`, `docs/progress.md`, teste noi în `adapter/in/web/*ControllerTest.java` + `src/test/resources/application.yml`.
 
 **Branch:** `019-faza4-api-rest`.
+
+### 2026-07-15 — Faza 6 backend/frontend: integrarea frontend ↔ backend (Faza 5 amânată intenționat)
+**De ce:** userul a cerut explicit să sară Faza 5 (auth) și să treacă direct la Faza 6 — auth se face ultima, `currentUserId` rămâne stub pe backend până atunci.
+
+- **`RenovationStore` peste fetch** (Task 6.1): `store.tsx` rescris cu 2 provideri — `ApiStoreProvider` (nou, implicit) apelează backend-ul real prin `api-client.ts`; `MockStoreProvider` (fostul comportament) rămâne ca fallback demo, activat cu `NEXT_PUBLIC_USE_MOCK_DATA=true`. Interfața `RenovationStore` nu s-a schimbat deloc — nicio pagină/componentă a trebuit atinsă, dovada că abstracția a ținut.
+- **`api-client.ts`** (nou): fetch wrapper JSON + `DEFAULT_PROJECT_ID` (ID-ul fix seedat de backend, `V2__seed_default_project.sql`) — aplicația rămâne single-project.
+- **`updateRoom`**: după PATCH, reîncarcă lista de elemente de la server (nu doar camera) — reconcilierea `AutoItemReconciler` rulează acum server-side, iar frontend-ul trebuie să reflecte exact ce a calculat backend-ul.
+- **`deleteRoom`**: filtrare locală a elementelor camerei șterse (cascade e server-side, dar starea locală trebuie actualizată fără round-trip suplimentar).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (1 warning preexistent), `npm run build` → succes. **Testat efectiv în browser**, nu doar cod scris: pornit backend (Postgres local) + frontend, creat o cameră prin UI (`POST` real, confirmat în DB via curl), șters camera prin UI (dialog de confirmare → `DELETE` real, confirmat DB gol după).
+
+**Nefăcut aici (conform cerinței userului):** Faza 5 (auth) rămâne neimplementată — `currentUserId` pe backend e stub, frontend-ul nu are login/sesiune.
+
+**Fișiere atinse:** `frontend/src/shared/{store.tsx (rescris), api-client.ts (nou)}`, `frontend/.env.example` (nou), `CLAUDE.md`, `docs/backend-blueprint.md`, `docs/progress.md`.
+
+**Branch:** `020-faza6-integrare-frontend`.
