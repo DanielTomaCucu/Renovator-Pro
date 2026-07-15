@@ -180,48 +180,50 @@ export default function ElementePage() {
             </div>
           </div>
 
-          {/* Poză element — aceeași funcționalitate ca pe mobil (capture cameră), disponibilă acum
-              și pe tabletă/desktop, nu doar sub 768px. */}
-          <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center">
-            <label className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-white/70">
-              Poză element
-            </label>
-            {qaImage ? (
-              <div className="flex items-center gap-3 rounded-lg border border-white/20 bg-white/10 p-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qaImage} alt="Poză element" className="h-12 w-12 rounded object-cover" />
-                <button
-                  type="button"
-                  onClick={() => setQaImage(undefined)}
-                  className="flex items-center gap-1 text-[11px] font-bold uppercase text-tertiary"
-                >
-                  <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
-                  Elimină
-                </button>
-              </div>
-            ) : (
-              <label className="flex w-full max-w-xs cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-white/30 bg-white/10 p-2.5 text-[12px] font-bold uppercase text-white/70 transition-colors hover:bg-white/20">
-                <span className="material-symbols-outlined">{ACTION_ICONS.photoCamera}</span>
-                Fă o poză
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleQaPhoto}
-                  className="hidden"
-                />
+          {/* Poză element + Salvează — pe același rând de la sm în sus, ca să nu ocupe fiecare
+              câte un rând întreg pe tabletă/desktop. */}
+          <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-1 items-center gap-3">
+              <label className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-white/70">
+                Poză element
               </label>
-            )}
-          </div>
+              {qaImage ? (
+                <div className="flex items-center gap-3 rounded-lg border border-white/20 bg-white/10 p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qaImage} alt="Poză element" className="h-12 w-12 rounded object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setQaImage(undefined)}
+                    className="flex items-center gap-1 text-[11px] font-bold uppercase text-tertiary"
+                  >
+                    <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
+                    Elimină
+                  </button>
+                </div>
+              ) : (
+                <label className="flex w-full max-w-xs cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-white/30 bg-white/10 p-2.5 text-[12px] font-bold uppercase text-white/70 transition-colors hover:bg-white/20">
+                  <span className="material-symbols-outlined">{ACTION_ICONS.photoCamera}</span>
+                  Fă o poză
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleQaPhoto}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
 
-          {/* Salvează — mereu ultimul buton din formular, după poză. */}
-          <button
-            type="submit"
-            className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-secondary text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98] lg:w-auto lg:self-end"
-          >
-            <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
-            Salvează
-          </button>
+            {/* Salvează — mereu ultimul buton din formular, aliniat cu rândul poza pe sm+. */}
+            <button
+              type="submit"
+              className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-secondary px-6 text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98] sm:w-auto"
+            >
+              <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
+              Salvează
+            </button>
+          </div>
         </form>
 
         {/* Camere */}
