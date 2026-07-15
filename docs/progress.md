@@ -853,3 +853,9 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `frontend/src/shared/{store.tsx (rescris), api-client.ts (nou)}`, `frontend/.env.example` (nou), `CLAUDE.md`, `docs/backend-blueprint.md`, `docs/progress.md`.
 
 **Branch:** `020-faza6-integrare-frontend`.
+
+### 2026-07-15 — Faza 7: CI (GitHub Actions) + audit securitate rapid (Task 7.1)
+- **Task 7.1**: audit OWASP API rapid pe codul existent — BOLA/IDOR (n/a, auth amânată intenționat, documentat), mass assignment (verificat: niciun DTO de update nu expune `id`/`projectId`/`origin`), injection (zero SQL brut, doar Spring Data parametrizat), excessive data exposure (controllere întorc DTO-uri, niciodată entități), actuator restricționat la `health` pe prod, Swagger dezactivat pe prod, CORS fără wildcard. Niciun fix necesar.
+- **Task 7.2 (parțial)**: `.github/workflows/ci.yml` — job `frontend` (lint+tsc+build) + job `backend` (`mvn verify`, Testcontainers pe runner-ul GitHub cu Docker preinstalat), pe fiecare PR + push pe `main`.
+
+**Branch:** `021-faza7-ci-deploy`.
