@@ -8,12 +8,19 @@
 
 Aplicație web de **management al bugetului pentru renovări de locuințe** (proprietari, contractori, arhitecți). UI-ul este implementat după design-urile generate în **Google Stitch** (proiect Stitch: `projects/14594146001803528847`, titlu "Planificator Buget Renovare"). Când e nevoie de referință vizuală, ecranele se pot prelua prin MCP-ul `stitch` (`get_screen` → screenshot + HTML).
 
-**Stadiu actual:** frontend Next.js cu date mock (client-side store). Urmează: backend Spring Boot (API REST) și aplicație mobilă Flutter (proiecte separate).
+**Stadiu actual:** monorepo `frontend/` (Next.js cu date mock, client-side store) + `backend/` (Spring Boot + PostgreSQL, arhitectură hexagonală — planificat în `docs/backend-blueprint.md`, Faza 0 finalizată). Urmează și o aplicație mobilă Flutter (proiect separat).
+
+## Monorepo — unde stă ce
+
+- **`frontend/`** — tot codul Next.js (`src/`, `public/`, `package.json`, config-uri). Comenzile npm se rulează din `frontend/`, nu din rădăcină.
+- **`backend/`** — aplicația Spring Boot (creată în Faza 1 din blueprint; încă inexistentă).
+- **`docs/`**, **`CLAUDE.md`**, **`AGENTS.md`**, **`README.md`** — rămân la rădăcină (documentație și convenții comune).
 
 ## Stack & comenzi
 
-- Next.js 16 (App Router, `src/`), React 19, TypeScript, Tailwind CSS 4
-- `npm run dev` — server dev. **Atenție: portul 3000 e ocupat de alt proiect al userului; folosește portul 3001** (configurația `renovator-web` din `~/.claude/launch.json`).
+- Next.js 16 (App Router, `frontend/src/`), React 19, TypeScript, Tailwind CSS 4
+- **Toate comenzile de mai jos se rulează din `frontend/`** (`cd frontend` întâi).
+- `npm run dev -- --port 3001` — server dev. **Atenție: portul 3000 e ocupat de alt proiect al userului; folosește portul 3001** (configurația `renovator-web` din `~/.claude/launch.json`, cu `--prefix .../frontend`).
 - `npm run build`, `npm run lint`, `npx tsc --noEmit` — rulează-le pe toate trei înainte să consideri o schimbare încheiată.
 
 ## Workflow Git — OBLIGATORIU
@@ -31,8 +38,10 @@ poată face review înainte de merge.
 
 ## Structură
 
+> Toate căile de mai jos sunt relative la **`frontend/`** (ex. `frontend/src/shared/...`). Importurile `@/` rămân neschimbate (aliasul pointează în `frontend/src/`).
+
 ```
-src/
+frontend/src/
   shared/                — TOT ce e reutilizat în ≥2 pagini/componente. Nimic „local" nu stă aici.
     types/                — modelul de date. UN FIȘIER PER INTERFAȚĂ/ENUM (vezi regula dedicată mai jos).
       RoomType.ts, ItemStatus.ts, MaterialType.ts, Currency.ts   — enums
@@ -51,9 +60,10 @@ src/
     centralizator/        — Tabel Centralizator Costuri
     analiza/              — Analiză Bugetară (dashboard)
     configurare/          — Configurare Apartament
-docs/
+docs/                     — (la RĂDĂCINĂ, nu în frontend/) documentație comună
   progress.md             — jurnal cronologic de schimbări (actualizează-l după fiecare sesiune de lucru)
   api-contract.md         — contractul API REST (viitor backend Spring Boot) — sursa unică de adevăr pt. shape-urile de request/response
+  backend-blueprint.md    — planul de implementare al backend-ului (faze + task-uri, arhitectură hexagonală)
 ```
 
 ## Documentație vie — citește și scrie în ea

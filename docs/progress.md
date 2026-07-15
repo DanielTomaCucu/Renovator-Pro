@@ -745,3 +745,19 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/app/elemente/page.tsx`, `docs/progress.md`.
 
 **Branch:** `011-fix-poza-element-tableta-mobil`.
+
+### 2026-07-15 — Faza 0 backend: restructurare în monorepo (`frontend/` + `backend/`)
+**De ce:** primul task din `docs/backend-blueprint.md` (Faza 0). Pregătește repo-ul pentru adăugarea backend-ului Spring Boot, mutând întreaga aplicație Next.js din rădăcină într-un folder `frontend/` dedicat, ca cele două aplicații să stea alături fără să se amestece config-urile.
+
+- **Mutat tot codul Next.js în `frontend/`** cu `git mv` (istoric păstrat): `src/`, `public/`, `package.json`, `package-lock.json`, `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `postcss.config.mjs`, `vercel.json`. Artefactele gitignorate (`node_modules/`, `.next/`, `next-env.d.ts`, `tsconfig.tsbuildinfo`) mutate cu `mv` simplu. La rădăcină rămân: `docs/`, `CLAUDE.md`, `AGENTS.md`, `README.md`, `.gitignore`.
+- **`.gitignore` rescris pentru monorepo**: pattern-uri deroot-ate (`node_modules`, `.next/`, `*.tsbuildinfo` prind acum și în `frontend/` și în viitorul `backend/`), adăugate `.idea/`, `*.iml`, `target/` (Maven), `.env.example` whitelistuit.
+- **`~/.claude/launch.json`**: config `renovator-web` → `--prefix .../frontend` (dev server pornește din noua cale, tot pe 3001).
+- **`README.md`** rescris ca index de monorepo (structură, cum se pornește frontend-ul, link la blueprint). **`CLAUDE.md`**: secțiunea Structură + Stack & comenzi actualizate (căi `frontend/src/...`, comenzile se rulează din `frontend/`).
+- **Backend NU a fost creat** — folderul `backend/` apare în Faza 1. Aici doar s-a pregătit terenul.
+- Verificat din `frontend/`: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori (1 warning preexistent `<img>`), `npm run build` → succes (toate 7 rutele generate). Testat efectiv: dev server repornit din noua cale (`cwd` nou), `/elemente` se încarcă corect în browser pe 3001.
+
+**⚠️ Pas manual rămas pentru user:** în dashboard-ul Vercel, setează **Root Directory → `frontend`** (Settings → General), altfel deploy-ul nu mai găsește aplicația.
+
+**Fișiere atinse:** mutare `frontend/**` (fost rădăcină), `.gitignore`, `README.md`, `CLAUDE.md`, `~/.claude/launch.json` (în afara repo), `docs/backend-blueprint.md` (nou, din sesiunea de planificare), `docs/progress.md`.
+
+**Branch:** `012-monorepo-frontend-backend-split`.

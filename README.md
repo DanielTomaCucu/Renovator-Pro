@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Renovator Pro — Planificator Buget Renovare
 
-## Getting Started
+Monorepo cu aplicația de management al bugetului pentru renovări de locuințe.
 
-First, run the development server:
+## Structură monorepo
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+project-renovation/
+  frontend/    ← aplicația Next.js 16 (App Router, React 19, Tailwind 4) — UI cu date mock (client-side store)
+  backend/     ← Spring Boot + PostgreSQL, arhitectură hexagonală (NEÎNCEPUT — vezi blueprint-ul)
+  docs/        ← documentație comună (contract API, jurnal de progres, blueprint backend)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Frontend
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd frontend
+npm install        # prima dată
+npm run dev -- --port 3001   # portul 3000 e ocupat de alt proiect; folosește 3001
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Deschide [http://localhost:3001](http://localhost:3001). Vezi `CLAUDE.md` (rădăcină) pentru convențiile de cod,
+design system și workflow-ul Git obligatoriu.
 
-## Learn More
+Verificări înainte de a considera o schimbare gata (din `frontend/`):
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+npm run lint
+npx tsc --noEmit
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Backend
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Neimplementat încă. Planul complet de implementare (faze + task-uri, arhitectură hexagonală, securitate,
+schema PostgreSQL) e în **[docs/backend-blueprint.md](docs/backend-blueprint.md)**. Faza 0 (această restructurare
+în monorepo) e finalizată; Faza 1 (schelet Spring Boot) urmează.
 
-## Deploy on Vercel
+## Documentație
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **[docs/backend-blueprint.md](docs/backend-blueprint.md)** — blueprint-ul oficial al backend-ului (arhitect-șef → executori).
+- **[docs/api-contract.md](docs/api-contract.md)** — contractul API REST (sursă unică de adevăr pentru shape-uri).
+- **[docs/progress.md](docs/progress.md)** — jurnal cronologic de schimbări + registru de funcții.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy (Vercel)
+
+⚠️ **Pas manual necesar după această restructurare:** în setările proiectului Vercel, schimbă
+**Root Directory → `frontend`** (Settings → General → Root Directory). Fără asta, build-ul Vercel nu mai găsește
+aplicația Next.js, fiindcă a fost mutată din rădăcină în `frontend/`.
