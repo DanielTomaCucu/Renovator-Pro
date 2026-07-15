@@ -4,6 +4,7 @@
  * și docs/progress.md → „Registru de funcții" pentru lista completă + locuri de utilizare.
  */
 export * from "./money";
+export * from "./currency";
 export * from "./items";
 export * from "./budget";
 export * from "./charts";

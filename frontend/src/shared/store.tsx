@@ -9,10 +9,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Item, Project, RenovationStore, Room } from "./types";
+import { Currency, Item, Project, RenovationStore, Room } from "./types";
 import { mockItems, mockProject, mockRooms } from "./mock-data";
 import { api, DEFAULT_PROJECT_ID } from "./api-client";
 import { syncAutoItemsForRoom } from "./functions/auto-items";
+import { convertAmount } from "./functions/currency";
 
 const StoreContext = createContext<RenovationStore | null>(null);
 
@@ -47,6 +48,23 @@ function ApiStoreProvider({ children }: { children: ReactNode }) {
 
   const updateProject = useCallback((patch: Partial<Project>) => {
     api.patch<Project>(`/api/projects/${DEFAULT_PROJECT_ID}`, patch).then((updated) => setProject(updated));
+  }, []);
+
+  const convertCurrency = useCallback((targetCurrency: Currency, exchangeRate: number) => {
+    // Conversia atinge project + toate camerele + toate elementele — reîncărcăm snapshot-ul complet
+    // ca fiecare pagină/header să reflecte sumele convertite, nu doar moneda proiectului.
+    api
+      .post<Project>(`/api/projects/${DEFAULT_PROJECT_ID}/currency`, { targetCurrency, exchangeRate })
+      .then((updated) => {
+        setProject(updated);
+        Promise.all([
+          api.get<Room[]>(`/api/projects/${DEFAULT_PROJECT_ID}/rooms`),
+          api.get<Item[]>(`/api/projects/${DEFAULT_PROJECT_ID}/items`),
+        ]).then(([r, i]) => {
+          setRooms(r);
+          setItems(i);
+        });
+      });
   }, []);
 
   const addRoom = useCallback((room: Omit<Room, "id">) => {
@@ -93,6 +111,7 @@ function ApiStoreProvider({ children }: { children: ReactNode }) {
       rooms,
       items,
       updateProject,
+      convertCurrency,
       addRoom,
       updateRoom,
       deleteRoom,
@@ -100,7 +119,7 @@ function ApiStoreProvider({ children }: { children: ReactNode }) {
       updateItem,
       deleteItem,
     }),
-    [project, rooms, items, updateProject, addRoom, updateRoom, deleteRoom, addItem, updateItem, deleteItem]
+    [project, rooms, items, updateProject, convertCurrency, addRoom, updateRoom, deleteRoom, addItem, updateItem, deleteItem]
   );
 
   if (!loaded) return null;
@@ -117,6 +136,32 @@ function MockStoreProvider({ children }: { children: ReactNode }) {
   const updateProject = useCallback((patch: Partial<Project>) => {
     setProject((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  const convertCurrency = useCallback(
+    (targetCurrency: Currency, exchangeRate: number) => {
+      // Demo offline: replicăm ce face backend-ul (convertAmount = oglinda CurrencyConverter.java)
+      // pe toate sumele. Trei updatere PURE, independente (fără setState imbricat) — sigure în StrictMode.
+      const from = project.currency;
+      setProject((prev) => ({
+        ...prev,
+        currency: targetCurrency,
+        totalBudget: convertAmount(prev.totalBudget, from, targetCurrency, exchangeRate),
+      }));
+      setRooms((prev) =>
+        prev.map((r) => ({
+          ...r,
+          allocatedBudget: convertAmount(r.allocatedBudget, from, targetCurrency, exchangeRate),
+        }))
+      );
+      setItems((prev) =>
+        prev.map((i) => ({
+          ...i,
+          unitPrice: convertAmount(i.unitPrice, from, targetCurrency, exchangeRate),
+        }))
+      );
+    },
+    [project.currency]
+  );
 
   const addRoom = useCallback((room: Omit<Room, "id">) => {
     setRooms((prev) => [...prev, { ...room, id: nextId("r") }]);
@@ -151,8 +196,8 @@ function MockStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ project, rooms, items, updateProject, addRoom, updateRoom, deleteRoom, addItem, updateItem, deleteItem }),
-    [project, rooms, items, updateProject, addRoom, updateRoom, deleteRoom, addItem, updateItem, deleteItem]
+    () => ({ project, rooms, items, updateProject, convertCurrency, addRoom, updateRoom, deleteRoom, addItem, updateItem, deleteItem }),
+    [project, rooms, items, updateProject, convertCurrency, addRoom, updateRoom, deleteRoom, addItem, updateItem, deleteItem]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

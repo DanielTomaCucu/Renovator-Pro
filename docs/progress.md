@@ -13,6 +13,7 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | Funcție | Fișier / Locație | Ce face | Folosită în |
 |---|---|---|---|
 | `formatMoney(value, currency?)` | `shared/functions/money.ts` | formatare Intl ro-RO, 2 zecimale, implicit `Currency.EUR` | peste tot unde se afișează bani |
+| `convertAmount(value, from, to, rate)` | `shared/functions/currency.ts` | conversie pură a unei sume între monede (EUR→RON ×rate; RON→EUR ÷rate; rotunjire 2 zecimale). OGLINDĂ a `CurrencyConverter.java` — sursa de adevăr e backend-ul | DOAR `store.tsx` (`MockStoreProvider.convertCurrency`, demo offline) |
 | `itemTotal(item)` | `shared/functions/items.ts` | cantitate × preț unitar | `elemente`, `centralizator`, `analiza`, intern în `items.ts`/`charts.ts` |
 | `totalEstimated(items)` | `shared/functions/items.ts` | suma tuturor elementelor, indiferent de status | `elemente`, `centralizator`, `analiza` |
 | `totalSpent(items)` | `shared/functions/items.ts` | suma elementelor cu status `ItemStatus.Cumparat` | `elemente`, `centralizator`, `analiza`, intern în `budget.ts` |
@@ -859,3 +860,24 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 - **Task 7.2 (parțial)**: `.github/workflows/ci.yml` — job `frontend` (lint+tsc+build) + job `backend` (`mvn verify`, Testcontainers pe runner-ul GitHub cu Docker preinstalat), pe fiecare PR + push pe `main`.
 
 **Branch:** `021-faza7-ci-deploy`.
+
+### 2026-07-15 — Audit Problema 1: conversie REALĂ de monedă EUR↔RON (nu doar schimbare de simbol)
+**De ce:** din `docs/audit-remedieri.md` (Problema 1, severitate mare, cerută explicit de user): comutarea RON↔EUR din Setări schimba doar eticheta monedei, nu convertea valorile; câmpul „Curs Valutar" era pur decorativ. Abordarea aleasă: conversie reală, persistată, în backend (sursa de adevăr), ca să nu dublăm logica.
+
+- **Contract-first** (`docs/api-contract.md`): endpoint nou `POST /api/projects/{id}/currency`, body `{ targetCurrency, exchangeRate }` (rate = câți RON per 1 EUR). Documentat caveat-ul distructiv + bifat item-ul „curs valutar" din „De decis".
+- **Backend** (arhitectură hexagonală, `BigDecimal`/`HALF_UP`):
+  - `domain/service/CurrencyConverter.java` (nou) — funcție pură de conversie (EUR→RON ×rate; RON→EUR ÷rate; aceeași monedă = identitate; rate ≤ 0 respins). Sursa unică de adevăr a regulii.
+  - `application/port/in/ConvertProjectCurrencyUseCase.java` + `application/usecase/ConvertProjectCurrencyService.java` (noi) — o singură tranzacție care convertește `project.totalBudget` + toate `room.allocatedBudget` + toate `item.unitPrice`, apoi setează `project.currency = target`. Câmpurile tehnice ale camerelor și restul câmpurilor elementelor rămân neatinse (reconstruite via builder/constructor).
+  - `adapter/in/web/dto/ConvertCurrencyRequest.java` (nou, `@NotNull` + `@Positive` pe rate), endpoint în `ProjectController`, mapare `toConvertCommand` în `ProjectDtoMapper` (String label → `Currency` via `DtoConversionSupport`).
+  - Teste: `CurrencyConverterTest` (6, regula pură + rotunjire + dus-întors), `UseCasesTest.convertCurrency...` (end-to-end pe fake repos), 3 teste noi în `ProjectControllerTest` (happy path + rate 0 → 400 + rate lipsă → 400). **Total: 77 teste, toate verzi.**
+- **Frontend:**
+  - `shared/functions/currency.ts` (nou) — `convertAmount`, OGLINDA `CurrencyConverter.java`, folosită DOAR de store-ul mock offline (demo). Adăugat în barrel.
+  - `RenovationStore` + `store.tsx`: metodă nouă `convertCurrency(target, rate)`. `ApiStoreProvider` apelează endpoint-ul și **reîncarcă snapshot-ul complet** (project+rooms+items) ca toate paginile/headerele să reflecte sumele convertite. `MockStoreProvider` aplică conversia local (3 updatere pure, fără setState imbricat — sigur în StrictMode).
+  - `app/setari/page.tsx`: butonul Salvează apelează acum `convertCurrency` când moneda diferă (nu `updateProject({currency})`); câmpul de curs apare ori de câte ori e nevoie de conversie (ambele direcții), cu hint direcțional; validare rate > 0 cu mesaj de eroare; butonul devine „Convertește și Salvează"; textul „De Reținut" rescris să descrie corect conversia + caveat-ul distructiv.
+- **Verificat efectiv** (nu doar compilat): `mvn test` (77 verzi), `npx tsc --noEmit` + `npm run lint` (0 erori, 1 warning preexistent) + `npm run build` (succes). **Testat end-to-end pe backend-ul real local** (Postgres via docker compose + `spring-boot:run` profil dev): `curl` conversie EUR→RON @5 → project 1000→5000, room 500→2500, item 100→500; invers RON→EUR @5 → revine la original; validări 400 (rate 0/negativ/lipsă, monedă invalidă) + 404 (proiect inexistent). **Testat în browser** (`/setari`): selectat RON → apărut câmp curs + buton „Convertește și Salvează"; setat 5, convertit → moneda proiectului RON, valorile scrise prin backend (confirmat `curl`), iar `/centralizator` afișează „1.000 RON" (Robinet 2×500 RON). Datele de test curățate, proiectul readus la starea seed.
+
+**Nefăcut aici:** conversia nu are sursă automată de curs (userul introduce rata manual, ca în cerință). Restul problemelor din audit (2–8) rămân neatinse.
+
+**Fișiere atinse:** `docs/api-contract.md`, `docs/progress.md`; backend nou: `domain/service/CurrencyConverter.java`, `application/port/in/ConvertProjectCurrencyUseCase.java`, `application/usecase/ConvertProjectCurrencyService.java`, `adapter/in/web/dto/ConvertCurrencyRequest.java`; backend modificat: `adapter/in/web/ProjectController.java`, `adapter/in/web/mapper/ProjectDtoMapper.java`; teste: `domain/service/CurrencyConverterTest.java` (nou), `application/usecase/UseCasesTest.java`, `adapter/in/web/ProjectControllerTest.java`; frontend nou: `shared/functions/currency.ts`; frontend modificat: `shared/functions/index.ts`, `shared/types/RenovationStore.ts`, `shared/store.tsx`, `app/setari/page.tsx`.
+
+**Branch:** `023-conversie-moneda-reala`.

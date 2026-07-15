@@ -77,6 +77,35 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 | `addItem(item)` | `/api/rooms/{roomId}/items` | `POST` | Body: `Omit<Item, "id">`. Response: `Item` complet |
 | `updateItem(id, patch)` | `/api/items/{id}` | `PATCH` | Body: `Partial<Item>` |
 | `deleteItem(id)` | `/api/items/{id}` | `DELETE` | — |
+| `convertCurrency(target, rate)` | `/api/projects/{id}/currency` | `POST` | Conversie reală a TUTUROR sumelor proiectului — vezi secțiunea dedicată mai jos |
+
+## Conversie monedă — `POST /api/projects/{id}/currency`
+
+Schimbarea monedei unui proiect **convertește efectiv** toate sumele stocate (nu doar schimbă simbolul).
+Operația e o singură tranzacție pe backend care recalculează, cu factorul potrivit:
+`project.totalBudget`, toate `room.allocatedBudget` și toate `item.unitPrice` ale proiectului, apoi setează
+`project.currency = targetCurrency`. Formula pură trăiește în `domain/service/CurrencyConverter` (nu se
+reimplementează în frontend — regula de aur #2 anti-duplicare; modul mock offline o oglindește doar pt. demo).
+
+**Request body:**
+```ts
+{
+  targetCurrency: Currency; // "EUR" | "RON" — moneda țintă
+  exchangeRate: number;     // curs: câți RON per 1 EUR (strict pozitiv). EUR→RON: sumă × rate; RON→EUR: sumă ÷ rate
+}
+```
+
+**Response:** `Project` complet, cu `currency` = target și `totalBudget` deja convertit. Frontend-ul reîncarcă
+apoi snapshot-ul complet (project + rooms + items), fiindcă și `allocatedBudget`/`unitPrice` s-au schimbat.
+
+**Rotunjire:** `BigDecimal`, `RoundingMode.HALF_UP`, 2 zecimale (invariantul `Money`). Conversia în aceeași
+monedă (`targetCurrency === currency` curent) e identitate — nicio valoare nu se schimbă.
+
+**Caveat (de reținut la afișare/UX):** conversia e **distructivă** — dus-întors repetat (RON→EUR→RON) pierde
+precizie prin rotunjire. Alternativa non-distructivă (stocare într-o monedă de bază + conversie la afișare) a
+fost respinsă intenționat: userul a cerut explicit ca schimbarea monedei să **modifice** valorile stocate.
+
+**Erori:** `exchangeRate` absent/≤0 sau `targetCurrency` invalid → `400`; proiect inexistent → `404`.
 
 ## Agregări server-side (de evaluat)
 
@@ -92,4 +121,4 @@ ajunge să aibă multe elemente/camere per proiect, evaluează endpoint-uri de a
 - [ ] Autentificare (JWT? sesiune?) și cine are acces la un proiect
 - [ ] Paginare pe `/items` dacă un proiect crește mult
 - [ ] Upload real de imagini (`imageUrl`) — azi e doar text liber, un URL extern
-- [ ] Rate/curs valutar pentru conversia EUR↔RON (backlog frontend, item 6 din `CLAUDE.md`)
+- [x] Rate/curs valutar pentru conversia EUR↔RON (backlog frontend, item 6 din `CLAUDE.md`) — **rezolvat**: cursul e furnizat de user la conversie (`POST /api/projects/{id}/currency`, câmp `exchangeRate`); nu există (încă) sursă automată de curs.

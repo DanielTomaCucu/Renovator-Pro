@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ro.renovatorpro.application.port.in.AddItemUseCase;
 import ro.renovatorpro.application.port.in.AddRoomUseCase;
+import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
 import ro.renovatorpro.application.port.in.DeleteItemUseCase;
 import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
 import ro.renovatorpro.application.port.in.GetItemsUseCase;
@@ -51,6 +52,7 @@ class UseCasesTest {
     private AddItemUseCase addItem;
     private UpdateItemUseCase updateItem;
     private DeleteItemUseCase deleteItem;
+    private ConvertProjectCurrencyUseCase convertCurrency;
 
     @BeforeEach
     void setUp() {
@@ -71,6 +73,7 @@ class UseCasesTest {
         addItem = new AddItemService(itemRepository, idGenerator);
         updateItem = new UpdateItemService(itemRepository);
         deleteItem = new DeleteItemService(itemRepository);
+        convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository);
     }
 
     @Test
@@ -175,5 +178,23 @@ class UseCasesTest {
 
         deleteItem.execute(USER, item.id());
         assertThat(itemRepository.findById(item.id())).isEmpty();
+    }
+
+    @Test
+    void convertCurrencyConvertesteTotBugetulCamereleSiElementele() {
+        // Proiect seedat: EUR, buget 1000. Adăugăm o cameră (buget 500) și un element (preț 100 EUR).
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
+
+        // Conversie EUR → RON la 5.00: toate sumele × 5.
+        Project result = convertCurrency.execute(USER, PROJECT_ID,
+                new ConvertProjectCurrencyUseCase.Command(Currency.RON, new BigDecimal("5.00")));
+
+        assertThat(result.currency()).isEqualTo(Currency.RON);
+        assertThat(result.totalBudget().amount()).isEqualByComparingTo("5000.00");
+        assertThat(projectRepository.findById(PROJECT_ID).orElseThrow().currency()).isEqualTo(Currency.RON);
+        assertThat(roomRepository.findById(room.id()).orElseThrow().allocatedBudget().amount()).isEqualByComparingTo("2500.00");
+        assertThat(itemRepository.findById(item.id()).orElseThrow().unitPrice().amount()).isEqualByComparingTo("500.00");
     }
 }
