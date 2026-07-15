@@ -734,3 +734,14 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `src/components/DashboardSummaryCard.tsx` (rescris), `docs/progress.md`.
 
 **Branch:** `009-sync-configurare-elemente-cumparat`.
+
+### 2026-07-14 — Fix poză element: disponibilă pe tabletă + thumbnail lipsă pe mobil
+**De ce:** userul a semnalat că poza de element (capturată cu camera) se putea adăuga doar pe mobil, nu și pe tabletă; și că poza „nu se salvează" — investigație (agent Explore) a arătat că `imageUrl` chiar ajungea corect pe `Item` (`qaImage` → `quickAdd` → `addItem`, nimic pierdut în `store.tsx`), dar rândul de element din lista **mobilă** (`/elemente`, secțiunea `md:hidden`) nu avea deloc un `<img>` care să afișeze `item.imageUrl` — spre deosebire de tabelul desktop, care îl afișa deja. De-asta părea „nesalvată": userul o făcea pe mobil, dar nu o vedea nicăieri.
+
+- **Poză disponibilă pe tabletă**: butonul „Fă o poză" (input `capture="environment"`) exista doar în formularul mobil (`md:hidden`). Adăugat același bloc (adaptat la tema închisă a formularului desktop) și în formularul „Adăugare Rapidă" de pe secțiunea desktop (`hidden ... md:block`) — de la 768px în sus (tabletă inclusiv, per convenția unică de breakpoint a proiectului), userul are acum acces la capture foto.
+- **Fix afișare pe mobil**: rândul de element din acordionul de cameră mobil (`roomItems.map` din secțiunea `md:hidden`) primește acum un thumbnail `item.imageUrl` (40×40px, cadru + colț rotunjit), identic ca logică cu cel din tabelul desktop (`item.imageUrl && <img ... />`).
+- Verificat: `npx tsc --noEmit` → 0 erori, `npm run lint` → 0 erori, `npm run build` → succes. Testat efectiv (nu doar citit codul): la 820px (tabletă) — capturat o poză de test prin formularul desktop, salvat, elementul apare cu thumbnail în tabel; la 375px (mobil) — capturat o poză prin formularul mobil, salvat, elementul apare cu thumbnail în lista de cameră (unde înainte nu apărea deloc).
+
+**Fișiere atinse:** `src/app/elemente/page.tsx`, `docs/progress.md`.
+
+**Branch:** `011-fix-poza-element-tableta-mobil`.
