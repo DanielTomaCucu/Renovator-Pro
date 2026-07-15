@@ -1,0 +1,6 @@
+# Suprascrie proprietăți fără fallback din application.yml (prod), doar pentru teste — ex.
+# app.cors.allowed-origins (APP_CORS_ALLOWED_ORIGINS), care intenționat NU are valoare implicită
+# pe profilul prod. Testele nu pornesc pe profilul dev, deci au nevoie de propria valoare.
+app:
+  cors:
+    allowed-origins: http://localhost:3001
