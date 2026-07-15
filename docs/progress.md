@@ -775,3 +775,17 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `backend/**` (nou: pom.xml, docker-compose.yml, .env.example, README.md, `src/main/java/ro/renovatorpro/**`, `src/main/resources/{application.yml,application-dev.yml,db/migration/V1__initial_schema.sql}`, `src/test/java/ro/renovatorpro/**`), `docs/backend-blueprint.md` (tabel stadiu), `docs/progress.md`.
 
 **Branch:** `013-faza1-schelet-backend-domeniu`.
+
+### 2026-07-15 — Faza 2 backend: reguli de business în domain/service
+**De ce:** task-urile 2.1–2.2 din `docs/backend-blueprint.md` (Faza 2), condiție necesară pentru Faza 3 (Task 3.2, `UpdateRoomService` invocă `AutoItemReconciler`). Portează regulile de business din `frontend/src/shared/functions/` în domeniul Java, fidel — nu reinventat.
+
+- **Task 2.1 — `BudgetCalculator`** (port din `items.ts` + `budget.ts` + agregările din `charts.ts`): `itemTotal`, `totalEstimated`, `totalSpent` (**doar `ItemStatus.CUMPARAT`** — regula critică), `boughtCount`, `purchaseProgress`, `itemsForRoom`, `roomSubtotal`, `roomSpent`, `budgetRemaining` (întoarce `BigDecimal`, nu `Money` — poate fi negativ la depășire de buget), `budgetEfficiency`, `costPerRoom`, `costPerCategory`. **`donutSegments` NU a fost portat** — e geometrie SVG pentru randare (stroke-dasharray), concern de prezentare, nu regulă de business; rămâne exclusiv client-side.
+- **Task 2.2 — `RoomDimensionsCalculator`** (port din `dimensions.ts`): toate formulele de necesar de material cu waste ratio propriu fiecărei categorii (`floorMaterialNeeded` 10%, `baseboardLength` 5%, `wallTilingArea` 10%, `wallFinishArea` — Vopsea 10%/Tapet 15%, `windowTrimLength` 5%), inclusiv regula delicată „la Gresie plinta e inclusă în necesarul de pardoseală" (`baseboardTileArea`).
+- **Task 2.2 — `AutoItemReconciler`** (port din `auto-items.ts`): `generateAutoItems` (produce `ItemDraft`-uri fără id, oglindă a `Omit<Item,"id">`) + `reconcile` (fostul `syncAutoItemsForRoom`) — elementele existente `origin: Din Configurare` păstrează `id`/`unitPrice`/`status`/`source`, doar `name`/`quantity` se recalculează; orfanele (măsurătoare ștearsă) se elimină; elementele `origin: Manual` nu sunt niciodată atinse, indiferent de cameră.
+- Verificat: `mvn verify` → **BUILD SUCCESS**, 37 teste (25 noi față de Faza 1), acoperă fiecare ramură de decizie documentată în `api-contract.md` §Room/§Item (Gresie vs Parchet/Mochetă, Vopsea vs Tapet, camere fără nicio măsurătoare, elemente pe alte camere neatinse).
+
+**Nefăcut aici (conform blueprint):** fără use cases (Faza 3 — acolo `AutoItemReconciler` e invocat efectiv din `UpdateRoomService`), fără API (Faza 4), fără auth (Faza 5).
+
+**Fișiere atinse:** `backend/src/main/java/ro/renovatorpro/domain/service/{BudgetCalculator,RoomDimensionsCalculator,AutoItemReconciler,package-info}.java`, `backend/src/test/java/ro/renovatorpro/domain/service/*Test.java`, `docs/backend-blueprint.md` (tabel stadiu), `docs/progress.md`.
+
+**Branch:** `016-faza2-domain-service-business-logic`.
