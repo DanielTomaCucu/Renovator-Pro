@@ -1,5 +1,6 @@
 package ro.renovatorpro.application.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.UpdateItemUseCase;
@@ -8,13 +9,10 @@ import ro.renovatorpro.domain.exception.ItemNotFoundException;
 import ro.renovatorpro.domain.model.Item;
 
 @Service
+@RequiredArgsConstructor
 public class UpdateItemService implements UpdateItemUseCase {
 
     private final ItemRepository itemRepository;
-
-    public UpdateItemService(ItemRepository itemRepository) {
-        this.itemRepository = itemRepository;
-    }
 
     @Override
     @Transactional

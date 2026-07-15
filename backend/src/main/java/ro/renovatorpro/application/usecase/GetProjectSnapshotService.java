@@ -1,5 +1,6 @@
 package ro.renovatorpro.application.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.GetProjectSnapshotUseCase;
@@ -14,17 +15,12 @@ import ro.renovatorpro.domain.model.Room;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class GetProjectSnapshotService implements GetProjectSnapshotUseCase {
 
     private final ProjectRepository projectRepository;
     private final RoomRepository roomRepository;
     private final ItemRepository itemRepository;
-
-    public GetProjectSnapshotService(ProjectRepository projectRepository, RoomRepository roomRepository, ItemRepository itemRepository) {
-        this.projectRepository = projectRepository;
-        this.roomRepository = roomRepository;
-        this.itemRepository = itemRepository;
-    }
 
     @Override
     @Transactional(readOnly = true)
