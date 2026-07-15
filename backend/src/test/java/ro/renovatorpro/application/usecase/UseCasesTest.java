@@ -6,6 +6,7 @@ import ro.renovatorpro.application.port.in.AddItemUseCase;
 import ro.renovatorpro.application.port.in.AddRoomUseCase;
 import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
 import ro.renovatorpro.application.port.in.DeleteItemUseCase;
+import ro.renovatorpro.application.port.in.GetProjectSummaryUseCase;
 import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
 import ro.renovatorpro.application.port.in.GetItemsUseCase;
 import ro.renovatorpro.application.port.in.GetProjectUseCase;
@@ -53,6 +54,7 @@ class UseCasesTest {
     private UpdateItemUseCase updateItem;
     private DeleteItemUseCase deleteItem;
     private ConvertProjectCurrencyUseCase convertCurrency;
+    private GetProjectSummaryUseCase getSummary;
 
     @BeforeEach
     void setUp() {
@@ -74,6 +76,7 @@ class UseCasesTest {
         updateItem = new UpdateItemService(itemRepository);
         deleteItem = new DeleteItemService(itemRepository);
         convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository);
+        getSummary = new GetProjectSummaryService(projectRepository, roomRepository, itemRepository);
     }
 
     @Test
@@ -196,5 +199,27 @@ class UseCasesTest {
         assertThat(projectRepository.findById(PROJECT_ID).orElseThrow().currency()).isEqualTo(Currency.RON);
         assertThat(roomRepository.findById(room.id()).orElseThrow().allocatedBudget().amount()).isEqualByComparingTo("2500.00");
         assertThat(itemRepository.findById(item.id()).orElseThrow().unitPrice().amount()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void summaryAgregaTotalurileCumpparatulSiDistributiile() {
+        Room baie = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        // 2 × 100 = 200 estimat, Cumparat → cheltuit
+        addItem.execute(USER, new AddItemUseCase.Command(baie.id(), "Gresie", MaterialType.GRESIE, "",
+                ItemStatus.CUMPARAT, BigDecimal.valueOf(2), Money.of(100), null, null, ItemOrigin.MANUAL));
+        // 1 × 300 = 300 estimat, NEcumpărat → nu intră la cheltuit
+        addItem.execute(USER, new AddItemUseCase.Command(baie.id(), "Robinet", MaterialType.SANITARE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(300), null, null, ItemOrigin.MANUAL));
+
+        GetProjectSummaryUseCase.ProjectSummary s = getSummary.execute(USER, PROJECT_ID);
+
+        assertThat(s.totalEstimated().amount()).isEqualByComparingTo("500.00"); // 200 + 300
+        assertThat(s.totalSpent().amount()).isEqualByComparingTo("200.00");     // doar Cumparat
+        assertThat(s.budgetRemaining()).isEqualByComparingTo("800.00");         // 1000 buget − 200 cheltuit
+        assertThat(s.boughtCount()).isEqualTo(1);
+        assertThat(s.purchaseProgress()).isEqualTo(50);                          // 1 din 2 elemente
+        assertThat(s.costPerRoom()).singleElement()
+                .satisfies(rc -> assertThat(rc.total().amount()).isEqualByComparingTo("500.00"));
+        assertThat(s.costPerCategory()).containsKey(MaterialType.GRESIE).containsKey(MaterialType.SANITARE);
     }
 }

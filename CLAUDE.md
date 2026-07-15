@@ -49,9 +49,8 @@ frontend/src/
       index.ts            — barrel de re-export; importă din „@/shared/types", nu din fișierele individuale
     functions/            — logica de business partajată, împărțită pe domeniu (nu un fișier gigant)
       money.ts, items.ts, budget.ts, charts.ts, index.ts
-    store.tsx             — StoreProvider (React context, DOAR CRUD, fără calcule); conectat la backend real via api-client.ts (NEXT_PUBLIC_USE_MOCK_DATA=true → fallback in-memory pe mock-data.ts)
+    store.tsx             — StoreProvider (React context, DOAR CRUD + `summary`, fără calcule); conectat exclusiv la backend real via api-client.ts. Expune `summary` (agregările server-side), reîncărcat după fiecare mutație
     api-client.ts          — fetch wrapper spre backend (NEXT_PUBLIC_API_URL) + DEFAULT_PROJECT_ID
-    mock-data.ts           — date de test (folosite doar în modul mock)
     icons.ts              — mapare centralizată nume-Material-Symbol (vezi secțiunea Iconițe)
   components/             — componente UI reutilizate în ≥2 pagini (Sidebar, StatCard, StatusChip, Drawer, ItemFormDrawer, RoomFormDrawer, ConfirmDialog, forms)
   app/
@@ -116,18 +115,22 @@ Aplicația asta va exista în minim 3 locuri (web Next.js, backend Spring Boot, 
 | Funcție | Fișier | Ce face |
 |---|---|---|
 | `formatMoney(value, currency?)` | `money.ts` | formatare Intl ro-RO, 2 zecimale, implicit `Currency.EUR` |
-| `itemTotal(item)` | `items.ts` | cantitate × preț unitar |
-| `totalEstimated(items)` | `items.ts` | suma tuturor elementelor, indiferent de status |
-| `totalSpent(items)` | `items.ts` | suma elementelor cu status `ItemStatus.Cumparat` — **doar Cumparat contează la cheltuit** |
-| `boughtCount(items)` | `items.ts` | număr elemente Cumparat |
-| `purchaseProgress(items)` | `items.ts` | % achiziții finalizate |
+| `itemTotal(item)` | `items.ts` | cantitate × preț unitar (randare per-rând) |
+| `totalEstimated(items)` | `items.ts` | suma unei liste (folosită pt. subtotaluri ad-hoc; totalul de proiect vine din `summary`) |
+| `totalSpent(items)` | `items.ts` | suma elementelor `ItemStatus.Cumparat` — **doar Cumparat contează la cheltuit** (folosită per-cameră) |
+| `boughtCount(items)` | `items.ts` | număr elemente Cumparat (per-cameră) |
 | `itemsForRoom(items, roomId)` | `items.ts` | filtrare după cameră |
-| `roomSubtotal(items, roomId)` | `items.ts` | total estimat al unei camere |
-| `roomSpent(items, roomId)` | `items.ts` | cheltuit efectiv într-o cameră |
-| `budgetRemaining(totalBudget, items)` | `budget.ts` | buget total − cheltuit |
-| `costPerRoom(rooms, items)` | `charts.ts` | distribuție cost pe cameră, sortată desc |
-| `costPerCategory(items)` | `charts.ts` | agregare {total, spent} per `MaterialType` |
-| `donutSegments(data)` | `charts.ts` | transformă distribuție în segmente SVG cumulative (`DonutSegment[]`) |
+| `roomSubtotal(items, roomId)` | `items.ts` | total estimat al unei camere (randare per-cameră) |
+| `roomSpent(items, roomId)` | `items.ts` | cheltuit efectiv într-o cameră (randare per-cameră) |
+| `budgetEfficiency(estimated, spent)` | `budget.ts` | % din estimat efectiv cheltuit (rație de prezentare peste totalurile din `summary`) |
+| `donutSegments(data)` | `charts.ts` | transformă distribuție în segmente SVG cumulative (`DonutSegment[]`) — geometrie de prezentare |
+| `computeRoomDimensions(room)` | `dimensions.ts` | breakdown necesar material (oglinda backend); PREVIEW client la editare + fallback |
+
+> **⚠️ Agregările de dashboard NU se mai calculează client-side** (Problema 2 din audit): `totalEstimated`/`totalSpent`/
+> `budgetRemaining`/`purchaseProgress`/`boughtCount`/`costPerRoom`/`costPerCategory` de proiect + sumarul tehnic vin din
+> `store.summary` (`GET /api/projects/{id}/summary`, `BudgetCalculator`/`RoomDimensionsCalculator` server-side). Funcțiile
+> `costPerRoom`/`costPerCategory`/`budgetRemaining`/`purchaseProgress`/`projectTechnicalSummary` au fost ȘTERSE din frontend.
+> Nu le reintroduce — consumă `useStore().summary`.
 
 Lista completă + locuri de utilizare exacte: `docs/progress.md` → „Registru de funcții” (actualizeaz-o mereu la zi).
 

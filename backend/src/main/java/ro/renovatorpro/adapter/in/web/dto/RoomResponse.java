@@ -20,6 +20,8 @@ public record RoomResponse(
         String wallShape,
         WallTilingDto wallTiling,
         WallFinishDto wallFinish,
-        Map<String, RoomWindowDto> windows
+        Map<String, RoomWindowDto> windows,
+        /** Necesarul de material calculat server-side (sursa de adevăr) — vezi {@link RoomDimensionsDto}. */
+        RoomDimensionsDto dimensions
 ) {
 }

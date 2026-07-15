@@ -8,20 +8,21 @@ import DashboardSummaryCard, {
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
 import { useStore } from "@/shared/store";
-import { formatMoney, projectTechnicalSummary } from "@/shared/functions";
+import { formatMoney } from "@/shared/functions";
 import { TECHNICAL_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
 import RoomTechnicalCard from "./RoomTechnicalCard";
 
 export default function ConfigurarePage() {
-  const { project, rooms, updateProject } = useStore();
+  const { project, rooms, summary, updateProject } = useStore();
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const summary = projectTechnicalSummary(rooms);
-  const progressPct = Math.round(summary.configuredRoomsRatio * 100);
+  // Sumarul tehnic vine din agregarea server-side (Problema 2 din audit), nu recalculat client-side.
+  const technical = summary.technical;
+  const progressPct = Math.round(technical.configuredRoomsRatio * 100);
   const status =
     progressPct === 0 ? "Neînceput" : progressPct === 100 ? "Finalizat" : "În Lucru";
   // Suprafață utilă afișată: valoarea manuală a proiectului dacă există, altfel suma camerelor configurate.
-  const displayedArea = project.totalArea ?? summary.totalFloorArea;
+  const displayedArea = project.totalArea ?? technical.totalFloorArea;
 
   // Import dinamic — @react-pdf/renderer e destul de greu, nu are rost în bundle-ul inițial al paginii,
   // doar la apăsarea efectivă a butonului de export.
@@ -33,7 +34,7 @@ export default function ConfigurarePage() {
         import("./ApartmentPdfDocument"),
       ]);
       const blob = await pdf(
-        <ApartmentPdfDocument project={project} rooms={rooms} />
+        <ApartmentPdfDocument project={project} rooms={rooms} technical={technical} />
       ).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");

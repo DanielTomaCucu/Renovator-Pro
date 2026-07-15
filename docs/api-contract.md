@@ -78,6 +78,7 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 | `updateItem(id, patch)` | `/api/items/{id}` | `PATCH` | Body: `Partial<Item>` |
 | `deleteItem(id)` | `/api/items/{id}` | `DELETE` | — |
 | `convertCurrency(target, rate)` | `/api/projects/{id}/currency` | `POST` | Conversie reală a TUTUROR sumelor proiectului — vezi secțiunea dedicată mai jos |
+| `summary` (store) | `/api/projects/{id}/summary` | `GET` | Agregările calculate server-side — vezi secțiunea „Agregări server-side" |
 
 ## Conversie monedă — `POST /api/projects/{id}/currency`
 
@@ -107,13 +108,46 @@ fost respinsă intenționat: userul a cerut explicit ca schimbarea monedei să *
 
 **Erori:** `exchangeRate` absent/≤0 sau `targetCurrency` invalid → `400`; proiect inexistent → `404`.
 
-## Agregări server-side (de evaluat)
+## Agregări server-side — `GET /api/projects/{id}/summary`
 
-Funcțiile din `src/shared/functions/` (`totalSpent`, `costPerRoom`, `costPerCategory` etc.) rulează azi
-client-side pe toată colecția de `items`. La scară mică rămân client-side fără probleme. Dacă proiectul
-ajunge să aibă multe elemente/camere per proiect, evaluează endpoint-uri de agregare dedicate (ex:
-`GET /api/projects/{id}/summary` returnând direct `{ totalEstimated, totalSpent, purchaseProgress, ... }`)
-— **dar formula rămâne cea din `shared/functions/`, doar mutată server-side**, nu reinventată.
+**Implementat (Problema 2 din audit).** Sursa unică de adevăr pentru totalurile pe care paginile le afișau
+recalculând client-side. Toate formulele vin din `BudgetCalculator` / `RoomDimensionsCalculator` (aceleași
+ca în `shared/functions/`), doar mutate server-side — NU reinventate. Store-ul frontend îl reîncarcă după
+FIECARE mutație (add/update/delete item/room, update/convert project), ca headerele/graficele să fie mereu la zi.
+
+**Response** (oglinda TS: `src/shared/types/ProjectSummary.ts`):
+```ts
+{
+  totalEstimated: number;
+  totalSpent: number;      // doar ItemStatus.Cumparat
+  budgetRemaining: number; // totalBudget − totalSpent (poate fi negativ)
+  purchaseProgress: number;// % întregi 0–100
+  boughtCount: number;
+  costPerRoom: { name: string; total: number }[];            // sortat desc, fără camere goale
+  costPerCategory: { materialType: MaterialType; total: number; spent: number }[]; // sortat desc
+  technical: { totalFloorArea: number; configuredRoomsRatio: number }; // projectTechnicalSummary
+}
+```
+
+Consumat de: `/analiza` (KPI + donut + progress bars), `/centralizator` (KPI), `/elemente` (KPI), `/configurare`
+(card „Sumar Tehnic Global" din `technical`). Calculele per-RÂND/per-cameră de detaliu (`itemTotal`, `roomSubtotal`,
+`roomSpent`, `itemsForRoom`) rămân client-side — sunt randare de tabel, nu agregat de dashboard.
+
+### `Room.dimensions` — necesarul de material, autoritativ
+
+Fiecare `RoomResponse` include acum un câmp `dimensions` (oglinda TS: `RoomDimensions.ts`), calculat server-side
+din `RoomDimensionsCalculator` (sursa de adevăr):
+```ts
+dimensions: {
+  hasFloorConfig: boolean;
+  floorMaterialNeeded: number; baseboardLength: number; baseboardTileArea: number;
+  wallTilingArea: number; paintArea: number; wallpaperArea: number;
+  windowTrimLength: number; totalDoorWidth: number;
+}
+```
+Frontend-ul păstrează un calcul client identic (`shared/functions/dimensions.ts` → `computeRoomDimensions`)
+DOAR ca preview instant la editarea unei camere (pe `draft`, înainte de salvare) și ca fallback; PDF-ul exportat
+folosește `room.dimensions` de la server. Formulele client oglindesc 1:1 backend-ul.
 
 ## De decis înainte de prima implementare
 

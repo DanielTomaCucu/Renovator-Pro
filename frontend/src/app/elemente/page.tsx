@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import StatusChip from "@/components/StatusChip";
 import OriginBadge from "@/components/OriginBadge";
 import DashboardSummaryCard, { SummaryProgressFooter } from "@/components/DashboardSummaryCard";
@@ -14,9 +14,7 @@ import {
   formatMoney,
   itemTotal,
   itemsForRoom,
-  purchaseProgress,
   roomSpent,
-  totalSpent,
 } from "@/shared/functions";
 import { ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
@@ -24,7 +22,7 @@ import { DeleteTarget } from "./DeleteTarget";
 import { ItemDrawerState } from "./ItemDrawerState";
 
 export default function ElementePage() {
-  const { project, rooms, items, addItem, deleteItem, deleteRoom } = useStore();
+  const { project, rooms, items, summary, addItem, deleteItem, deleteRoom } = useStore();
   const money = (value: number) => formatMoney(value, project.currency);
 
   const [itemDrawer, setItemDrawer] = useState<ItemDrawerState>({ open: false });
@@ -61,9 +59,9 @@ export default function ElementePage() {
     });
   }
 
-  const spent = useMemo(() => totalSpent(items), [items]);
-  const bought = boughtCount(items);
-  const progress = purchaseProgress(items);
+  // Totalurile de proiect vin din agregarea server-side (Problema 2 din audit); cele per cameră
+  // (roomSpent, boughtCount(roomItems)) rămân client-side — randare de detaliu, nu agregat de dashboard.
+  const { totalSpent: spent, boughtCount: bought, purchaseProgress: progress } = summary;
 
   function quickAdd(e: React.FormEvent) {
     e.preventDefault();

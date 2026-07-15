@@ -6,8 +6,8 @@ Monorepo cu aplicația de management al bugetului pentru renovări de locuințe.
 
 ```
 project-renovation/
-  frontend/    ← aplicația Next.js 16 (App Router, React 19, Tailwind 4) — UI cu date mock (client-side store)
-  backend/     ← Spring Boot + PostgreSQL, arhitectură hexagonală (NEÎNCEPUT — vezi blueprint-ul)
+  frontend/    ← aplicația Next.js 16 (App Router, React 19, Tailwind 4) — conectată la backend-ul real prin store.tsx
+  backend/     ← Spring Boot + PostgreSQL, arhitectură hexagonală (API REST complet — vezi blueprint-ul)
   docs/        ← documentație comună (contract API, jurnal de progres, blueprint backend)
 ```
 

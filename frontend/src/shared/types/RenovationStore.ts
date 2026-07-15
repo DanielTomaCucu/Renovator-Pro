@@ -1,13 +1,19 @@
 import { Currency } from "./Currency";
 import { Item } from "./Item";
 import { Project } from "./Project";
+import { ProjectSummary } from "./ProjectSummary";
 import { Room } from "./Room";
 
-/** Contractul stării globale a aplicației — implementat azi de StoreProvider (mock in-memory). */
+/** Contractul stării globale a aplicației — implementat de StoreProvider peste API-ul real. */
 export interface RenovationStore {
   project: Project;
   rooms: Room[];
   items: Item[];
+  /**
+   * Agregările calculate SERVER-SIDE (`GET /api/projects/{id}/summary`) — sursa de adevăr pentru totaluri,
+   * cost/cameră, cost/categorie și sumarul tehnic. Reîncărcat după FIECARE mutație (Problema 2 din audit).
+   */
+  summary: ProjectSummary;
   updateProject: (patch: Partial<Project>) => void;
   /**
    * Conversie REALĂ a monedei: recalculează toate sumele (buget proiect, buget alocat pe camere,

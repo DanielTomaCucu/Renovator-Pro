@@ -3,6 +3,7 @@ package ro.renovatorpro.adapter.in.web.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import ro.renovatorpro.adapter.in.web.dto.RoomCreateRequest;
+import ro.renovatorpro.adapter.in.web.dto.RoomDimensionsDto;
 import ro.renovatorpro.adapter.in.web.dto.RoomDoorDto;
 import ro.renovatorpro.adapter.in.web.dto.RoomResponse;
 import ro.renovatorpro.adapter.in.web.dto.RoomUpdateRequest;
@@ -15,7 +16,9 @@ import ro.renovatorpro.domain.model.Room;
 import ro.renovatorpro.domain.model.RoomDoor;
 import ro.renovatorpro.domain.model.RoomWindow;
 import ro.renovatorpro.domain.model.WallFinish;
+import ro.renovatorpro.domain.model.WallFinishType;
 import ro.renovatorpro.domain.model.WallTiling;
+import ro.renovatorpro.domain.service.RoomDimensionsCalculator;
 
 /**
  * {@code projectId} există doar pe {@link RoomResponse} — {@code domain.model.Room} nu-l cunoaște
@@ -25,7 +28,23 @@ import ro.renovatorpro.domain.model.WallTiling;
 public interface RoomDtoMapper {
 
     @Mapping(target = "projectId", source = "projectId")
+    @Mapping(target = "dimensions", expression = "java(toDimensions(room))")
     RoomResponse toResponse(Room room, String projectId);
+
+    /** Necesarul de material calculat server-side din {@link RoomDimensionsCalculator} — sursa de adevăr (Problema 2). */
+    default RoomDimensionsDto toDimensions(Room room) {
+        return new RoomDimensionsDto(
+                RoomDimensionsCalculator.hasFloorConfig(room),
+                RoomDimensionsCalculator.floorMaterialNeeded(room),
+                RoomDimensionsCalculator.baseboardLength(room),
+                RoomDimensionsCalculator.baseboardTileArea(room),
+                RoomDimensionsCalculator.wallTilingArea(room),
+                RoomDimensionsCalculator.wallFinishArea(room, WallFinishType.VOPSEA),
+                RoomDimensionsCalculator.wallFinishArea(room, WallFinishType.TAPET),
+                RoomDimensionsCalculator.windowTrimLength(room),
+                RoomDimensionsCalculator.totalDoorWidth(room)
+        );
+    }
 
     AddRoomUseCase.Command toAddCommand(RoomCreateRequest request);
 

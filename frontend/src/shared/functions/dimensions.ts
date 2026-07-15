@@ -1,4 +1,4 @@
-import { FlooringType, Room, Wall, WallFinishType } from "@/shared/types";
+import { FlooringType, Room, RoomDimensions, Wall, WallFinishType } from "@/shared/types";
 
 /** Pierdere estimată la tăiere/așezare — aplicată la pardoseală și la faianță. */
 const WASTE_RATIO_MATERIAL = 0.1;
@@ -126,15 +126,21 @@ export function wallFinishArea(room: Room, type: WallFinishType): number {
   return Math.max(0, grossArea - openings) * (1 + wasteRatio);
 }
 
-/** Sumar tehnic agregat pe tot proiectul — suprafață utilă totală + progres de configurare. */
-export function projectTechnicalSummary(rooms: Room[]): {
-  totalFloorArea: number;
-  configuredRoomsRatio: number;
-} {
-  const totalFloorArea = rooms.reduce((sum, r) => sum + (r.floorArea ?? 0), 0);
-  const configuredCount = rooms.filter(
-    (r) => hasFloorConfig(r) && !!r.doors && Object.keys(r.doors).length > 0 && !!r.perimeter
-  ).length;
-  const configuredRoomsRatio = rooms.length > 0 ? configuredCount / rooms.length : 0;
-  return { totalFloorArea, configuredRoomsRatio };
+/**
+ * Breakdown-ul complet de dimensiuni al unei camere — OGLINDĂ a `RoomDtoMapper.toDimensions` de pe backend
+ * (sursa de adevăr). Folosit ca PREVIEW instant la editarea unei camere (pe `draft`, înainte de salvare) și
+ * ca fallback când `room.dimensions` de la server lipsește. Aceleași formule ca funcțiile de mai sus.
+ */
+export function computeRoomDimensions(room: Room): RoomDimensions {
+  return {
+    hasFloorConfig: hasFloorConfig(room),
+    floorMaterialNeeded: floorMaterialNeeded(room),
+    baseboardLength: baseboardLength(room),
+    baseboardTileArea: baseboardTileArea(room),
+    wallTilingArea: wallTilingArea(room),
+    paintArea: wallFinishArea(room, WallFinishType.Vopsea),
+    wallpaperArea: wallFinishArea(room, WallFinishType.Tapet),
+    windowTrimLength: windowTrimLength(room),
+    totalDoorWidth: totalDoorWidth(room),
+  };
 }
