@@ -32,12 +32,15 @@ npx tsc --noEmit
 
 ## Backend
 
-Neimplementat încă. Planul complet de implementare (faze + task-uri, arhitectură hexagonală, securitate,
-schema PostgreSQL) e în **[docs/backend-blueprint.md](docs/backend-blueprint.md)**. Faza 0 (această restructurare
-în monorepo) e finalizată; Faza 1 (schelet Spring Boot) urmează.
+Spring Boot + PostgreSQL, arhitectură hexagonală. Fazele 0–4, 6, 7 finalizate (API REST complet, conectat la frontend,
+deployat pe Render + Supabase). **Faza 5 (autentificare) amânată intenționat** — se face ultima. Plan complet în
+**[docs/backend-blueprint.md](docs/backend-blueprint.md)**.
+
+Rulare locală: `cd backend && docker compose up -d && mvn spring-boot:run -Dspring-boot.run.profiles=dev`.
 
 ## Documentație
 
+- **[docs/audit-remedieri.md](docs/audit-remedieri.md)** — 🔴 probleme cunoscute + plan detaliat de remediere (de citit înainte de a lucra la fixuri).
 - **[docs/backend-blueprint.md](docs/backend-blueprint.md)** — blueprint-ul oficial al backend-ului (arhitect-șef → executori).
 - **[docs/api-contract.md](docs/api-contract.md)** — contractul API REST (sursă unică de adevăr pentru shape-uri).
 - **[docs/progress.md](docs/progress.md)** — jurnal cronologic de schimbări + registru de funcții.

@@ -855,6 +855,24 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 
 **Branch:** `021-faza7-ci-deploy`.
 
+### 2026-07-15 — Audit: probleme identificate + plan de remediere (`docs/audit-remedieri.md`)
+**De ce:** userul a cerut un audit al aplicației (front + back) după Faza 6/7 — ce merge, ce nu, ce trebuie schimbat — documentat detaliat pentru ca alt model să execute remedierile. Nu s-a modificat cod, doar s-a produs documentul.
+
+- **8 probleme documentate** în `docs/audit-remedieri.md`, fiecare cu simptom / ce e greșit + unde (fișiere+linii) / ce e corect deja / cum se remediază + ordine de implementare:
+  1. Schimbarea monedei nu convertește valorile (doar simbolul).
+  2. Logică de business duplicată frontend↔backend (dimensions/budget/charts/auto-items ↔ domain/service); recomandat endpoint `/summary` consumat din front.
+  3. Graficul „Evoluția Cheltuielilor" e hardcodat (SVG fals), nu date reale.
+  4. `Item` nu are timestamp → imposibil grafic temporal real (necesită `created_at`, migrare V3).
+  5. `project.totalBudget`/`title` needitabile în UI → buget 0 pe date reale, calcule de buget sparte.
+  6. PATCH cu `null`/`undefined` nu poate ȘTERGE câmpuri opționale (nu poți dezactiva placarea).
+  7. La activarea placării, `tileHeight`/`wallHeight` = 0 implicit → arie 0 → „pereții nu contează".
+  8. Header-ele sunt reactive, dar moștenesc bug-urile 1/2/5.
+- **Confirmat live (nu presupus):** backend-ul calculează corect datele de la pereți — la `PATCH` cu wallTiling generează `Faianță (2 pereți)` = 16.5mp corect. Problema „pereții nu contează" e frontend/UX, nu calcul backend.
+
+**Fișiere atinse:** `docs/audit-remedieri.md` (nou), `README.md`, `docs/progress.md`.
+
+**Branch:** `022-audit-probleme-remedieri`.
+
 ### 2026-07-15 — Audit Problema 1: conversie REALĂ de monedă EUR↔RON (nu doar schimbare de simbol)
 **De ce:** din `docs/audit-remedieri.md` (Problema 1, severitate mare, cerută explicit de user): comutarea RON↔EUR din Setări schimba doar eticheta monedei, nu convertea valorile; câmpul „Curs Valutar" era pur decorativ. Abordarea aleasă: conversie reală, persistată, în backend (sursa de adevăr), ca să nu dublăm logica.
 
