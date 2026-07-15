@@ -166,7 +166,7 @@ Enum-urile se stochează ca VARCHAR cu valorile string din TS (cu diacritice) �
 
 **Task 3.1 — Porturi + adapter de persistență JPA**
 - *Scop:* `port/out` (Project/Room/Item Repository) + implementările JPA cu entități separate și mapper.
-- *Pași:* entități `@Entity` în `adapter/out/persistence/entity` (JSONB prin `@JdbcTypeCode(SqlTypes.JSON)` pentru structurile per-perete), mapper explicit entity↔domain (manual, fără MapStruct la început — mai puțină magie), adapterele implementează porturile.
+- *Pași:* entități `@Entity` în `adapter/out/persistence/entity` (JSONB prin `@JdbcTypeCode(SqlTypes.JSON)` pentru structurile per-perete), mapper **MapStruct** entity↔domain (decizie revizuită cu userul — echipa nu folosește Lombok, dar MapStruct e acceptat: generează cod la compilare, nu reflecție runtime, deci nu contrazice spiritul „mai puțină magie"), adapterele implementează porturile.
 - *DoD:* teste Testcontainers pe fiecare adapter (CRUD + cascade la delete room); domeniul rămâne fără adnotări JPA.
 
 **Task 3.2 — Use case-urile CRUD**
@@ -244,8 +244,8 @@ Enum-urile se stochează ca VARCHAR cu valorile string din TS (cu diacritice) �
 |---|---|
 | 0 — Monorepo | ✅ mergeat (PR #12) |
 | 1 — Schelet backend | ✅ mergeat (PR #13) |
-| 2 — Business logic domeniu | 🟨 în review (PR deschis) |
-| 3 — Use cases + persistență | ⬜ |
+| 2 — Business logic domeniu | ✅ mergeat (PR #16) |
+| 3 — Use cases + persistență | 🟨 în review (PR deschis) |
 | 4 — API REST | ⬜ |
 | 5 — Auth & autorizare | ⬜ |
 | 6 — Integrare frontend | ⬜ |

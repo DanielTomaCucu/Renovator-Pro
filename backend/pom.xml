@@ -22,6 +22,7 @@
              Compilează cu release 21 chiar și pe un JDK mai nou instalat local. -->
         <java.version>21</java.version>
         <springdoc.version>2.7.0</springdoc.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
     </properties>
 
     <dependencies>
@@ -69,6 +70,14 @@
             <version>${springdoc.version}</version>
         </dependency>
 
+        <!-- Mapper entity JPA ↔ domeniu (adapter/out/persistence) și, ulterior, DTO ↔ domeniu (adapter/in/web).
+             Cod generat la compilare (nu reflecție runtime) — acceptat ca alternativă la Lombok. -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${mapstruct.version}</version>
+        </dependency>
+
         <!-- Teste -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -109,6 +118,19 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
         </plugins>
     </build>
