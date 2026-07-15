@@ -1,5 +1,6 @@
 package ro.renovatorpro.adapter.out.persistence;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ro.renovatorpro.adapter.out.persistence.mapper.ItemEntityMapper;
 import ro.renovatorpro.adapter.out.persistence.springdata.ItemJpaRepository;
@@ -10,15 +11,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class ItemRepositoryAdapter implements ItemRepository {
 
     private final ItemJpaRepository jpaRepository;
     private final ItemEntityMapper mapper;
-
-    public ItemRepositoryAdapter(ItemJpaRepository jpaRepository, ItemEntityMapper mapper) {
-        this.jpaRepository = jpaRepository;
-        this.mapper = mapper;
-    }
 
     @Override
     public Optional<Item> findById(String id) {

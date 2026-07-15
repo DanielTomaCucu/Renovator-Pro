@@ -804,3 +804,15 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `backend/pom.xml` (MapStruct), `backend/src/main/java/ro/renovatorpro/{adapter/out/persistence/**,adapter/out/id/**,application/port/**,application/usecase/**,domain/exception/*NotFoundException.java}`, `backend/src/main/resources/db/migration/{V1 amendat,V2 nou}`, `backend/src/test/java/ro/renovatorpro/{adapter/out/persistence/**,application/usecase/**}`, `docs/backend-blueprint.md` (tabel stadiu), `docs/progress.md`.
 
 **Branch:** `017-faza3-usecases-persistenta`.
+
+### 2026-07-15 — Backend: adoptare Lombok (entități JPA + injecție prin constructor)
+**De ce:** userul a cerut explicit adoptarea Lombok „în tot proiectul unde e necesar". Decizie revizuită față de blueprint (care inițial evita Lombok pt. mapper, cu MapStruct ca alternativă) — acum cele două coexistă: Lombok elimină boilerplate-ul de entități/constructori, MapStruct rămâne mapper-ul entity↔domeniu.
+
+- **Scop delimitat explicit**: Lombok se aplică DOAR în `adapter` (entitățile JPA: `@Getter`/`@Setter`/`@NoArgsConstructor`/`@AllArgsConstructor` unde exista deja constructor all-args) și `application` (`@RequiredArgsConstructor` pe cele 11 clase Spring cu injecție prin constructor — 8 use case services + 3 repository adapters). **Domeniul (`domain/model`, records + enums) rămâne neatins** — nu au nevoie de Lombok (record-urile deja generează accesori), și regula „domeniul fără nicio adnotare de framework" rămâne curată ca principiu, chiar dacă tehnic Lombok n-ar lăsa urmă la runtime (`scope=provided`).
+- **`pom.xml`**: dependință `org.projectlombok:lombok` (`provided`), `lombok-mapstruct-binding` + reordonarea `annotationProcessorPaths` (Lombok → binding → MapStruct — ordinea contează, Lombok trebuie să genereze getters/setters înainte ca MapStruct să le vadă).
+- **Fix compatibilitate JDK**: versiunea de Lombok gestionată implicit de `spring-boot-starter-parent` 3.4.1 (`1.18.36`) nu suportă JDK 25 (instalat local) — `java.lang.ExceptionInInitializerError: TypeTag :: UNKNOWN` la compilare. Suprascrisă explicit proprietatea `lombok.version` → `1.18.46`.
+- Verificat: `mvn verify` → **BUILD SUCCESS**, toate cele 52 de teste trec neschimbate (MapStruct generează mapper-ele corect peste entitățile cu accesori Lombok). Testat efectiv boot-ul complet: `mvn spring-boot:run -Pdev` → `Started RenovatorProApplication`, `/actuator/health` → `{"status":"UP"}`.
+
+**Fișiere atinse:** `backend/pom.xml`, cele 4 entități JPA (`UserEntity`, `ProjectEntity`, `RoomEntity`, `ItemEntity`), 8 use case services (`application/usecase/*.java`), 3 repository adapters (`ItemRepositoryAdapter`, `ProjectRepositoryAdapter`, `RoomRepositoryAdapter`), `docs/backend-blueprint.md` (§1 + nota Task 3.1), `docs/progress.md`.
+
+**Branch:** `018-adopta-lombok`.

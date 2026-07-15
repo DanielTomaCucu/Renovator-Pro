@@ -1,5 +1,6 @@
 package ro.renovatorpro.application.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.AddRoomUseCase;
@@ -8,15 +9,11 @@ import ro.renovatorpro.application.port.out.RoomRepository;
 import ro.renovatorpro.domain.model.Room;
 
 @Service
+@RequiredArgsConstructor
 public class AddRoomService implements AddRoomUseCase {
 
     private final RoomRepository roomRepository;
     private final IdGenerator idGenerator;
-
-    public AddRoomService(RoomRepository roomRepository, IdGenerator idGenerator) {
-        this.roomRepository = roomRepository;
-        this.idGenerator = idGenerator;
-    }
 
     @Override
     @Transactional

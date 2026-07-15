@@ -1,5 +1,6 @@
 package ro.renovatorpro.application.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.AddItemUseCase;
@@ -8,15 +9,11 @@ import ro.renovatorpro.application.port.out.ItemRepository;
 import ro.renovatorpro.domain.model.Item;
 
 @Service
+@RequiredArgsConstructor
 public class AddItemService implements AddItemUseCase {
 
     private final ItemRepository itemRepository;
     private final IdGenerator idGenerator;
-
-    public AddItemService(ItemRepository itemRepository, IdGenerator idGenerator) {
-        this.itemRepository = itemRepository;
-        this.idGenerator = idGenerator;
-    }
 
     @Override
     @Transactional

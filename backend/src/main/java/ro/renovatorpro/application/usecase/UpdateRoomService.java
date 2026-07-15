@@ -1,5 +1,6 @@
 package ro.renovatorpro.application.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.UpdateRoomUseCase;
@@ -15,17 +16,12 @@ import java.util.List;
 
 /** Vezi {@link UpdateRoomUseCase}: dacă patch-ul atinge orice câmp tehnic, reconciliază elementele „Din Configurare" ale camerei. */
 @Service
+@RequiredArgsConstructor
 public class UpdateRoomService implements UpdateRoomUseCase {
 
     private final RoomRepository roomRepository;
     private final ItemRepository itemRepository;
     private final IdGenerator idGenerator;
-
-    public UpdateRoomService(RoomRepository roomRepository, ItemRepository itemRepository, IdGenerator idGenerator) {
-        this.roomRepository = roomRepository;
-        this.itemRepository = itemRepository;
-        this.idGenerator = idGenerator;
-    }
 
     @Override
     @Transactional

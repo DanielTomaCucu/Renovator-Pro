@@ -1,5 +1,6 @@
 package ro.renovatorpro.application.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.UpdateProjectUseCase;
@@ -8,13 +9,10 @@ import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.model.Project;
 
 @Service
+@RequiredArgsConstructor
 public class UpdateProjectService implements UpdateProjectUseCase {
 
     private final ProjectRepository projectRepository;
-
-    public UpdateProjectService(ProjectRepository projectRepository) {
-        this.projectRepository = projectRepository;
-    }
 
     @Override
     @Transactional

@@ -1,5 +1,6 @@
 package ro.renovatorpro.adapter.out.persistence;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ro.renovatorpro.adapter.out.persistence.entity.RoomEntity;
 import ro.renovatorpro.adapter.out.persistence.mapper.RoomEntityMapper;
@@ -12,15 +13,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class RoomRepositoryAdapter implements RoomRepository {
 
     private final RoomJpaRepository jpaRepository;
     private final RoomEntityMapper mapper;
-
-    public RoomRepositoryAdapter(RoomJpaRepository jpaRepository, RoomEntityMapper mapper) {
-        this.jpaRepository = jpaRepository;
-        this.mapper = mapper;
-    }
 
     @Override
     public Optional<Room> findById(String id) {

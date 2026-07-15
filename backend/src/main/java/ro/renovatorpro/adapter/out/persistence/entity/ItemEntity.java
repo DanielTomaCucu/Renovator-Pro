@@ -5,6 +5,9 @@ import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import ro.renovatorpro.adapter.out.persistence.converter.ItemOriginConverter;
 import ro.renovatorpro.adapter.out.persistence.converter.ItemStatusConverter;
 import ro.renovatorpro.adapter.out.persistence.converter.MaterialTypeConverter;
@@ -18,6 +21,9 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "items")
+@Getter
+@Setter
+@NoArgsConstructor
 public class ItemEntity {
 
     @Id
@@ -56,31 +62,4 @@ public class ItemEntity {
     @Convert(converter = ItemOriginConverter.class)
     @Column(nullable = false)
     private ItemOrigin origin;
-
-    public ItemEntity() {
-        // JPA
-    }
-
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getRoomId() { return roomId; }
-    public void setRoomId(String roomId) { this.roomId = roomId; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public MaterialType getMaterialType() { return materialType; }
-    public void setMaterialType(MaterialType materialType) { this.materialType = materialType; }
-    public String getSource() { return source; }
-    public void setSource(String source) { this.source = source; }
-    public ItemStatus getStatus() { return status; }
-    public void setStatus(ItemStatus status) { this.status = status; }
-    public BigDecimal getQuantity() { return quantity; }
-    public void setQuantity(BigDecimal quantity) { this.quantity = quantity; }
-    public Money getUnitPrice() { return unitPrice; }
-    public void setUnitPrice(Money unitPrice) { this.unitPrice = unitPrice; }
-    public String getProductUrl() { return productUrl; }
-    public void setProductUrl(String productUrl) { this.productUrl = productUrl; }
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-    public ItemOrigin getOrigin() { return origin; }
-    public void setOrigin(ItemOrigin origin) { this.origin = origin; }
 }

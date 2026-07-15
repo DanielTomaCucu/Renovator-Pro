@@ -1,5 +1,6 @@
 package ro.renovatorpro.application.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
@@ -12,15 +13,11 @@ import ro.renovatorpro.application.port.out.RoomRepository;
  * independent de constrângerea de schemă — un backend viitor pe alt store nu ar mai avea cascade gratis).
  */
 @Service
+@RequiredArgsConstructor
 public class DeleteRoomService implements DeleteRoomUseCase {
 
     private final RoomRepository roomRepository;
     private final ItemRepository itemRepository;
-
-    public DeleteRoomService(RoomRepository roomRepository, ItemRepository itemRepository) {
-        this.roomRepository = roomRepository;
-        this.itemRepository = itemRepository;
-    }
 
     @Override
     @Transactional
