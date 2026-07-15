@@ -816,3 +816,25 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `backend/pom.xml`, cele 4 entități JPA (`UserEntity`, `ProjectEntity`, `RoomEntity`, `ItemEntity`), 8 use case services (`application/usecase/*.java`), 3 repository adapters (`ItemRepositoryAdapter`, `ProjectRepositoryAdapter`, `RoomRepositoryAdapter`), `docs/backend-blueprint.md` (§1 + nota Task 3.1), `docs/progress.md`.
 
 **Branch:** `018-adopta-lombok`.
+
+### 2026-07-15 — Faza 4 backend: API REST (Task 4.1 + 4.2)
+**De ce:** task-urile 4.1–4.2 din `docs/backend-blueprint.md` (Faza 4) — expune use case-urile din Faza 3 prin HTTP, conform `docs/api-contract.md`.
+
+- **Gol de contract descoperit și reparat înainte de cod** (regula „contract-first"): `updateProject` (deja în `RenovationStore`) nu avea rând în tabelul de endpoint-uri — adăugat `PATCH /api/projects/{id}`. Clarificat și că `addRoom` acceptă opțional toate câmpurile tehnice la creare (`Omit<Room,"id"|"projectId">` literal), nu doar type/name/allocatedBudget.
+- **Refactor Task 3.2 minor**: `GetProjectSnapshotUseCase` (o interogare combinată proiect+camere+elemente, introdusă în Faza 3 fără să fie documentată în contract) a fost înlocuit cu 3 use case-uri distincte (`GetProjectUseCase`, `GetRoomsUseCase`, `GetItemsUseCase`), ca să corespundă exact celor 3 endpoint-uri GET separate din contract, fără interogări risipite.
+- **`AddRoomUseCase.Command` extins**: de la 3 câmpuri (type/name/allocatedBudget) la toate cele 14 din `Room` minus id/projectId, conform contractului literal.
+- **`UpdateRoomUseCase`**: schimbat să întoarcă `Result(Room, projectId)` în loc de doar `Room` — `RoomResponse` are nevoie de `projectId`, pe care domeniul nu-l cunoaște; adăugat `RoomRepository.findProjectIdById`.
+- **DTO-uri** (`adapter/in/web/dto`): Project/Room/Item request+response, toate enum-urile ca `String` (niciodată tip de domeniu direct în JSON — regulă blueprint §3). Bean Validation pe câmpurile obligatorii/numerice.
+- **`DtoConversionSupport`**: clasă de suport cu conversii `label()`/`fromLabel()` + `Money`↔`BigDecimal`, refolosită de toate mapper-ele MapStruct (oglindă a `LabelEnumConverter` din adapter/out/persistence, dar pt. JSON).
+- **Controllere**: `ProjectController`, `RoomController`, `ItemController` — toate endpoint-urile din contract. `currentUserId` stub (Faza 5 îl înlocuiește cu extragerea din SecurityContext).
+- **`GlobalExceptionHandler`**: `ProblemDetail` (RFC 7807) — 404 not found, 422 regulă de business/constrângere DB, 400 validare/enum invalid.
+- **Task 4.2**: CORS configurabil per profil (`CorsConfig` + `app.cors.allowed-origins`) — dev: `localhost:3001`; prod: `APP_CORS_ALLOWED_ORIGINS` din env, FĂRĂ fallback (obligă setare explicită pe Render).
+- **Bug real găsit prin testare manuală end-to-end** (nu doar teste automate): `POST /api/rooms/{roomId}/items` cu `source` omis din body → `DataIntegrityViolationException` necaptată (500 brut, nu `ProblemDetail`) — coloana `items.source` e `NOT NULL`. Reparat în 2 straturi: `AddItemService` normalizează `null→""` (source e non-opțional în frontend, deci această normalizare reflectă exact contractul TS), și `GlobalExceptionHandler` prinde acum și `DataIntegrityViolationException` generic (apărare în adâncime pt. orice altă constrângere DB viitoare care ar scăpa de validare).
+- **Fix siguranță**: `POST /api/rooms/{roomId}/items` ignoră `roomId` din body (chiar dacă DTO-ul îl are, per `Omit<Item,"id">`) — path-ul e sursa de adevăr, nu poate fi redirecționat elementul către altă cameră printr-un body divergent.
+- Verificat: `mvn verify` → **BUILD SUCCESS**, 67 teste (15 noi — `@WebMvcTest`-style cu `MockMvc` standalone per controller, happy path + validare + 404, verifică JSON cu diacritice). Testat efectiv END-TO-END pe API-ul real (nu doar mock-uri): GET proiect, 404 ProblemDetail, POST/GET/PATCH cameră (a declanșat corect `AutoItemReconciler` — element „Gresie (Pardoseală)" auto-generat cu cantitatea calculată corect), POST/PATCH/DELETE element, DELETE cameră (cascade), Swagger UI accesibil pe dev.
+
+**Nefăcut aici (conform blueprint):** fără autentificare (Faza 5) — `currentUserId` rămâne stub.
+
+**Fișiere atinse:** `backend/src/main/java/ro/renovatorpro/adapter/in/web/**` (nou), `application/port/in/{AddRoomUseCase,UpdateRoomUseCase,GetProjectUseCase,GetRoomsUseCase,GetItemsUseCase}.java`, `application/usecase/{AddRoomService,UpdateRoomService,GetProjectService,GetRoomsService,GetItemsService,AddItemService}.java` (șters `GetProjectSnapshotUseCase`/`Service`), `application/port/out/RoomRepository.java` + `adapter/out/persistence/RoomRepositoryAdapter.java` (+`findProjectIdById`), `config/CorsConfig.java`, `application.yml`/`application-dev.yml`/`.env.example`, `docs/api-contract.md`, `docs/backend-blueprint.md`, `docs/progress.md`, teste noi în `adapter/in/web/*ControllerTest.java` + `src/test/resources/application.yml`.
+
+**Branch:** `019-faza4-api-rest`.

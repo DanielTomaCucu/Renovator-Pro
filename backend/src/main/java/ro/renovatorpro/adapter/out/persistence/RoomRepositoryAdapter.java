@@ -25,6 +25,11 @@ public class RoomRepositoryAdapter implements RoomRepository {
     }
 
     @Override
+    public Optional<String> findProjectIdById(String id) {
+        return jpaRepository.findById(id).map(RoomEntity::getProjectId);
+    }
+
+    @Override
     public List<Room> findByProjectId(String projectId) {
         return jpaRepository.findByProjectId(projectId).stream().map(mapper::toDomain).toList();
     }

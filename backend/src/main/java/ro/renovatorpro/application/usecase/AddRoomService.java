@@ -18,7 +18,19 @@ public class AddRoomService implements AddRoomUseCase {
     @Override
     @Transactional
     public Room execute(String currentUserId, String projectId, Command command) {
-        Room room = Room.builder(idGenerator.newId(), command.type(), command.name(), command.allocatedBudget()).build();
+        Room room = Room.builder(idGenerator.newId(), command.type(), command.name(), command.allocatedBudget())
+                .floorMaterial(command.floorMaterial())
+                .floorArea(command.floorArea())
+                .perimeter(command.perimeter())
+                .tileSize(command.tileSize())
+                .installationType(command.installationType())
+                .doors(command.doors())
+                .baseboardHeight(command.baseboardHeight())
+                .wallShape(command.wallShape())
+                .wallTiling(command.wallTiling())
+                .wallFinish(command.wallFinish())
+                .windows(command.windows())
+                .build();
         return roomRepository.insert(room, projectId);
     }
 }

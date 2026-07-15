@@ -18,9 +18,12 @@ public class AddItemService implements AddItemUseCase {
     @Override
     @Transactional
     public Item execute(String currentUserId, Command command) {
+        // source e non-opțional în frontend (Item.source: string) — dacă un client API omite câmpul,
+        // normalizăm la "" aici, nu lăsăm null să ajungă la INSERT (coloana e NOT NULL).
+        String source = command.source() != null ? command.source() : "";
         Item item = new Item(
                 idGenerator.newId(), command.roomId(), command.name(), command.materialType(),
-                command.source(), command.status(), command.quantity(), command.unitPrice(),
+                source, command.status(), command.quantity(), command.unitPrice(),
                 command.productUrl(), command.imageUrl(), command.origin()
         );
         return itemRepository.save(item);

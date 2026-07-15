@@ -25,8 +25,9 @@ public class UpdateRoomService implements UpdateRoomUseCase {
 
     @Override
     @Transactional
-    public Room execute(String currentUserId, String roomId, Command command) {
+    public Result execute(String currentUserId, String roomId, Command command) {
         Room existing = roomRepository.findById(roomId).orElseThrow(() -> new RoomNotFoundException(roomId));
+        String projectId = roomRepository.findProjectIdById(roomId).orElseThrow(() -> new RoomNotFoundException(roomId));
         Room patched = new Room(
                 existing.id(),
                 command.type() != null ? command.type() : existing.type(),
@@ -63,6 +64,6 @@ public class UpdateRoomService implements UpdateRoomUseCase {
             }
         }
 
-        return saved;
+        return new Result(saved, projectId);
     }
 }
