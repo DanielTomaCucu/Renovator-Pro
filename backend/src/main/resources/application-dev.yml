@@ -1,0 +1,25 @@
+# Profil de dezvoltare locală. Rulează cu: --spring.profiles.active=dev
+# DB pornit din backend/docker-compose.yml (Postgres pe portul 5433).
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/renovatorpro
+    username: renovatorpro
+    password: renovatorpro
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# Documentația API vizibilă local la http://localhost:8080/swagger-ui.html
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
