@@ -135,7 +135,7 @@ export default function ElementePage() {
               </span>
               <h3 className="font-heading text-base font-bold">Adăugare Rapidă</h3>
             </div>
-            <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+            <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
               <div className="space-y-1">
                 <label className="block text-[9px] font-bold uppercase tracking-widest text-white/70">
                   Nume element
@@ -177,15 +177,6 @@ export default function ElementePage() {
                   className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-mono text-sm text-white outline-none transition-all focus:bg-white/20"
                 />
               </div>
-              <button
-                type="submit"
-                className="flex h-10 items-center justify-center gap-2 self-end rounded-lg bg-secondary px-6 text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
-              >
-                <span className="material-symbols-outlined icon-btn">
-                  {ACTION_ICONS.save}
-                </span>
-                Salvează
-              </button>
             </div>
           </div>
 
@@ -222,6 +213,15 @@ export default function ElementePage() {
               </label>
             )}
           </div>
+
+          {/* Salvează — mereu ultimul buton din formular, după poză. */}
+          <button
+            type="submit"
+            className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-secondary text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98] lg:w-auto lg:self-end"
+          >
+            <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
+            Salvează
+          </button>
         </form>
 
         {/* Camere */}
