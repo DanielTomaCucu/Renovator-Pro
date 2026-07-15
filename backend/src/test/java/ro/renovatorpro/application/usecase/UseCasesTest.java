@@ -6,7 +6,9 @@ import ro.renovatorpro.application.port.in.AddItemUseCase;
 import ro.renovatorpro.application.port.in.AddRoomUseCase;
 import ro.renovatorpro.application.port.in.DeleteItemUseCase;
 import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
-import ro.renovatorpro.application.port.in.GetProjectSnapshotUseCase;
+import ro.renovatorpro.application.port.in.GetItemsUseCase;
+import ro.renovatorpro.application.port.in.GetProjectUseCase;
+import ro.renovatorpro.application.port.in.GetRoomsUseCase;
 import ro.renovatorpro.application.port.in.UpdateItemUseCase;
 import ro.renovatorpro.application.port.in.UpdateProjectUseCase;
 import ro.renovatorpro.application.port.in.UpdateRoomUseCase;
@@ -39,7 +41,9 @@ class UseCasesTest {
     private FakeItemRepository itemRepository;
     private FakeIdGenerator idGenerator;
 
-    private GetProjectSnapshotUseCase getProjectSnapshot;
+    private GetProjectUseCase getProject;
+    private GetRoomsUseCase getRooms;
+    private GetItemsUseCase getItems;
     private UpdateProjectUseCase updateProject;
     private AddRoomUseCase addRoom;
     private UpdateRoomUseCase updateRoom;
@@ -57,7 +61,9 @@ class UseCasesTest {
 
         projectRepository.seed(new Project(PROJECT_ID, "Proiectul Meu", Money.of(1000), Currency.EUR, null));
 
-        getProjectSnapshot = new GetProjectSnapshotService(projectRepository, roomRepository, itemRepository);
+        getProject = new GetProjectService(projectRepository);
+        getRooms = new GetRoomsService(roomRepository);
+        getItems = new GetItemsService(roomRepository, itemRepository);
         updateProject = new UpdateProjectService(projectRepository);
         addRoom = new AddRoomService(roomRepository, idGenerator);
         updateRoom = new UpdateRoomService(roomRepository, itemRepository, idGenerator);
@@ -68,16 +74,14 @@ class UseCasesTest {
     }
 
     @Test
-    void getProjectSnapshotIntoarceProiectulCamereleSiElementele() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500)));
+    void getProjectRoomsItemsIntoarceStareaCurenta() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
         addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
 
-        GetProjectSnapshotUseCase.ProjectSnapshot snapshot = getProjectSnapshot.execute(USER, PROJECT_ID);
-
-        assertThat(snapshot.project().id()).isEqualTo(PROJECT_ID);
-        assertThat(snapshot.rooms()).hasSize(1);
-        assertThat(snapshot.items()).hasSize(1);
+        assertThat(getProject.execute(USER, PROJECT_ID).id()).isEqualTo(PROJECT_ID);
+        assertThat(getRooms.execute(USER, PROJECT_ID)).hasSize(1);
+        assertThat(getItems.execute(USER, PROJECT_ID)).hasSize(1);
     }
 
     @Test
@@ -91,14 +95,14 @@ class UseCasesTest {
 
     @Test
     void addRoomGenereazaIdSiOSalveazaInProiect() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.DORMITOR, "Dormitor", Money.of(700)));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.DORMITOR, "Dormitor", Money.of(700), null, null, null, null, null, null, null, null, null, null, null));
         assertThat(room.id()).startsWith("generated-");
         assertThat(roomRepository.findByProjectId(PROJECT_ID)).contains(room);
     }
 
     @Test
     void deleteRoomStergeSiElementeleEi() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BUCATARIE, "Bucătărie", Money.of(2000)));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BUCATARIE, "Bucătărie", Money.of(2000), null, null, null, null, null, null, null, null, null, null, null));
         Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "",
                 ItemStatus.IN_ASTEPTARE, BigDecimal.TEN, Money.of(50), null, null, ItemOrigin.MANUAL));
 
@@ -110,7 +114,7 @@ class UseCasesTest {
 
     @Test
     void updateRoomFaraCampuriTehniceNuAtingeElementele() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500)));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null));
         Item manual = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Canapea", MaterialType.MOBILA, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(800), null, null, ItemOrigin.MANUAL));
 
@@ -123,7 +127,7 @@ class UseCasesTest {
 
     @Test
     void updateRoomCuCampuriTehniceGenereazaElementeAutoSiLeReconciliazaLaSchimbare() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200)));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null));
 
         // Prima configurare tehnică: pardoseală Parchet Laminat 10mp, perimetru 12m.
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
@@ -144,7 +148,7 @@ class UseCasesTest {
 
     @Test
     void updateRoomStergeElementeleAutoOrfaneCandMasuratoareaDispare() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200)));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null));
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
                 null, null, null, FlooringType.PARCHET_LAMINAT, 10.0, 12.0, null, null, null, null, null, null, null, null));
         assertThat(itemRepository.findByRoomId(room.id())).isNotEmpty();
@@ -160,7 +164,7 @@ class UseCasesTest {
 
     @Test
     void addUpdateDeleteItemCrudDeBaza() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BALCON, "Balcon", Money.of(300)));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BALCON, "Balcon", Money.of(300), null, null, null, null, null, null, null, null, null, null, null));
         Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "Dedeman",
                 ItemStatus.IN_ASTEPTARE, BigDecimal.TEN, Money.of(40), null, null, ItemOrigin.MANUAL));
 

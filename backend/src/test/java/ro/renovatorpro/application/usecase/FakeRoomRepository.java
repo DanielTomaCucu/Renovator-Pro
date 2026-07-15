@@ -20,6 +20,11 @@ class FakeRoomRepository implements RoomRepository {
     }
 
     @Override
+    public Optional<String> findProjectIdById(String id) {
+        return Optional.ofNullable(projectIdByRoomId.get(id));
+    }
+
+    @Override
     public List<Room> findByProjectId(String projectId) {
         return store.values().stream().filter(r -> projectId.equals(projectIdByRoomId.get(r.id()))).toList();
     }

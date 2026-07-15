@@ -69,8 +69,9 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 |---|---|---|---|
 | — (load inițial) | `/api/projects/{id}` | `GET` | Returnează `Project` |
 | — (load inițial) | `/api/projects/{id}/rooms` | `GET` | Returnează `Room[]` |
-| — (load inițial) | `/api/projects/{id}/items` | `GET` | Returnează `Item[]` (sau nested sub rooms — de decis) |
-| `addRoom(room)` | `/api/projects/{id}/rooms` | `POST` | Body: `Omit<Room, "id" \| "projectId">`. Response: `Room` complet |
+| — (load inițial) | `/api/projects/{id}/items` | `GET` | Returnează `Item[]` — **decis (Faza 4): plat, nu nested sub rooms** (frontend-ul filtrează client-side per cameră, ca azi cu mock data) |
+| `updateProject(patch)` | `/api/projects/{id}` | `PATCH` | Body: `Partial<Project>`. **Lipsea din contract — adăugat la implementarea Fazei 4** (era deja în `RenovationStore`, omisă din tabel din motive istorice) |
+| `addRoom(room)` | `/api/projects/{id}/rooms` | `POST` | Body: `Omit<Room, "id" \| "projectId">` — camera completă, câmpurile tehnice sunt opționale (pot lipsi la creare; fluxul real din UI le adaugă ulterior prin `PATCH`, dar API-ul acceptă oricare din ele direct la creare, dacă un client viitor vrea asta). Response: `Room` complet |
 | `updateRoom(id, patch)` | `/api/rooms/{id}` | `PATCH` | Body: `Partial<Room>` |
 | `deleteRoom(id)` | `/api/rooms/{id}` | `DELETE` | **Cascade obligatoriu** — șterge și `Item`-urile din cameră (regulă deja implementată client-side, trebuie replicată server-side) |
 | `addItem(item)` | `/api/rooms/{roomId}/items` | `POST` | Body: `Omit<Item, "id">`. Response: `Item` complet |

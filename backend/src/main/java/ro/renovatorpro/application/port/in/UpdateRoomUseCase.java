@@ -21,7 +21,11 @@ public interface UpdateRoomUseCase {
      * Actualizează o cameră. Dacă {@link Command#touchesTechnicalFields()} e adevărat, implementarea
      * invocă {@code AutoItemReconciler} după salvare (regulă de business, nu doar persistență).
      */
-    Room execute(String currentUserId, String roomId, Command command);
+    Result execute(String currentUserId, String roomId, Command command);
+
+    /** {@code projectId} inclus explicit — necesar pentru {@code RoomResponse} (Faza 4), domeniul nu-l cunoaște. */
+    record Result(Room room, String projectId) {
+    }
 
     /** Câmp {@code null} = nu se modifică. Oglindă a {@code Partial<Room>} din TS. */
     record Command(
