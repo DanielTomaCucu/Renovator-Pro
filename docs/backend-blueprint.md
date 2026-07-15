@@ -244,8 +244,8 @@ Enum-urile se stochează ca VARCHAR cu valorile string din TS (cu diacritice) �
 |---|---|
 | 0 — Monorepo | ✅ mergeat (PR #12) |
 | 1 — Schelet backend | ✅ mergeat (PR #13) |
-| 2 — Business logic domeniu | 🟨 în review (PR deschis) |
-| 3 — Use cases + persistență | ⬜ |
+| 2 — Business logic domeniu | ✅ mergeat (PR #16) |
+| 3 — Use cases + persistență | 🟨 în review (PR deschis) |
 | 4 — API REST | ⬜ |
 | 5 — Auth & autorizare | ⬜ |
 | 6 — Integrare frontend | ⬜ |
