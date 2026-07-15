@@ -1,0 +1,102 @@
+package ro.renovatorpro.domain.service;
+
+import org.junit.jupiter.api.Test;
+import ro.renovatorpro.domain.model.Currency;
+import ro.renovatorpro.domain.model.Item;
+import ro.renovatorpro.domain.model.ItemOrigin;
+import ro.renovatorpro.domain.model.ItemStatus;
+import ro.renovatorpro.domain.model.MaterialType;
+import ro.renovatorpro.domain.model.Money;
+import ro.renovatorpro.domain.model.Room;
+import ro.renovatorpro.domain.model.RoomType;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class BudgetCalculatorTest {
+
+    private static Item item(String roomId, ItemStatus status, int quantity, long unitPrice, MaterialType type) {
+        return new Item("i-" + roomId + "-" + status + "-" + type, roomId, "Test", type, "", status,
+                BigDecimal.valueOf(quantity), Money.of(unitPrice), null, null, ItemOrigin.MANUAL);
+    }
+
+    @Test
+    void itemTotalEsteCantitateInmultitaCuPretUnitar() {
+        Item i = item("r1", ItemStatus.PLANIFICAT, 3, 10, MaterialType.ALTELE);
+        assertThat(BudgetCalculator.itemTotal(i).amount()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void totalSpentNumaraDoarStatusulCumparat() {
+        List<Item> items = List.of(
+                item("r1", ItemStatus.CUMPARAT, 1, 100, MaterialType.GRESIE),
+                item("r1", ItemStatus.PLANIFICAT, 1, 50, MaterialType.GRESIE),
+                item("r1", ItemStatus.IN_ASTEPTARE, 1, 25, MaterialType.GRESIE)
+        );
+        assertThat(BudgetCalculator.totalSpent(items).amount()).isEqualByComparingTo("100.00");
+        assertThat(BudgetCalculator.totalEstimated(items).amount()).isEqualByComparingTo("175.00");
+    }
+
+    @Test
+    void purchaseProgressRotunjesteLaProcentIntreg() {
+        List<Item> items = List.of(
+                item("r1", ItemStatus.CUMPARAT, 1, 1, MaterialType.ALTELE),
+                item("r1", ItemStatus.PLANIFICAT, 1, 1, MaterialType.ALTELE),
+                item("r1", ItemStatus.PLANIFICAT, 1, 1, MaterialType.ALTELE)
+        );
+        assertThat(BudgetCalculator.purchaseProgress(items)).isEqualTo(33);
+        assertThat(BudgetCalculator.purchaseProgress(List.of())).isZero();
+    }
+
+    @Test
+    void budgetRemainingPoateFiNegativLaDepasire() {
+        List<Item> items = List.of(item("r1", ItemStatus.CUMPARAT, 1, 150, MaterialType.ALTELE));
+        BigDecimal remaining = BudgetCalculator.budgetRemaining(Money.of(100), items);
+        assertThat(remaining).isEqualByComparingTo("-50.00");
+    }
+
+    @Test
+    void budgetEfficiencyReturneazaZeroCandEstimatulEZero() {
+        assertThat(BudgetCalculator.budgetEfficiency(Money.zero(), Money.zero())).isZero();
+        assertThat(BudgetCalculator.budgetEfficiency(Money.of(200), Money.of(50))).isEqualTo(25);
+    }
+
+    @Test
+    void roomSubtotalSiRoomSpentFiltreazaPeCamera() {
+        List<Item> items = List.of(
+                item("r1", ItemStatus.CUMPARAT, 1, 100, MaterialType.GRESIE),
+                item("r2", ItemStatus.CUMPARAT, 1, 999, MaterialType.GRESIE)
+        );
+        assertThat(BudgetCalculator.roomSubtotal(items, "r1").amount()).isEqualByComparingTo("100.00");
+        assertThat(BudgetCalculator.roomSpent(items, "r1").amount()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void costPerRoomExcludeCamereleGoaleSiSorteazaDescrescator() {
+        Room r1 = Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1000)).build();
+        Room r2 = Room.builder("r2", RoomType.DORMITOR, "Dormitor", Money.of(1000)).build();
+        Room r3 = Room.builder("r3", RoomType.LIVING, "Living gol", Money.of(1000)).build();
+        List<Item> items = List.of(
+                item("r1", ItemStatus.PLANIFICAT, 1, 50, MaterialType.ALTELE),
+                item("r2", ItemStatus.PLANIFICAT, 1, 200, MaterialType.ALTELE)
+        );
+        List<BudgetCalculator.RoomCost> result = BudgetCalculator.costPerRoom(List.of(r1, r2, r3), items);
+        assertThat(result).extracting(BudgetCalculator.RoomCost::name).containsExactly("Dormitor", "Baie");
+    }
+
+    @Test
+    void costPerCategoryAgregaTotalSiSpentPerCategorie() {
+        List<Item> items = List.of(
+                item("r1", ItemStatus.CUMPARAT, 1, 100, MaterialType.GRESIE),
+                item("r1", ItemStatus.PLANIFICAT, 1, 50, MaterialType.GRESIE),
+                item("r1", ItemStatus.CUMPARAT, 1, 30, MaterialType.VOPSEA)
+        );
+        Map<MaterialType, BudgetCalculator.CategoryCost> result = BudgetCalculator.costPerCategory(items);
+        assertThat(result.get(MaterialType.GRESIE).total().amount()).isEqualByComparingTo("150.00");
+        assertThat(result.get(MaterialType.GRESIE).spent().amount()).isEqualByComparingTo("100.00");
+        assertThat(result.get(MaterialType.VOPSEA).spent().amount()).isEqualByComparingTo("30.00");
+    }
+}
