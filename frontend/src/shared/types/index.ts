@@ -23,5 +23,6 @@ export * from "./Room";
 export * from "./Item";
 export * from "./Project";
 export * from "./ProjectSummary";
+export * from "./SpendingTimelinePoint";
 export * from "./RenovationStore";
 export * from "./DonutSegment";

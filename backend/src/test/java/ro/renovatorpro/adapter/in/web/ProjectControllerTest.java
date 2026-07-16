@@ -7,9 +7,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ro.renovatorpro.adapter.in.web.mapper.ProjectDtoMapper;
 import ro.renovatorpro.adapter.in.web.mapper.ProjectSummaryDtoMapper;
+import ro.renovatorpro.adapter.in.web.mapper.SpendingTimelineDtoMapper;
 import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
 import ro.renovatorpro.application.port.in.GetProjectSummaryUseCase;
 import ro.renovatorpro.application.port.in.GetProjectUseCase;
+import ro.renovatorpro.application.port.in.GetSpendingTimelineUseCase;
 import ro.renovatorpro.application.port.in.UpdateProjectUseCase;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.model.Currency;
@@ -19,6 +21,7 @@ import ro.renovatorpro.domain.model.Project;
 import ro.renovatorpro.domain.service.BudgetCalculator;
 import ro.renovatorpro.domain.service.RoomDimensionsCalculator;
 
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 
@@ -40,15 +43,17 @@ class ProjectControllerTest {
     private final UpdateProjectUseCase updateProjectUseCase = mock(UpdateProjectUseCase.class);
     private final ConvertProjectCurrencyUseCase convertProjectCurrencyUseCase = mock(ConvertProjectCurrencyUseCase.class);
     private final GetProjectSummaryUseCase getProjectSummaryUseCase = mock(GetProjectSummaryUseCase.class);
+    private final GetSpendingTimelineUseCase getSpendingTimelineUseCase = mock(GetSpendingTimelineUseCase.class);
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         ProjectDtoMapper mapper = Mappers.getMapper(ProjectDtoMapper.class);
         ProjectSummaryDtoMapper summaryMapper = new ProjectSummaryDtoMapper();
+        SpendingTimelineDtoMapper spendingTimelineMapper = new SpendingTimelineDtoMapper();
         ProjectController controller = new ProjectController(
                 getProjectUseCase, updateProjectUseCase, convertProjectCurrencyUseCase,
-                getProjectSummaryUseCase, mapper, summaryMapper);
+                getProjectSummaryUseCase, getSpendingTimelineUseCase, mapper, summaryMapper, spendingTimelineMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -145,5 +150,29 @@ class ProjectControllerTest {
                 .andExpect(jsonPath("$.costPerCategory[0].materialType").value("Faianță"))
                 .andExpect(jsonPath("$.technical.totalFloorArea").value(12.5))
                 .andExpect(jsonPath("$.technical.configuredRoomsRatio").value(0.5));
+    }
+
+    @Test
+    void spendingTimelineIntoarceSeriaCumulativaFormatataYyyyMm() throws Exception {
+        when(getSpendingTimelineUseCase.execute(anyString(), anyString())).thenReturn(List.of(
+                new GetSpendingTimelineUseCase.TimelinePoint(YearMonth.of(2026, 1), Money.of(100)),
+                new GetSpendingTimelineUseCase.TimelinePoint(YearMonth.of(2026, 2), Money.of(400))));
+
+        mockMvc.perform(get("/api/projects/p1/spending-timeline"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].month").value("2026-01"))
+                .andExpect(jsonPath("$[0].cumulativeSpent").value(100.00))
+                .andExpect(jsonPath("$[1].month").value("2026-02"))
+                .andExpect(jsonPath("$[1].cumulativeSpent").value(400.00));
+    }
+
+    @Test
+    void spendingTimelineIntoarceListaGoalaCandNimicNuECumparat() throws Exception {
+        when(getSpendingTimelineUseCase.execute(anyString(), anyString())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/projects/p1/spending-timeline"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 }

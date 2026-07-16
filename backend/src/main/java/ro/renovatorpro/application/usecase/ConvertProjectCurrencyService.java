@@ -84,6 +84,7 @@ public class ConvertProjectCurrencyService implements ConvertProjectCurrencyUseC
     /** Reconstruiește un element doar cu prețul unitar schimbat — restul câmpurilor se păstrează. */
     private static Item withUnitPrice(Item item, Money unitPrice) {
         return new Item(item.id(), item.roomId(), item.name(), item.materialType(), item.source(),
-                item.status(), item.quantity(), unitPrice, item.productUrl(), item.imageUrl(), item.origin());
+                item.status(), item.quantity(), unitPrice, item.productUrl(), item.imageUrl(), item.origin(),
+                item.createdAt(), item.purchasedAt());
     }
 }

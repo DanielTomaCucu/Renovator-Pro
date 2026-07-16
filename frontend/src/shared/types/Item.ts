@@ -16,4 +16,11 @@ export interface Item {
   imageUrl?: string;
   /** Manual (adăugat de user) sau Configurare (generat automat din pardoseală/plintă/faianță). */
   origin: ItemOrigin;
+  /** Momentul adăugării (ISO 8601), setat de server — imutabil, nu editabil de user. */
+  createdAt: string;
+  /**
+   * Momentul ultimei tranziții spre `ItemStatus.Cumparat` (ISO 8601), setat de server — absent dacă
+   * elementul nu a fost niciodată cumpărat. Folosit de graficul „Evoluția Cheltuielilor" (Problema 3).
+   */
+  purchasedAt?: string;
 }

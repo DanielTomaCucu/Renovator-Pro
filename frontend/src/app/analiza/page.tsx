@@ -3,13 +3,20 @@
 import { useMemo } from "react";
 import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/shared/store";
-import { donutSegments, formatMoney, totalEstimated } from "@/shared/functions";
+import { donutSegments, formatMoney, timelinePoints, totalEstimated } from "@/shared/functions";
 import { ItemStatus } from "@/shared/types";
 import { ACTION_ICONS, ANALYTICS_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
 import DashboardSummaryCard, {
   SummaryAccentFooter,
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
+import { formatMonthLabel } from "./dates";
+
+/** Padding vertical al viewBox-ului (0 0 800 200) pt. graficul de evoluție — nu chiar marginile, ca linia să nu atingă marginile. */
+const TIMELINE_PAD_TOP = 30;
+const TIMELINE_PAD_BOTTOM = 180;
+const toScreenX = (x: number) => x * 800;
+const toScreenY = (y: number) => TIMELINE_PAD_BOTTOM - y * (TIMELINE_PAD_BOTTOM - TIMELINE_PAD_TOP);
 
 /** Paletă pastel pt. segmentele donut-ului „Cost per Cameră" (desktop) — vezi design Stitch. */
 const PIE_COLORS = ["#a7f3d0", "#ddd6fe", "#fecaca", "#bae6fd", "#fde68a"];
@@ -18,7 +25,7 @@ const PIE_COLORS = ["#a7f3d0", "#ddd6fe", "#fecaca", "#bae6fd", "#fde68a"];
 const MOBILE_PIE_COLORS = ["#000000", "#45464d", "#76777d", "#c6c6cd", "#e2e8f0"];
 
 export default function AnalizaPage() {
-  const { project, rooms, items, summary } = useStore();
+  const { project, rooms, items, summary, spendingTimeline } = useStore();
   const money = (value: number) => formatMoney(value, project.currency);
 
   // Totalurile vin din agregarea server-side (summary), nu recalculate client-side (Problema 2 din audit).
@@ -68,6 +75,23 @@ export default function AnalizaPage() {
   const pendingTotal = totalEstimated(
     items.filter((i) => i.status === ItemStatus.InAsteptare)
   );
+
+  // Evoluția Cheltuielilor: date REALE (Problema 3 din audit) — serie cumulativă pe luna cumpărării,
+  // nu mai o curbă hardcodată. Listă goală → empty-state (randat mai jos), nu o curbă falsă.
+  const timeline = useMemo(() => timelinePoints(spendingTimeline), [spendingTimeline]);
+  const timelineLinePath = useMemo(
+    () =>
+      timeline.length < 2
+        ? ""
+        : timeline.map((p, i) => `${i === 0 ? "M" : "L"}${toScreenX(p.x)},${toScreenY(p.y)}`).join(" "),
+    [timeline]
+  );
+  const timelineAreaPath = useMemo(() => {
+    if (timeline.length < 2) return "";
+    const first = timeline[0];
+    const last = timeline[timeline.length - 1];
+    return `${timelineLinePath} L${toScreenX(last.x)},200 L${toScreenX(first.x)},200 Z`;
+  }, [timeline, timelineLinePath]);
 
   return (
     <div>
@@ -123,7 +147,7 @@ export default function AnalizaPage() {
       <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
         {/* Grafice */}
         <div className="grid grid-cols-12 gap-6">
-          {/* Evoluția Cheltuielilor — placeholder vizual, fără date reale (vezi backlog #4) */}
+          {/* Evoluția Cheltuielilor — date REALE, pe luna cumpărării (Problema 3 din audit). */}
           <div className="col-span-12 rounded-xl border border-line bg-surface p-6 shadow-sm sm:p-8 lg:col-span-8">
             <div className="mb-8 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -134,57 +158,59 @@ export default function AnalizaPage() {
                   Evoluția Cheltuielilor
                 </h3>
               </div>
-              <div className="flex items-center gap-4">
+              {timeline.length > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-primary" />
                   <span className="text-[11px] uppercase tracking-wider text-muted">
-                    Realizat
+                    Cheltuit cumulat
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-line" />
-                  <span className="text-[11px] uppercase tracking-wider text-muted">
-                    Estimare
-                  </span>
-                </div>
+              )}
+            </div>
+            {timeline.length === 0 ? (
+              <div className="flex h-64 flex-col items-center justify-center gap-2 text-center">
+                <span className="material-symbols-outlined text-4xl text-muted/40">
+                  {ANALYTICS_ICONS.expenseTimeline}
+                </span>
+                <p className="max-w-xs text-sm text-muted">
+                  Niciun element cumpărat încă — evoluția cheltuielilor apare aici pe măsură ce
+                  marchezi elemente ca „Cumpărat”.
+                </p>
               </div>
-            </div>
-            <div className="relative h-64 w-full overflow-hidden">
-              <svg
-                className="h-full w-full"
-                preserveAspectRatio="none"
-                viewBox="0 0 800 200"
-              >
-                <defs>
-                  <linearGradient id="expense-gradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#000000" stopOpacity="0.1" />
-                    <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="50" y2="50" />
-                <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="100" y2="100" />
-                <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="150" y2="150" />
-                <path
-                  d="M0,180 Q100,160 200,120 T400,90 T600,60 T800,40"
-                  fill="none"
-                  stroke="#000000"
-                  strokeWidth="3"
-                />
-                <path
-                  d="M0,180 Q100,160 200,120 T400,90 T600,60 T800,40 L800,200 L0,200 Z"
-                  fill="url(#expense-gradient)"
-                />
-              </svg>
-            </div>
-            <div className="mt-4 flex justify-between px-2 text-[11px] uppercase tracking-wider text-muted">
-              <span>Ian</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>Mai</span>
-              <span>Iun</span>
-              <span>Iul</span>
-            </div>
+            ) : (
+              <>
+                <div className="relative h-64 w-full overflow-hidden">
+                  <svg
+                    className="h-full w-full"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 800 200"
+                  >
+                    <defs>
+                      <linearGradient id="expense-gradient" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#000000" stopOpacity="0.1" />
+                        <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="50" y2="50" />
+                    <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="100" y2="100" />
+                    <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="150" y2="150" />
+                    {timeline.length === 1 ? (
+                      <circle cx="400" cy={toScreenY(timeline[0].y)} r="5" fill="#000000" />
+                    ) : (
+                      <>
+                        <path d={timelineLinePath} fill="none" stroke="#000000" strokeWidth="3" />
+                        <path d={timelineAreaPath} fill="url(#expense-gradient)" />
+                      </>
+                    )}
+                  </svg>
+                </div>
+                <div className="mt-4 flex justify-between px-2 text-[11px] uppercase tracking-wider text-muted">
+                  {timeline.map((p) => (
+                    <span key={p.month}>{formatMonthLabel(p.month)}</span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Cost per cameră — donut */}
@@ -368,20 +394,29 @@ export default function AnalizaPage() {
             <h3 className="mb-4 text-[12px] font-bold uppercase tracking-wider text-muted">
               Evoluția Cheltuielilor
             </h3>
-            <div className="relative flex h-48 w-full items-end justify-between px-2">
-              <div className="h-[20%] w-8 rounded-t bg-surface-low" />
-              <div className="h-[45%] w-8 rounded-t bg-surface-low" />
-              <div className="h-[75%] w-8 rounded-t border-x border-t border-primary bg-line" />
-              <div className="h-[90%] w-8 rounded-t bg-primary" />
-              <div className="h-[55%] w-8 rounded-t bg-surface-low" />
-              <div className="absolute -bottom-6 left-0 flex w-full justify-between text-[10px] font-bold uppercase text-muted">
-                <span>Ian</span>
-                <span>Feb</span>
-                <span>Mar</span>
-                <span>Apr</span>
-                <span>Mai</span>
-              </div>
-            </div>
+            {timeline.length === 0 ? (
+              <p className="py-8 text-center text-xs text-muted">
+                Niciun element cumpărat încă.
+              </p>
+            ) : (
+              <>
+                <div className="flex h-48 w-full items-end justify-between gap-2 px-2">
+                  {timeline.map((p) => (
+                    <div key={p.month} className="flex h-full flex-1 items-end justify-center">
+                      <div
+                        className="w-full max-w-8 rounded-t bg-primary"
+                        style={{ height: `${Math.max(p.y * 100, 4)}%` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex justify-between px-2 text-[10px] font-bold uppercase text-muted">
+                  {timeline.map((p) => (
+                    <span key={p.month}>{formatMonthLabel(p.month)}</span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="rounded-xl border border-line bg-surface p-5">
