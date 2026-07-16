@@ -37,7 +37,7 @@ export default function SetariPage() {
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [detailsSaved, setDetailsSaved] = useState(false);
 
-  const handleSaveDetails = () => {
+  const handleSaveDetails = async () => {
     const trimmedTitle = title.trim();
     const budget = Number(totalBudget);
     if (!trimmedTitle) {
@@ -49,7 +49,9 @@ export default function SetariPage() {
       return;
     }
     setDetailsError(null);
-    updateProject({ title: trimmedTitle, totalBudget: budget });
+    // Așteptăm requestul (store-ul înghite eroarea de rețea/validare în `error` global) — „Salvat ✓"
+    // apare doar după ce mutația chiar s-a terminat, nu imediat la click.
+    await updateProject({ title: trimmedTitle, totalBudget: budget });
     setDetailsSaved(true);
     setTimeout(() => setDetailsSaved(false), 2000);
   };
@@ -71,7 +73,7 @@ export default function SetariPage() {
   // Conversie necesară doar când moneda țintă diferă de cea curentă a proiectului.
   const conversionNeeded = pendingCurrency !== project.currency;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!conversionNeeded) {
       // Nimic de convertit — moneda e deja cea selectată.
       setSaved(true);
@@ -85,8 +87,9 @@ export default function SetariPage() {
     }
     setError(null);
     // Conversie REALĂ: recalculează toate sumele (buget, camere, elemente) pe backend, apoi
-    // reîncarcă snapshot-ul — vezi convertCurrency din store.tsx.
-    convertCurrency(pendingCurrency, rate);
+    // reîncarcă snapshot-ul — vezi convertCurrency din store.tsx. Așteptăm requestul înainte de
+    // a arăta „Conversie aplicată ✓" (altfel apărea și dacă requestul eșua).
+    await convertCurrency(pendingCurrency, rate);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

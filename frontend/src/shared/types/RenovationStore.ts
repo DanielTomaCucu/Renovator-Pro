@@ -21,6 +21,14 @@ export interface RenovationStore {
    * dacă nimic nu a fost încă marcat Cumpărat. Reîncărcată după fiecare mutație de item.
    */
   spendingTimeline: SpendingTimelinePoint[];
+  /**
+   * Mesajul ultimei erori de mutație (request API eșuat — validare, rețea, server jos), sau `null` dacă
+   * nimic nu a eșuat. Mutațiile NU aruncă — starea locală nu se schimbă dacă requestul eșuează, iar
+   * eroarea ajunge aici ca UI-ul să o poată afișa (altfel eșecul trecea neobservat).
+   */
+  error: string | null;
+  /** Șterge mesajul de eroare curent (ex. la închiderea unui toast). */
+  dismissError: () => void;
   updateProject: (patch: Partial<Project>) => void;
   /**
    * Conversie REALĂ a monedei: recalculează toate sumele (buget proiect, buget alocat pe camere,

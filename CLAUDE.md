@@ -178,25 +178,18 @@ NU crea un card nou de la zero. Datele afișate rămân mereu specifice paginii 
 - Colțuri strânse: elemente mici 4px (`rounded`), carduri/inputs 8px (`rounded-lg` max). **Fără forme „bubble"** — excepție doar status pills (capsule).
 
 ### Iconițe — IMPORTANT
-Design-urile Stitch folosesc **Material Symbols Outlined** (Google), NU emoji. Implementarea actuală
-folosește emoji ca placeholder — **de înlocuit** (backlog item 2, netratat încă în acest branch).
+Design-urile Stitch folosesc **Material Symbols Outlined** (Google). Fontul e **self-hosted** prin pachetul
+npm `material-symbols` — `import "material-symbols/outlined.css"` în `app/layout.tsx` (nu link extern către
+Google Fonts: evită FOUT-ul unde textul iconiței apărea literal — „bed" — la fiecare încărcare de pagină,
+înainte ca fontul extern să se descarce; `font-display: block` din pachet ascunde iconița până se încarcă
+fontul, în loc să afișeze text). Unele componente mai vechi (ex. `RoomFormDrawer.tsx` — grid tip cameră)
+încă folosesc emoji placeholder, migrare parțială, netratată complet.
 Lista de mai jos e extrasă direct din codul HTML generat de Stitch (nu ghicită), deci sunt numele exacte de folosit.
-
-**Setup (de făcut la implementarea efectivă):**
-```html
-<!-- în <head>, sau importat ca font local -->
-<link
-  rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-/>
-```
-sau pachetul npm `material-symbols` (self-hosted, recomandat pt. producție — evită request extern către Google Fonts).
 
 Utilizare (span cu clasa `material-symbols-outlined`, numele iconiței ca text):
 ```html
 <span class="material-symbols-outlined">bolt</span>
 ```
-**Nu adăuga clasa `material-symbols-outlined` fără să încarci fontul întâi** — fără font, textul iconiței apare literal (ex: „bed” în loc de o iconiță). Până la migrare, componentele folosesc emoji locale (vezi ex. `ROOM_TYPE_EMOJI` din `RoomFormDrawer.tsx`).
 
 **Stil:** outlined, weight ~400, culoare `text-muted` pe acțiuni secundare, `text-white`/`primary` pe acțiuni pe fundal întunecat.
 
