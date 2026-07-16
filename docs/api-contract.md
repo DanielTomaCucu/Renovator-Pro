@@ -72,7 +72,7 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 | — (load inițial) | `/api/projects/{id}/items` | `GET` | Returnează `Item[]` — **decis (Faza 4): plat, nu nested sub rooms** (frontend-ul filtrează client-side per cameră, ca azi cu mock data) |
 | `updateProject(patch)` | `/api/projects/{id}` | `PATCH` | Body: `Partial<Project>`. **Lipsea din contract — adăugat la implementarea Fazei 4** (era deja în `RenovationStore`, omisă din tabel din motive istorice) |
 | `addRoom(room)` | `/api/projects/{id}/rooms` | `POST` | Body: `Omit<Room, "id" \| "projectId">` — camera completă, câmpurile tehnice sunt opționale (pot lipsi la creare; fluxul real din UI le adaugă ulterior prin `PATCH`, dar API-ul acceptă oricare din ele direct la creare, dacă un client viitor vrea asta). Response: `Room` complet |
-| `updateRoom(id, patch)` | `/api/rooms/{id}` | `PATCH` | Body: `Partial<Room>` |
+| `updateRoom(id, patch)` | `/api/rooms/{id}` | `PATCH` | Body: `Partial<Room>` — câmpurile tehnice opționale au semantică specială, vezi secțiunea dedicată mai jos (Problema 6) |
 | `deleteRoom(id)` | `/api/rooms/{id}` | `DELETE` | **Cascade obligatoriu** — șterge și `Item`-urile din cameră (regulă deja implementată client-side, trebuie replicată server-side) |
 | `addItem(item)` | `/api/rooms/{roomId}/items` | `POST` | Body: `Omit<Item, "id">`. Response: `Item` complet |
 | `updateItem(id, patch)` | `/api/items/{id}` | `PATCH` | Body: `Partial<Item>` |
@@ -148,6 +148,34 @@ dimensions: {
 Frontend-ul păstrează un calcul client identic (`shared/functions/dimensions.ts` → `computeRoomDimensions`)
 DOAR ca preview instant la editarea unei camere (pe `draft`, înainte de salvare) și ca fallback; PDF-ul exportat
 folosește `room.dimensions` de la server. Formulele client oglindesc 1:1 backend-ul.
+
+## PATCH `/api/rooms/{id}` — semantica „absent" vs. „null explicit" (Problema 6)
+
+**Implementat.** Pentru câmpurile OBLIGATORII pe `Room` (`type`, `name`, `allocatedBudget`): convenția rămâne
+simplă — `null`/absent = nu se modifică (nu pot fi șterse, nu are sens).
+
+Pentru câmpurile tehnice OPȚIONALE (`floorMaterial`, `floorArea`, `perimeter`, `tileSize`, `installationType`,
+`doors`, `baseboardHeight`, `wallShape`, `wallTiling`, `wallFinish`, `windows`) body-ul JSON distinge acum
+**trei** stări, nu două:
+1. **cheia absentă din body** → câmpul nu se modifică (comportamentul vechi, neschimbat);
+2. **cheia prezentă cu valoare `null`** → câmpul se **ȘTERGE explicit** (nou — înainte era indistinguibil de #1,
+   motiv pentru care dezactivarea placării/finisajului de pereți sau golirea suprafeței pardoselii nu se
+   persista niciodată, chiar dacă UI-ul arăta local dezactivat);
+3. **cheia prezentă cu o valoare** → câmpul se setează (neschimbat).
+
+**Implementare backend:** DTO-ul (`RoomUpdateRequest`) folosește `JsonNullable<T>` (`org.openapitools:jackson-databind-nullable`,
+modul înregistrat în `config/JacksonConfig`) pe fiecare câmp tehnic opțional, tradus în `Patch<T>`
+(`application/port/in/Patch` — tip domeniu-agnostic, independent de Jackson) prin `DtoConversionSupport.toPatch(...)`.
+`UpdateRoomService` aplică `command.câmp().resolve(existing.câmp())` pentru fiecare — `Patch.absent()` păstrează
+valoarea veche, `Patch.of(null)` o șterge, `Patch.of(value)` o înlocuiește.
+
+**Frontend:** `RoomTechnicalCard.handleSave()` normalizează explicit `undefined` → `null` pe toate câmpurile
+tehnice opționale ale draftului înainte de a apela `updateRoom` (altfel `JSON.stringify` ar omite cheia,
+recreând bug-ul). `RenovationStore.updateRoom` acceptă `{ [K in keyof Room]?: Room[K] | null }`.
+
+**Test de referință** (cerut explicit de audit): dezactivarea `wallTiling` → `GET /api/rooms/{id}` arată
+`wallTiling: null`, iar elementul auto-generat „Faianță" e eliminat de reconciliere. Verificat în
+`RoomControllerTest`/`UseCasesTest` + manual pe backend real (`curl`).
 
 ## De decis înainte de prima implementare
 

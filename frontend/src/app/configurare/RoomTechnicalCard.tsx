@@ -291,7 +291,21 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
   };
 
   const handleSave = () => {
-    updateRoom(room.id, draft);
+    // Câmpurile tehnice opționale trimit explicit `null` când sunt dezactivate în draft (nu `undefined`,
+    // care JSON.stringify-uiește ca „cheie absentă" = „nu se modifică" pe backend) — altfel dezactivarea
+    // placării/finisajului sau golirea suprafeței pardoselii nu s-ar persista (Problema 6 din audit).
+    updateRoom(room.id, {
+      ...draft,
+      floorMaterial: draft.floorMaterial ?? null,
+      floorArea: draft.floorArea ?? null,
+      perimeter: draft.perimeter ?? null,
+      tileSize: draft.tileSize ?? null,
+      installationType: draft.installationType ?? null,
+      baseboardHeight: draft.baseboardHeight ?? null,
+      wallShape: draft.wallShape ?? null,
+      wallTiling: draft.wallTiling ?? null,
+      wallFinish: draft.wallFinish ?? null,
+    });
     setOpen(false);
     setSectionsOpen({ floor: false, walls: false, windows: false, doors: false });
     setSaved(true);
@@ -306,6 +320,10 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
   // să nu completeze de la 0 fiecare perete — rămâne complet editabilă după activare, nu se resincronizează.
   const estimatedSide = Number(estimatedSquareWallSide(draft).toFixed(2));
 
+  // Înălțime implicită la activare — camera standard are ~2.5m; 0 ar produce silențios o arie de 0mp
+  // (lungime × 0), dând impresia falsă că „datele de la pereți nu contează" (Problema 7 din audit).
+  const DEFAULT_WALL_HEIGHT = 2.5;
+
   const toggleWallTiling = () => {
     if (wallTilingEnabled) {
       patch({ wallTiling: undefined });
@@ -314,7 +332,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
         wallShape: draft.wallShape ?? RoomShape.Patrat,
         wallTiling: {
           tiledWallsCount: 4,
-          tileHeight: 0,
+          tileHeight: DEFAULT_WALL_HEIGHT,
           wallLengths: {
             [Wall.Nord]: estimatedSide,
             [Wall.Est]: estimatedSide,
@@ -333,7 +351,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
       patch({
         wallShape: draft.wallShape ?? RoomShape.Patrat,
         wallFinish: {
-          wallHeight: 0,
+          wallHeight: DEFAULT_WALL_HEIGHT,
           wallLengths: {
             [Wall.Nord]: estimatedSide,
             [Wall.Est]: estimatedSide,
@@ -995,6 +1013,18 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                   {isGresie && !!draft.perimeter && !draft.baseboardHeight && (
                     <p className="text-[10px] italic text-tertiary">
                       Completează câmpul Înălțime plintă pentru a include plinta în necesarul de gresie.
+                    </p>
+                  )}
+
+                  {wallTilingEnabled && !draft.wallTiling!.tileHeight && (
+                    <p className="text-[10px] italic text-tertiary">
+                      Înălțime Placare e 0 → aria de faianță e 0. Completează câmpul mai sus.
+                    </p>
+                  )}
+
+                  {wallFinishEnabled && !draft.wallFinish!.wallHeight && (
+                    <p className="text-[10px] italic text-tertiary">
+                      Înălțime Pereți e 0 → aria de vopsea/tapet e 0. Completează câmpul mai sus.
                     </p>
                   )}
 

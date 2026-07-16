@@ -11,6 +11,7 @@ import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
 import ro.renovatorpro.application.port.in.GetItemsUseCase;
 import ro.renovatorpro.application.port.in.GetProjectUseCase;
 import ro.renovatorpro.application.port.in.GetRoomsUseCase;
+import ro.renovatorpro.application.port.in.Patch;
 import ro.renovatorpro.application.port.in.UpdateItemUseCase;
 import ro.renovatorpro.application.port.in.UpdateProjectUseCase;
 import ro.renovatorpro.application.port.in.UpdateRoomUseCase;
@@ -125,7 +126,9 @@ class UseCasesTest {
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(800), null, null, ItemOrigin.MANUAL));
 
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
-                null, "Living Renumit", null, null, null, null, null, null, null, null, null, null, null, null));
+                null, "Living Renumit", null,
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
 
         assertThat(roomRepository.findById(room.id()).orElseThrow().name()).isEqualTo("Living Renumit");
         assertThat(itemRepository.findById(manual.id())).isPresent(); // neatins
@@ -137,7 +140,10 @@ class UseCasesTest {
 
         // Prima configurare tehnică: pardoseală Parchet Laminat 10mp, perimetru 12m.
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
-                null, null, null, FlooringType.PARCHET_LAMINAT, 10.0, 12.0, null, null, null, null, null, null, null, null));
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent()));
 
         var afterFirst = itemRepository.findByRoomId(room.id());
         assertThat(afterFirst).anyMatch(i -> i.materialType() == MaterialType.PARCHET);
@@ -145,7 +151,10 @@ class UseCasesTest {
 
         // A doua configurare: schimbă suprafața — elementele Din Configurare trebuie recalculate, nu duplicate.
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
-                null, null, null, FlooringType.PARCHET_LAMINAT, 20.0, 12.0, null, null, null, null, null, null, null, null));
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(20.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent()));
 
         var afterSecond = itemRepository.findByRoomId(room.id());
         long parchetCount = afterSecond.stream().filter(i -> i.materialType() == MaterialType.PARCHET).count();
@@ -156,16 +165,50 @@ class UseCasesTest {
     void updateRoomStergeElementeleAutoOrfaneCandMasuratoareaDispare() {
         Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null));
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
-                null, null, null, FlooringType.PARCHET_LAMINAT, 10.0, 12.0, null, null, null, null, null, null, null, null));
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent()));
         assertThat(itemRepository.findByRoomId(room.id())).isNotEmpty();
 
-        // Configurare ștearsă complet (floorArea null explicit nu se poate distinge de "unset" în Command,
-        // deci testăm cu floorMaterial diferit care nu mai produce Plintă separată — Gresie o include în pardoseală).
+        // Schimbare de material — Gresie nu mai produce Plintă separată (o include în pardoseală).
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
-                null, null, null, FlooringType.GRESIE, null, null, null, null, null, null, null, null, null, null));
+                null, null, null,
+                Patch.of(FlooringType.GRESIE), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent()));
 
         var after = itemRepository.findByRoomId(room.id());
         assertThat(after).noneMatch(i -> i.materialType() == MaterialType.PLINTA); // orfană — ștearsă
+    }
+
+    @Test
+    void updateRoomStergeExplicitUnCampTehnicOptionalPrinPatchOfNull() {
+        // Problema 6 din audit: PATCH cu câmp absent nu trebuie confundat cu PATCH care șterge explicit.
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null));
+        updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.of(2.5), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent()));
+        assertThat(roomRepository.findById(room.id()).orElseThrow().baseboardHeight()).isEqualTo(2.5);
+
+        // absent() → păstrează valoarea; of(null) → șterge explicit.
+        updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
+                null, null, null,
+                Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent()));
+        assertThat(roomRepository.findById(room.id()).orElseThrow().baseboardHeight())
+                .as("absent() nu modifică valoarea existentă").isEqualTo(2.5);
+
+        updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
+                null, null, null,
+                Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.of(null), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent()));
+        assertThat(roomRepository.findById(room.id()).orElseThrow().baseboardHeight())
+                .as("of(null) șterge explicit valoarea").isNull();
     }
 
     @Test

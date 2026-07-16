@@ -89,7 +89,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const updateRoom = useCallback(
-    (id: string, patch: Partial<Room>) => {
+    (id: string, patch: { [K in keyof Room]?: Room[K] | null }) => {
       api.patch<Room>(`/api/rooms/${id}`, patch).then((updated) => {
         setRooms((prev) => prev.map((r) => (r.id === id ? updated : r)));
         // Câmpurile tehnice pot declanșa reconcilierea elementelor auto-generate pe server — reîncărcăm
