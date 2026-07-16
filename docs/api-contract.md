@@ -55,10 +55,24 @@
   productUrl?: string;
   imageUrl?: string;
   origin: ItemOrigin;         // enum: "Manual" | "Din Configurare" — proveniența elementului
+  createdAt: string;          // ISO 8601 — setat de server la creare, imutabil, NU trimis de client
+  purchasedAt?: string;       // ISO 8601 — setat de server la tranziția spre Cumpărat, absent dacă nu a fost cumpărat încă
 }
 ```
 
-**`origin: ItemOrigin.Configurare`** marchează elemente generate automat de server (sau client, până la migrare) din configurarea tehnică a unei camere (`Room.floorMaterial`/`floorArea`/`perimeter`/`wallTiling`) — vezi `shared/functions/auto-items.ts`. Backend-ul trebuie să recreeze aceeași reconciliere la fiecare `PATCH /api/rooms/{id}` (nu doar clientul): elementele existente cu `origin: "Din Configurare"` pentru acea cameră își păstrează `id`/`unitPrice`/`status`, doar `name`/`quantity` se recalculează; cele fără corespondent nou se șterg; elementele `origin: "Manual"` nu sunt niciodată atinse de acest proces.
+**`createdAt`/`purchasedAt`** (Problema 4 din audit): gestionate exclusiv de server, niciodată acceptate în
+body-ul de creare/actualizare (`Omit<Item, "id" | "createdAt" | "purchasedAt">` la creare). `purchasedAt` se
+actualizează DOAR la tranziția SPRE `Cumpărat` (era altceva → devine Cumpărat); rămâne neschimbat dacă statusul
+e deja Cumpărat (nu se „reîmprospătează" la fiecare editare) sau dacă revine la alt status (istoric, nu se șterge).
+Elementele deja `Cumpărat` înainte de migrarea acestor coloane au `purchasedAt: null` (nu există un moment real
+cunoscut) — nu apar în `spending-timeline` până la o eventuală retranziție de status.
+
+**`origin: ItemOrigin.Configurare`** marchează elemente generate automat de server din configurarea tehnică a
+unei camere (`Room.floorMaterial`/`floorArea`/`perimeter`/`wallTiling`) — vezi `domain/service/AutoItemReconciler`
+(server-side, sursă unică; nu mai există echivalent client-side, șters odată cu Problema 2 din audit). Backend-ul
+recreează reconcilierea la fiecare `PATCH /api/rooms/{id}`: elementele existente cu `origin: "Din Configurare"`
+pentru acea cameră își păstrează `id`/`unitPrice`/`status`/`createdAt`/`purchasedAt`, doar `name`/`quantity` se
+recalculează; cele fără corespondent nou se șterg; elementele `origin: "Manual"` nu sunt niciodată atinse de acest proces.
 
 ## Endpoint-uri planificate
 
@@ -79,6 +93,7 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 | `deleteItem(id)` | `/api/items/{id}` | `DELETE` | — |
 | `convertCurrency(target, rate)` | `/api/projects/{id}/currency` | `POST` | Conversie reală a TUTUROR sumelor proiectului — vezi secțiunea dedicată mai jos |
 | `summary` (store) | `/api/projects/{id}/summary` | `GET` | Agregările calculate server-side — vezi secțiunea „Agregări server-side" |
+| `spendingTimeline` (store) | `/api/projects/{id}/spending-timeline` | `GET` | Serie temporală de cheltuieli cumulate — vezi secțiunea dedicată mai jos |
 
 ## Conversie monedă — `POST /api/projects/{id}/currency`
 
@@ -176,6 +191,24 @@ recreând bug-ul). `RenovationStore.updateRoom` acceptă `{ [K in keyof Room]?: 
 **Test de referință** (cerut explicit de audit): dezactivarea `wallTiling` → `GET /api/rooms/{id}` arată
 `wallTiling: null`, iar elementul auto-generat „Faianță" e eliminat de reconciliere. Verificat în
 `RoomControllerTest`/`UseCasesTest` + manual pe backend real (`curl`).
+
+## Serie temporală de cheltuieli — `GET /api/projects/{id}/spending-timeline`
+
+**Implementat (Problema 3 din audit, fundamentată pe Problema 4 — `Item.createdAt`/`purchasedAt`).** Sursa
+graficului „Evoluția Cheltuielilor" din `/analiza` — înlocuiește curba SVG hardcodată. Grupează elementele
+`ItemStatus.Cumparat` pe luna calendaristică (UTC) a lui `purchasedAt`, însumează `itemTotal` per lună, apoi
+calculează suma **cumulativă** crescătoare. Elementele fără `purchasedAt` (niciodată cumpărate, sau cumpărate
+înainte de migrarea `V3`) sunt ignorate.
+
+**Response** (oglinda TS: `src/shared/types/SpendingTimelinePoint.ts`), sortat cronologic ascendent:
+```ts
+{ month: string; cumulativeSpent: number }[]  // month = "yyyy-MM" (ISO); cumulativeSpent = sumă cumulativă
+```
+
+**Listă goală** dacă nimic nu a fost încă marcat Cumpărat — frontend-ul afișează un empty-state explicit
+(„Niciun element cumpărat încă"), NICIODATĂ o curbă falsă (regulă explicită din audit). Etichetele de lună
+(„Ian", „Feb 2025" etc.) se derivă pe frontend din `month` (`app/analiza/dates.ts` → `formatMonthLabel`) —
+formatarea locală RO nu e concern de backend. Reîncărcat de store după fiecare mutație de item.
 
 ## De decis înainte de prima implementare
 

@@ -11,6 +11,7 @@ import ro.renovatorpro.domain.model.Room;
 import ro.renovatorpro.domain.model.RoomType;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -20,7 +21,8 @@ class BudgetCalculatorTest {
 
     private static Item item(String roomId, ItemStatus status, int quantity, long unitPrice, MaterialType type) {
         return new Item("i-" + roomId + "-" + status + "-" + type, roomId, "Test", type, "", status,
-                BigDecimal.valueOf(quantity), Money.of(unitPrice), null, null, ItemOrigin.MANUAL);
+                BigDecimal.valueOf(quantity), Money.of(unitPrice), null, null, ItemOrigin.MANUAL,
+                Instant.now(), null);
     }
 
     @Test

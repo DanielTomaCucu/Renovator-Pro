@@ -31,6 +31,8 @@ import ro.renovatorpro.domain.model.WallFinishType;
 import ro.renovatorpro.domain.model.WallTiling;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.UUID;
 
@@ -141,14 +143,21 @@ class PersistenceAdapterIntegrationTest {
         String roomId = UUID.randomUUID().toString();
         roomRepository.insert(Room.builder(roomId, RoomType.BUCATARIE, "Bucătărie", Money.of(3000)).build(), SEEDED_PROJECT_ID);
 
+        // Truncat la microsecunde: Postgres TIMESTAMPTZ nu păstrează precizia de nanosecunde a Instant.now(),
+        // deci o comparație exactă post-roundtrip ar fi flaky fără trunchiere la aceeași granularitate.
+        Instant createdAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        Instant purchasedAt = createdAt.plusSeconds(60);
         Item item = new Item(UUID.randomUUID().toString(), roomId, "Gresie", MaterialType.GRESIE, "Dedeman",
-                ItemStatus.CUMPARAT, BigDecimal.valueOf(12.5), Money.of(45), null, null, ItemOrigin.MANUAL);
+                ItemStatus.CUMPARAT, BigDecimal.valueOf(12.5), Money.of(45), null, null, ItemOrigin.MANUAL,
+                createdAt, purchasedAt);
         itemRepository.save(item);
 
         Item reloaded = itemRepository.findById(item.id()).orElseThrow();
         assertThat(reloaded.status()).isEqualTo(ItemStatus.CUMPARAT);
         assertThat(reloaded.materialType()).isEqualTo(MaterialType.GRESIE);
         assertThat(reloaded.quantity()).isEqualByComparingTo("12.5");
+        assertThat(reloaded.createdAt()).isEqualTo(createdAt);
+        assertThat(reloaded.purchasedAt()).isEqualTo(purchasedAt);
 
         assertThat(itemRepository.findByRoomId(roomId)).extracting(Item::id).containsExactly(item.id());
     }
@@ -158,7 +167,8 @@ class PersistenceAdapterIntegrationTest {
         String roomId = UUID.randomUUID().toString();
         roomRepository.insert(Room.builder(roomId, RoomType.BALCON, "Balcon", Money.of(300)).build(), SEEDED_PROJECT_ID);
         Item item = new Item(UUID.randomUUID().toString(), roomId, "Gresie", MaterialType.GRESIE, "",
-                ItemStatus.IN_ASTEPTARE, BigDecimal.ONE, Money.zero(), null, null, ItemOrigin.MANUAL);
+                ItemStatus.IN_ASTEPTARE, BigDecimal.ONE, Money.zero(), null, null, ItemOrigin.MANUAL,
+                Instant.now().truncatedTo(ChronoUnit.MICROS), null);
         itemRepository.save(item);
 
         roomRepository.deleteById(roomId);

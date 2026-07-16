@@ -35,6 +35,8 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `windowTrimLength(room)` | `shared/functions/dimensions.ts` | lungime totală de glaf/bordură pt. toate ferestrele (Σ perimetru) + 5% pierdere | intern (`computeRoomDimensions`) |
 | `computeRoomDimensions(room)` | `shared/functions/dimensions.ts` | breakdown complet de necesar material (oglinda `RoomDimensionsCalculator.java`) — PREVIEW client la editare + fallback; sursa de adevăr e `room.dimensions` de la server | `configurare` (RoomTechnicalCard preview), `ApartmentPdfDocument` (fallback), `roomCalcRows.ts` |
 | `buildRoomCalcRows(room, dims)` | `app/configurare/roomCalcRows.ts` (local) | rândurile din „Calcule Detaliate" (label/valoare/formulă/math) din `dims` (server sau preview) | `RoomTechnicalCard`, `ApartmentPdfDocument` |
+| `timelinePoints(data)` | `shared/functions/charts.ts` | normalizează `SpendingTimelinePoint[]` (din `spending-timeline`) în puncte {x,y}∈[0,1] pt. graficul de evoluție — geometrie de prezentare | `analiza` |
+| `formatMonthLabel(month)` | `app/analiza/dates.ts` (local) | formatează "yyyy-MM" într-o etichetă scurtă RO ("Ian", "Ian 2025" dacă anul diferă de cel curent) | `analiza` (axa graficului de evoluție) |
 
 ### Funcții locale de pagină
 
@@ -59,9 +61,12 @@ _(niciuna momentan — `dimensions.ts` a fost promovat în `shared/functions/` d
 | `WallFinish` | `WallFinish.ts` | interface (wallHeight, wallLengths per `Wall`, finishes: `Partial<Record<Wall, WallFinishType>>`) — doar la Parchet/Mochetă, alternativa la `WallTiling` |
 | `RoomWindow` | `RoomWindow.ts` | interface (width, height) — o fereastră, max. 1 per perete |
 | `RoomShape` | `RoomShape.ts` | enum (Pătrat / Dreptunghi / Neregulată) — controlează câte lungimi de perete cere UI-ul la `wallTiling`/`wallFinish` |
-| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `doors?: Partial<Record<Wall, RoomDoor>>`, `baseboardHeight?: number`, `wallShape?: RoomShape`, `wallTiling?: WallTiling`, `wallFinish?: WallFinish`, `windows?: Partial<Record<Wall, RoomWindow>>`) |
-| `Item` | `Item.ts` | interface (extins cu `origin: ItemOrigin`) |
+| `RoomDimensions` | `RoomDimensions.ts` | interface (breakdown necesar material, autoritativ de la server — `hasFloorConfig`, `floorMaterialNeeded`, `baseboardLength`, `baseboardTileArea`, `wallTilingArea`, `paintArea`, `wallpaperArea`, `windowTrimLength`, `totalDoorWidth`) |
+| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `doors?: Partial<Record<Wall, RoomDoor>>`, `baseboardHeight?: number`, `wallShape?: RoomShape`, `wallTiling?: WallTiling`, `wallFinish?: WallFinish`, `windows?: Partial<Record<Wall, RoomWindow>>`, `dimensions?: RoomDimensions`) |
+| `Item` | `Item.ts` | interface (extins cu `origin: ItemOrigin`, `createdAt: string`, `purchasedAt?: string`) |
 | `Project` | `Project.ts` | interface (extins cu `totalArea?: number`) |
+| `ProjectSummary` | `ProjectSummary.ts` | interface (agregări server-side: `totalEstimated`, `totalSpent`, `budgetRemaining`, `purchaseProgress`, `boughtCount`, `costPerRoom: RoomCost[]`, `costPerCategory: CategoryCost[]`, `technical: TechnicalSummary`) |
+| `SpendingTimelinePoint` | `SpendingTimelinePoint.ts` | interface (`month: string` "yyyy-MM", `cumulativeSpent: number`) — serie cumulativă pe luna cumpărării |
 | `RenovationStore` | `RenovationStore.ts` | interface |
 | `DonutSegment` | `DonutSegment.ts` | interface |
 
@@ -909,6 +914,33 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 
 **Branch:** `023-conversie-moneda-reala` (același MR ca Problema 1).
 
+### 2026-07-16 — Audit Problemele 3+4: timestamp-uri pe items + grafic „Evoluția Cheltuielilor" real
+**De ce:** din `docs/audit-remedieri.md`. Problema 4 (severitate mare): `Item` nu avea niciun câmp de dată — imposibil de construit o evoluție reală. Problema 3 (severitate mare): graficul „Evoluția Cheltuielilor" era o curbă SVG hardcodată + bare mobile fixe, indiferent de date. Auditul le leagă explicit (3 depinde de 4) și recomandă „evoluție = după momentul cumpărării" — decizie aplicată (nu doar `createdAt`, ci și `purchasedAt` separat).
+
+- **Migrare** `V3__items_timestamps.sql` (nouă, nu modifică V1/V2): `items.created_at TIMESTAMPTZ NOT NULL DEFAULT now()` + `items.purchased_at TIMESTAMPTZ` (nullable — elementele deja Cumpărate înainte de migrare nu au un moment real cunoscut, rămân NULL).
+- **Backend — port nou** `TimeProvider` (`application/port/out` + `adapter/out/time/SystemTimeProvider`) — `Instant.now()` niciodată direct în use case, testabil via `FakeTimeProvider`.
+- **`Item.java`** (domain): +`Instant createdAt` (obligatoriu), +`Instant purchasedAt` (nullable). Toate cele ~15 puncte de construcție (`AddItemService`, `UpdateItemService`, `AutoItemReconciler`, `ConvertProjectCurrencyService`, + teste) actualizate.
+  - `AddItemService`: `createdAt = now()`; `purchasedAt = now()` DOAR dacă elementul e creat direct cu status Cumpărat (rar, dar posibil).
+  - `UpdateItemService`: `purchasedAt` se actualizează DOAR la tranziția SPRE Cumpărat (era altceva → devine Cumpărat) — nu se „reîmprospătează" dacă rămâne Cumpărat, nu se șterge dacă revine la alt status (istoric).
+  - `AutoItemReconciler.reconcile`: semnătură nouă cu `Instant now` — elementele auto existente păstrează `createdAt`/`purchasedAt` neschimbate (la fel ca id/preț/status), cele noi primesc `createdAt = now`, `purchasedAt = null`.
+- **Backend — endpoint nou** `GET /api/projects/{id}/spending-timeline` (`GetSpendingTimelineUseCase`/`Service`): grupează elementele Cumpărate pe luna (UTC) lui `purchasedAt`, însumează `itemTotal` (din `BudgetCalculator`, nereinventat), calculează suma cumulativă crescătoare (`TreeMap<YearMonth,...>`, sortare naturală). Listă goală dacă nimic nu-i cumpărat.
+- **`ItemEntity`/`ItemResponse`**: +2 coloane/`Instant` (Jackson serializează ISO-8601 automat, fără conversie custom — la fel ca `Double floorArea` pe `RoomResponse`).
+- Teste: `mvn test` → **85 verzi** (+6 față de sesiunea Problema 1+2): `addItem`/`updateItem` setează corect `createdAt`/`purchasedAt` (tranziție, non-reîmprospătare, păstrare la revenire), `spendingTimeline` agregă cumulativ corect + listă goală, endpoint nou în `ProjectControllerTest`, round-trip Postgres real pe `PersistenceAdapterIntegrationTest` (cu trunchiere la microsecunde — Postgres TIMESTAMPTZ nu păstrează nanosecunde).
+- **Frontend:**
+  - `Item.ts`: +`createdAt: string`, +`purchasedAt?: string` (gestionate exclusiv de server — `RenovationStore.addItem` exclude ambele din tipul param, `Omit<Item, "id" | "createdAt" | "purchasedAt">`).
+  - `SpendingTimelinePoint.ts` (nou, shared) — oglinda răspunsului.
+  - `store.tsx`: `reloadSummary` redenumit `reloadAggregates` — reîncarcă ACUM `summary` + `spendingTimeline` în paralel, la fiecare mutație + load inițial.
+  - `shared/functions/charts.ts`: +`timelinePoints(data)` (normalizare {x,y}∈[0,1], geometrie de prezentare, alături de `donutSegments`).
+  - `app/analiza/dates.ts` (nou, LOCAL — folosit doar în `/analiza`, nu promovat în shared): `formatMonthLabel("yyyy-MM")` → etichetă RO scurtă, cu anul doar dacă diferă de cel curent.
+  - `app/analiza/page.tsx`: graficul desktop (SVG hardcodat cu curbă Bezier falsă) înlocuit cu polilinie reală prin punctele din `spendingTimeline` (sau un singur punct → cerc, sau listă goală → empty-state explicit, NICIODATĂ o curbă falsă — regulă explicită din audit); graficul mobil (bare cu înălțimi fixe) înlocuit cu bare reale, o bară per lună. Legenda „Realizat/Estimare" (implica două serii) simplificată la o singură etichetă „Cheltuit cumulat" (avem o singură serie reală).
+- **Verificat efectiv**: `mvn test` (85 verzi), `npx tsc --noEmit`/`npm run lint`/`npm run build` (0 erori, 1 warning preexistent).
+
+**Nefăcut aici:** restul problemelor din audit (5–8) neatinse. Nu există sursă automată de curs sau alt element în afara scopului celor două probleme.
+
+**Fișiere atinse:** `docs/{api-contract,progress}.md`, `CLAUDE.md`; backend nou: `db/migration/V3__items_timestamps.sql`, `application/port/out/TimeProvider.java`, `adapter/out/time/{SystemTimeProvider,package-info}.java`, `application/port/in/GetSpendingTimelineUseCase.java`, `application/usecase/GetSpendingTimelineService.java`, `adapter/in/web/dto/SpendingTimelinePointResponse.java`, `adapter/in/web/mapper/SpendingTimelineDtoMapper.java`; backend modificat: `domain/model/Item.java`, `application/usecase/{AddItemService,UpdateItemService,ConvertProjectCurrencyService,UpdateRoomService}.java`, `domain/service/AutoItemReconciler.java`, `adapter/out/persistence/entity/ItemEntity.java`, `adapter/in/web/dto/ItemResponse.java`, `adapter/in/web/ProjectController.java`; teste noi/modificate: `FakeTimeProvider.java` (nou), `UseCasesTest`, `ItemControllerTest`, `ProjectControllerTest`, `PersistenceAdapterIntegrationTest`, `DomainInvariantsTest`, `BudgetCalculatorTest`, `AutoItemReconcilerTest`; frontend nou: `shared/types/SpendingTimelinePoint.ts`, `app/analiza/dates.ts`; frontend modificat: `shared/types/{Item,RenovationStore,index}.ts`, `shared/store.tsx`, `shared/functions/charts.ts`, `app/analiza/page.tsx`.
+
+**Branch:** `024-timestamp-si-grafic-evolutie`.
+
 ### 2026-07-16 — Audit Problemele 5–8: buget/titlu editabile, PATCH cu ștergere explicită, defaults UX, verificare finală
 **De ce:** userul a cerut rezolvarea rândului pe rând a Problemelor 5–8 din `docs/audit-remedieri.md`, într-o singură sesiune. Branch nou din `main` la zi (conform workflow-ului Git obligatoriu) — NU include Problemele 3+4 (timestamp/grafic evoluție), care stau pe branch-ul separat `024-timestamp-si-grafic-evolutie`, local, nepus încă.
 
@@ -923,8 +955,26 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 - **Problema 8 (verificare finală reactivitate):** confirmat că rezolvarea 5 (buget real) + 2 (summary server-side, deja mergeuit) fac header-ele corecte peste tot — `/analiza` arată „Buget Rămas” = suma corectă (nu negativ implicit), reîncărcat automat din `summary` la fiecare mutație. Nicio schimbare de cod suplimentară necesară — doar verificare.
 - **Verificat efectiv:** `mvn test` (82 verzi), `npx tsc --noEmit`/`npm run lint`/`npm run build` (0 erori, 1 warning preexistent). End-to-end pe backend real (Postgres local + `curl`) + în browser: Problema 5 (title/totalBudget salvate prin UI, confirmate pe backend + reflectate în `/analiza`), Problema 6 (absent vs. null explicit, ambele direcții), Problema 7 (default 2.5 confirmat în input). Date de test curățate, proiect + cameră readuse la starea seed.
 
-**Nefăcut aici:** Problemele 3+4 (timestamp/grafic evoluție) rămân pe branch-ul separat, nepus.
-
 **Fișiere atinse:** `docs/{api-contract,progress}.md`, `backend/pom.xml` (dependință nouă); backend nou: `application/port/in/Patch.java`, `config/JacksonConfig.java`; backend modificat: `application/port/in/UpdateRoomUseCase.java`, `application/usecase/UpdateRoomService.java`, `adapter/in/web/dto/RoomUpdateRequest.java`, `adapter/in/web/mapper/{RoomDtoMapper,DtoConversionSupport}.java`, teste `UseCasesTest`/`RoomControllerTest`; frontend modificat: `shared/types/RenovationStore.ts`, `shared/store.tsx`, `app/setari/page.tsx`, `app/configurare/RoomTechnicalCard.tsx`.
 
-**Branch:** `025-buget-titlu-editabil-patch-null-defaults`.
+**Branch:** `025-buget-titlu-editabil-patch-null-defaults` (merge-uit ulterior peste `024-timestamp-si-grafic-evolutie` pe branch-ul `026-fix-buguri-confirmate`, pentru remedierea buguri lor confirmate din audit live).
+
+### 2026-07-16 — Fix buguri confirmate din auditul live (rotunjire bani, grafic fals, erori înghițite, FOUT iconițe)
+**De ce:** userul a cerut testarea funcțională live a aplicației (nu doar citirea codului). Testare directă în browser + API a scos la iveală 5 buguri reale, dincolo de cele deja documentate în `docs/audit-remedieri.md`. Branch nou din `origin/main` la zi — a inclus întâi merge-ul local al `024-timestamp-si-grafic-evolutie` (Probleme 3+4 din audit, scris dar niciodată pus/mergeuit), care era încă ne-integrat și bloca verificarea graficului real.
+
+- **Merge `024` → `026`:** 3 conflicte (`UseCasesTest.java` — două importuri distincte, combinate; `docs/api-contract.md` și `docs/progress.md` — secțiuni/intrări de jurnal independente, concatenate cronologic, fără pierdere de conținut). Backend recompilat + `mvn test` → **88 teste verzi** după merge.
+- **Bug 1 — rotunjire silențioasă a banilor:** `formatMoney` (`shared/functions/money.ts`) avea `maximumFractionDigits: 0` — un element de 99.5 EUR apărea peste tot ca „100 EUR" (tabel, donut, totaluri), înșelător pe o aplicație de buget. Fix: `maximumFractionDigits: 2`, zecimalele apar doar când suma nu e întreagă (100 EUR rămâne „100 EUR", dar 99.5 devine „99,5 EUR"). Verificat live: element de 99.5 EUR afișat corect pe `/elemente`, `/analiza`, `/centralizator`.
+- **Bug 3 — store.tsx înghițea toate erorile de mutație:** nicio mutație (`updateProject`, `addItem`, etc.) nu avea `.catch` — un request eșuat (validare, rețea, backend jos) pierdea datele în tăcere, iar UI-ul (ex. Setări) arăta „Salvat ✓" oricum, imediat, fără să aștepte răspunsul. Plus: `if (!value) return null` la încărcarea inițială → ecran alb fără feedback (grav pe Render free tier, cu cold-start de zeci de secunde).
+  - `store.tsx` rescris: toate mutațiile devin `async`/`try-catch`, eșecul NU schimbă starea locală și ajunge în `error` (nou în `RenovationStore`) — afișat ca toast global (colț dreapta-jos) cu buton de închidere (`dismissError`).
+  - Încărcarea inițială: `initialLoadError`/`loadAttempt` separate de starea de mutație — ecran dedicat cu mesaj + buton „Reîncearcă” în loc de pagină albă; spinner cât timp datele se încarcă prima dată.
+  - `app/setari/page.tsx`: `handleSaveDetails`/`handleSave` devin `async`, `await updateProject(...)`/`await convertCurrency(...)` înainte de a arăta „Salvat ✓” — confirmarea reflectă acum rezultatul real al requestului.
+  - Verificat live: oprire intenționată a backend-ului → ecran „Nu am putut încărca datele proiectului” cu buton Reîncearcă (nu pagină albă); repornire backend + reload → aplicația se încarcă normal.
+- **Bug 5 — FOUT pe iconițe (text literal „home_work” etc. la fiecare încărcare):** fontul Material Symbols venea printr-un `<link>` extern spre Google Fonts în `app/layout.tsx` — până se descarcă fontul, span-urile arătau numele iconiței ca text brut. Fix: pachetul npm `material-symbols` (self-hosted, `font-display: block` — ascunde span-ul până se încarcă fontul, în loc să afișeze text), importat direct în `layout.tsx` (`import "material-symbols/outlined.css"`), `<link>`-ul extern eliminat. `CLAUDE.md` (secțiunea Iconițe) actualizat — nu mai descrie asta ca „de făcut”, ci ca implementat.
+- **Bug 2 (graficul fals) și Bug 4 (branch-uri paralele `024`/`025`)** — rezolvate implicit prin merge-ul `024` descris mai sus (graficul real era deja scris pe acel branch, doar nu era integrat).
+- **Verificat efectiv:** `npx tsc --noEmit` (0 erori), `npm run lint` (0 erori, 1 warning preexistent `no-img-element`), `npm run build` (succes, toate cele 7 rute). Backend: `mvn test` → 88 verzi. **Testat live, end-to-end** (backend local repornit cu codul nou după merge, ca să preia endpoint-ul `/spending-timeline`): element de 99.5 EUR adăugat prin UI → afișat corect cu zecimale peste tot; marcat Cumpărat → graficul „Evoluția Cheltuielilor” arată un punct real (99,5 EUR, luna curentă), nu mai curba SVG falsă; header-ele (`Cheltuieli totale`, `Buget rămas`, `Achiziții finalizate`) reflectă corect suma reală. Date de test șterse, proiect readus la starea seed (`totalBudget: 0`) după verificare.
+
+**Nefăcut aici:** restul recomandărilor din auditul live (etichete inconsistente „estimat”, poză base64 nelimitată, căutare decorativă, istoric curs fals, pluralizare RO) rămân neatinse — sunt de severitate mai mică, task-uri separate.
+
+**Fișiere atinse:** merge `024`→`026` (vezi fișierele listate în intrarea „Audit Problemele 3+4” de mai sus); plus, direct în această sesiune: `CLAUDE.md`, `frontend/package.json`/`package-lock.json` (dependință nouă `material-symbols`), `frontend/src/app/layout.tsx`, `frontend/src/app/setari/page.tsx`, `frontend/src/shared/functions/money.ts`, `frontend/src/shared/store.tsx` (rescris), `frontend/src/shared/types/RenovationStore.ts`.
+
+**Branch:** `026-fix-buguri-confirmate` (din `origin/main`, include merge-ul `024-timestamp-si-grafic-evolutie`).

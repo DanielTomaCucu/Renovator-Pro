@@ -124,6 +124,7 @@ Aplicația asta va exista în minim 3 locuri (web Next.js, backend Spring Boot, 
 | `roomSpent(items, roomId)` | `items.ts` | cheltuit efectiv într-o cameră (randare per-cameră) |
 | `budgetEfficiency(estimated, spent)` | `budget.ts` | % din estimat efectiv cheltuit (rație de prezentare peste totalurile din `summary`) |
 | `donutSegments(data)` | `charts.ts` | transformă distribuție în segmente SVG cumulative (`DonutSegment[]`) — geometrie de prezentare |
+| `timelinePoints(data)` | `charts.ts` | normalizează `SpendingTimelinePoint[]` în puncte {x,y}∈[0,1] pt. graficul de evoluție — geometrie de prezentare |
 | `computeRoomDimensions(room)` | `dimensions.ts` | breakdown necesar material (oglinda backend); PREVIEW client la editare + fallback |
 
 > **⚠️ Agregările de dashboard NU se mai calculează client-side** (Problema 2 din audit): `totalEstimated`/`totalSpent`/
@@ -177,25 +178,18 @@ NU crea un card nou de la zero. Datele afișate rămân mereu specifice paginii 
 - Colțuri strânse: elemente mici 4px (`rounded`), carduri/inputs 8px (`rounded-lg` max). **Fără forme „bubble"** — excepție doar status pills (capsule).
 
 ### Iconițe — IMPORTANT
-Design-urile Stitch folosesc **Material Symbols Outlined** (Google), NU emoji. Implementarea actuală
-folosește emoji ca placeholder — **de înlocuit** (backlog item 2, netratat încă în acest branch).
+Design-urile Stitch folosesc **Material Symbols Outlined** (Google). Fontul e **self-hosted** prin pachetul
+npm `material-symbols` — `import "material-symbols/outlined.css"` în `app/layout.tsx` (nu link extern către
+Google Fonts: evită FOUT-ul unde textul iconiței apărea literal — „bed" — la fiecare încărcare de pagină,
+înainte ca fontul extern să se descarce; `font-display: block` din pachet ascunde iconița până se încarcă
+fontul, în loc să afișeze text). Unele componente mai vechi (ex. `RoomFormDrawer.tsx` — grid tip cameră)
+încă folosesc emoji placeholder, migrare parțială, netratată complet.
 Lista de mai jos e extrasă direct din codul HTML generat de Stitch (nu ghicită), deci sunt numele exacte de folosit.
-
-**Setup (de făcut la implementarea efectivă):**
-```html
-<!-- în <head>, sau importat ca font local -->
-<link
-  rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-/>
-```
-sau pachetul npm `material-symbols` (self-hosted, recomandat pt. producție — evită request extern către Google Fonts).
 
 Utilizare (span cu clasa `material-symbols-outlined`, numele iconiței ca text):
 ```html
 <span class="material-symbols-outlined">bolt</span>
 ```
-**Nu adăuga clasa `material-symbols-outlined` fără să încarci fontul întâi** — fără font, textul iconiței apare literal (ex: „bed” în loc de o iconiță). Până la migrare, componentele folosesc emoji locale (vezi ex. `ROOM_TYPE_EMOJI` din `RoomFormDrawer.tsx`).
 
 **Stil:** outlined, weight ~400, culoare `text-muted` pe acțiuni secundare, `text-white`/`primary` pe acțiuni pe fundal întunecat.
 
@@ -298,7 +292,7 @@ din acest fișier — nu scrie string-uri de iconiță direct în JSX.
 Entitățile din `src/shared/types/` (vezi și regula „un fișier per interfață/enum" mai sus):
 - **Project**: titlu, buget total, `currency: Currency` (EUR/RON).
 - **Room** (cameră): `type: RoomType`, nume liber, buget alocat. Ștergerea unei camere șterge și elementele ei (cascade — deja implementat în store). Câmpuri tehnice opționale, completate doar din pagina `/configurare` (o cameră nouă nu le are): `floorMaterial: FlooringType`, `floorArea` (mp), `perimeter` (ml), `tileSize: TileSize`, `installationType: InstallationType`, `door: RoomDoor` (width, height, wall), `wallTiling?: WallTiling` (tiledWallsCount, tileHeight, wallLengths per `Wall` — doar la camere cu zonă umedă, activat explicit).
-- **Item** (element de cumpărat): nume, `materialType: MaterialType`, sursă/magazin, `status: ItemStatus`, cantitate, preț unitar, link produs (opțional), URL imagine (opțional), FK cameră.
+- **Item** (element de cumpărat): nume, `materialType: MaterialType`, sursă/magazin, `status: ItemStatus`, cantitate, preț unitar, link produs (opțional), URL imagine (opțional), FK cameră, `createdAt` (setat de server la creare, imutabil), `purchasedAt?` (setat de server la tranziția spre `Cumpărat` — sursa graficului „Evoluția Cheltuielilor").
 
 ### Statusuri element
 `ItemStatus.InAsteptare` (default la creare) → `ItemStatus.Planificat` → `ItemStatus.Cumparat`. Sunt libere (dropdown), nu un workflow strict.
@@ -327,11 +321,11 @@ Vezi „Registru actual de funcții partajate” mai sus pentru lista completă.
 1. Bottom navigation + bottom sheets pentru mobile
 2. Înlocuire emoji cu Material Symbols (necesită încărcarea fontului în `layout.tsx` întâi)
 3. Sidebar colapsabil (varianta „Meniu Restrâns" din Stitch)
-4. Grafic evoluție cheltuieli pe `/analiza`
-5. Export PDF / partajare
-6. Comutare monedă EUR↔RON cu curs
-7. Galerie Inspirație (există în design, neimplementată)
-8. Conectare la backend Spring Boot (înlocuiește mock store; păstrează interfața `RenovationStore` ca s-o poți implementa peste fetch)
+4. Galerie Inspirație (există în design, neimplementată)
+
+**Rezolvate** (vezi `docs/progress.md` pentru detalii): export PDF/partajare, comutare monedă EUR↔RON cu
+curs real, conectare la backend Spring Boot, grafic evoluție cheltuieli pe `/analiza` (date reale, pe
+momentul cumpărării — Problemele 3+4 din audit).
 
 ## Convenții de cod
 

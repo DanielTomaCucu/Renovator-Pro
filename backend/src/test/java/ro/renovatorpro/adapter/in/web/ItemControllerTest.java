@@ -18,6 +18,7 @@ import ro.renovatorpro.domain.model.MaterialType;
 import ro.renovatorpro.domain.model.Money;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -45,7 +46,7 @@ class ItemControllerTest {
 
     private static Item item(String id) {
         return new Item(id, "r1", "Gresie", MaterialType.GRESIE, "Dedeman", ItemStatus.CUMPARAT,
-                BigDecimal.TEN, Money.of(45), null, null, ItemOrigin.MANUAL);
+                BigDecimal.TEN, Money.of(45), null, null, ItemOrigin.MANUAL, Instant.now(), Instant.now());
     }
 
     @BeforeEach
@@ -64,7 +65,9 @@ class ItemControllerTest {
         mockMvc.perform(get("/api/projects/p1/items"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].status").value("Cumpărat"))
-                .andExpect(jsonPath("$[0].materialType").value("Gresie"));
+                .andExpect(jsonPath("$[0].materialType").value("Gresie"))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$[0].purchasedAt").exists());
     }
 
     @Test
