@@ -22,7 +22,12 @@ export interface RenovationStore {
    */
   convertCurrency: (targetCurrency: Currency, exchangeRate: number) => void;
   addRoom: (room: Omit<Room, "id">) => void;
-  updateRoom: (id: string, patch: Partial<Room>) => void;
+  /**
+   * `null` explicit pe un câmp = ȘTERGE valoarea existentă (nu doar „nu se modifică", ca `undefined`/absent).
+   * Necesar ca să poți dezactiva placarea/finisajul de pereți sau goli suprafața pardoselii prin PATCH
+   * (Problema 6 din audit) — vezi `POST/PATCH /api/rooms/{id}` în api-contract.md.
+   */
+  updateRoom: (id: string, patch: { [K in keyof Room]?: Room[K] | null }) => void;
   deleteRoom: (id: string) => void;
   addItem: (item: Omit<Item, "id">) => void;
   updateItem: (id: string, patch: Partial<Item>) => void;

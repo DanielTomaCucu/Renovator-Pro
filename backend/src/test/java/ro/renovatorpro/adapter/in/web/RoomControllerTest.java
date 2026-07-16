@@ -1,8 +1,11 @@
 package ro.renovatorpro.adapter.in.web;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.openapitools.jackson.nullable.JsonNullableModule;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ro.renovatorpro.adapter.in.web.mapper.RoomDtoMapper;
@@ -17,10 +20,12 @@ import ro.renovatorpro.domain.model.RoomType;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -43,8 +48,13 @@ class RoomControllerTest {
     void setUp() {
         RoomDtoMapper mapper = Mappers.getMapper(RoomDtoMapper.class);
         RoomController controller = new RoomController(getRoomsUseCase, addRoomUseCase, updateRoomUseCase, deleteRoomUseCase, mapper);
+        // standaloneSetup nu pornește contextul Spring complet, deci nu preia bean-ul JsonNullableModule
+        // din config/JacksonConfig — înregistrăm manual același modul pe ObjectMapper-ul de test, altfel
+        // JsonNullable din RoomUpdateRequest rămâne null (NPE), nu JsonNullable.undefined() (Problema 6).
+        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JsonNullableModule());
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
     }
 
@@ -109,5 +119,39 @@ class RoomControllerTest {
     void deleteReturneaza204() throws Exception {
         mockMvc.perform(delete("/api/rooms/r1"))
                 .andExpect(status().isNoContent());
+    }
+
+    /** Problema 6 din audit: {@code "wallTiling": null} EXPLICIT în body trebuie să însemne „șterge", nu „nu atinge". */
+    @Test
+    void updateCuWallTilingNullExplicitTrimiteUnPatchPrezentCareSterge() throws Exception {
+        Room existing = Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1200)).build();
+        when(updateRoomUseCase.execute(anyString(), eq("r1"), any()))
+                .thenReturn(new UpdateRoomUseCase.Result(existing, "p1"));
+
+        mockMvc.perform(patch("/api/rooms/r1")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"wallTiling\": null}"))
+                .andExpect(status().isOk());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(UpdateRoomUseCase.Command.class);
+        verify(updateRoomUseCase).execute(anyString(), eq("r1"), captor.capture());
+        assertThat(captor.getValue().wallTiling().isPresent()).isTrue();
+        assertThat(captor.getValue().wallTiling().resolve(existing.wallTiling())).isNull();
+    }
+
+    /** Problema 6 din audit: {@code wallTiling} ABSENT din body nu trebuie să atingă valoarea existentă. */
+    @Test
+    void updateFaraWallTilingInBodyNuTrimiteUnPatchPrezent() throws Exception {
+        when(updateRoomUseCase.execute(anyString(), eq("r1"), any()))
+                .thenReturn(new UpdateRoomUseCase.Result(Room.builder("r1", RoomType.BAIE, "Nume Nou", Money.of(1200)).build(), "p1"));
+
+        mockMvc.perform(patch("/api/rooms/r1")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"name\": \"Nume Nou\"}"))
+                .andExpect(status().isOk());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(UpdateRoomUseCase.Command.class);
+        verify(updateRoomUseCase).execute(anyString(), eq("r1"), captor.capture());
+        assertThat(captor.getValue().wallTiling().isPresent()).isFalse();
     }
 }

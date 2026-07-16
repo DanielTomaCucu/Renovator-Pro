@@ -74,6 +74,15 @@
             <version>${springdoc.version}</version>
         </dependency>
 
+        <!-- Distinge „câmp absent" de „câmp prezent cu valoare null" la deserializarea JSON — necesar
+             pt. semantica PATCH care poate ȘTERGE explicit un câmp opțional (Problema 6 din audit,
+             vezi Patch<T> din application/port/in). Modulul se înregistrează în config/JacksonConfig. -->
+        <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>jackson-databind-nullable</artifactId>
+            <version>0.2.6</version>
+        </dependency>
+
         <!-- Mapper entity JPA ↔ domeniu (adapter/out/persistence) și, ulterior, DTO ↔ domeniu (adapter/in/web).
              Cod generat la compilare (nu reflecție runtime). -->
         <dependency>

@@ -27,28 +27,34 @@ public interface UpdateRoomUseCase {
     record Result(Room room, String projectId) {
     }
 
-    /** Câmp {@code null} = nu se modifică. Oglindă a {@code Partial<Room>} din TS. */
+    /**
+     * {@code type}/{@code name}/{@code allocatedBudget}: {@code null} = nu se modifică (câmpuri
+     * obligatorii pe {@link Room}, nu pot fi șterse — convenția veche rămâne valabilă pt. ele).
+     * Restul (câmpuri tehnice OPȚIONALE): {@link Patch} — {@code absent()} = nu se modifică,
+     * {@code of(null)} = șterge explicit, {@code of(value)} = setează (Problema 6 din audit).
+     */
     record Command(
             RoomType type,
             String name,
             Money allocatedBudget,
-            FlooringType floorMaterial,
-            Double floorArea,
-            Double perimeter,
-            TileSize tileSize,
-            InstallationType installationType,
-            Map<Wall, RoomDoor> doors,
-            Double baseboardHeight,
-            RoomShape wallShape,
-            WallTiling wallTiling,
-            WallFinish wallFinish,
-            Map<Wall, RoomWindow> windows
+            Patch<FlooringType> floorMaterial,
+            Patch<Double> floorArea,
+            Patch<Double> perimeter,
+            Patch<TileSize> tileSize,
+            Patch<InstallationType> installationType,
+            Patch<Map<Wall, RoomDoor>> doors,
+            Patch<Double> baseboardHeight,
+            Patch<RoomShape> wallShape,
+            Patch<WallTiling> wallTiling,
+            Patch<WallFinish> wallFinish,
+            Patch<Map<Wall, RoomWindow>> windows
     ) {
         /** true dacă patch-ul atinge orice câmp de configurare tehnică — declanșează reconcilierea elementelor auto-generate. */
         public boolean touchesTechnicalFields() {
-            return floorMaterial != null || floorArea != null || perimeter != null || tileSize != null
-                    || installationType != null || doors != null || baseboardHeight != null
-                    || wallShape != null || wallTiling != null || wallFinish != null || windows != null;
+            return floorMaterial.isPresent() || floorArea.isPresent() || perimeter.isPresent()
+                    || tileSize.isPresent() || installationType.isPresent() || doors.isPresent()
+                    || baseboardHeight.isPresent() || wallShape.isPresent() || wallTiling.isPresent()
+                    || wallFinish.isPresent() || windows.isPresent();
         }
     }
 }

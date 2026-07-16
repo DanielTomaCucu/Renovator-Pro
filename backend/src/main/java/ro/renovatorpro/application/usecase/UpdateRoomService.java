@@ -33,17 +33,17 @@ public class UpdateRoomService implements UpdateRoomUseCase {
                 command.type() != null ? command.type() : existing.type(),
                 command.name() != null ? command.name() : existing.name(),
                 command.allocatedBudget() != null ? command.allocatedBudget() : existing.allocatedBudget(),
-                command.floorMaterial() != null ? command.floorMaterial() : existing.floorMaterial(),
-                command.floorArea() != null ? command.floorArea() : existing.floorArea(),
-                command.perimeter() != null ? command.perimeter() : existing.perimeter(),
-                command.tileSize() != null ? command.tileSize() : existing.tileSize(),
-                command.installationType() != null ? command.installationType() : existing.installationType(),
-                command.doors() != null ? command.doors() : existing.doors(),
-                command.baseboardHeight() != null ? command.baseboardHeight() : existing.baseboardHeight(),
-                command.wallShape() != null ? command.wallShape() : existing.wallShape(),
-                command.wallTiling() != null ? command.wallTiling() : existing.wallTiling(),
-                command.wallFinish() != null ? command.wallFinish() : existing.wallFinish(),
-                command.windows() != null ? command.windows() : existing.windows()
+                command.floorMaterial().resolve(existing.floorMaterial()),
+                command.floorArea().resolve(existing.floorArea()),
+                command.perimeter().resolve(existing.perimeter()),
+                command.tileSize().resolve(existing.tileSize()),
+                command.installationType().resolve(existing.installationType()),
+                command.doors().resolve(existing.doors()),
+                command.baseboardHeight().resolve(existing.baseboardHeight()),
+                command.wallShape().resolve(existing.wallShape()),
+                command.wallTiling().resolve(existing.wallTiling()),
+                command.wallFinish().resolve(existing.wallFinish()),
+                command.windows().resolve(existing.windows())
         );
 
         Room saved = roomRepository.update(patched);

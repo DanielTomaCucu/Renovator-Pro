@@ -1,5 +1,7 @@
 package ro.renovatorpro.adapter.in.web.mapper;
 
+import org.openapitools.jackson.nullable.JsonNullable;
+import ro.renovatorpro.application.port.in.Patch;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.FlooringType;
 import ro.renovatorpro.domain.model.InstallationType;
@@ -14,6 +16,7 @@ import ro.renovatorpro.domain.model.Wall;
 import ro.renovatorpro.domain.model.WallFinishType;
 
 import java.math.BigDecimal;
+import java.util.function.Function;
 
 /**
  * Conversii JSON (String, cu diacritice) ↔ enum-uri de domeniu, pentru mapper-ele MapStruct din
@@ -122,5 +125,19 @@ public final class DtoConversionSupport {
 
     public static String fromWall(Wall value) {
         return value == null ? null : value.label();
+    }
+
+    /**
+     * {@link JsonNullable} (concern de deserializare JSON, adapter/in/web) → {@link Patch} (tip
+     * domeniu-agnostic, application/port/in) — punte pt. semantica PATCH din Problema 6 a auditului.
+     * {@code nullable.get()} poate fi {@code null} (cheie prezentă, valoare explicit null → șterge).
+     */
+    public static <T> Patch<T> toPatch(JsonNullable<T> nullable) {
+        return nullable.isPresent() ? Patch.of(nullable.get()) : Patch.absent();
+    }
+
+    /** Ca {@link #toPatch(JsonNullable)}, dar aplică și un convertor (ex. label String → enum de domeniu). */
+    public static <S, T> Patch<T> toPatch(JsonNullable<S> nullable, Function<S, T> converter) {
+        return nullable.isPresent() ? Patch.of(converter.apply(nullable.get())) : Patch.absent();
     }
 }
