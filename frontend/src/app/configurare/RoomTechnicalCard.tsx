@@ -13,6 +13,7 @@ import {
   WallFinishType,
 } from "@/shared/types";
 import { useStore } from "@/shared/store";
+import { useAsyncAction } from "@/shared/useAsyncAction";
 import {
   ACTION_ICONS,
   FLOORING_TYPE_ICONS,
@@ -22,6 +23,7 @@ import {
   TILE_SIZE_ICONS,
 } from "@/shared/icons";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Spinner from "@/components/Spinner";
 import RoomSketch from "./RoomSketch";
 import { RoomShapeSelect, RoomShapeLengthInputs } from "./RoomShapeWallsEditor";
 import { buildRoomCalcRows } from "./roomCalcRows";
@@ -290,11 +292,11 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
     setSaved(false);
   };
 
-  const handleSave = () => {
+  const { run: handleSave, pending: savePending } = useAsyncAction(async () => {
     // Câmpurile tehnice opționale trimit explicit `null` când sunt dezactivate în draft (nu `undefined`,
     // care JSON.stringify-uiește ca „cheie absentă" = „nu se modifică" pe backend) — altfel dezactivarea
     // placării/finisajului sau golirea suprafeței pardoselii nu s-ar persista (Problema 6 din audit).
-    updateRoom(room.id, {
+    await updateRoom(room.id, {
       ...draft,
       floorMaterial: draft.floorMaterial ?? null,
       floorArea: draft.floorArea ?? null,
@@ -309,7 +311,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
     setOpen(false);
     setSectionsOpen({ floor: false, walls: false, windows: false, doors: false });
     setSaved(true);
-  };
+  });
 
   // Faianța (wallTiling) e disponibilă doar la Gresie — la Parchet/Mochetă alternativa e vopsea/tapet (wallFinish).
   const isGresie = draft.floorMaterial === FlooringType.Gresie;
@@ -1041,8 +1043,11 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+            disabled={savePending}
+            aria-busy={savePending}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
+            {savePending && <Spinner />}
             Salvează
           </button>
         </div>
@@ -1053,8 +1058,8 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
         title="Șterge camera"
         message={`Sigur vrei să ștergi „${room.name}"? Elementele asociate acestei camere vor fi șterse și ele.`}
         onCancel={() => setConfirmDelete(false)}
-        onConfirm={() => {
-          deleteRoom(room.id);
+        onConfirm={async () => {
+          await deleteRoom(room.id);
           setConfirmDelete(false);
         }}
       />

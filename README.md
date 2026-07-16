@@ -41,6 +41,7 @@ Rulare locală: `cd backend && docker compose up -d && mvn spring-boot:run -Dspr
 ## Documentație
 
 - **[docs/audit-remedieri.md](docs/audit-remedieri.md)** — 🔴 probleme cunoscute + plan detaliat de remediere (de citit înainte de a lucra la fixuri).
+- **[docs/cerinte-loading-states.md](docs/cerinte-loading-states.md)** — 🟡 specificație de implementat: skeleton la încărcarea paginii + spinner în butoane pe durata requesturilor.
 - **[docs/backend-blueprint.md](docs/backend-blueprint.md)** — blueprint-ul oficial al backend-ului (arhitect-șef → executori).
 - **[docs/api-contract.md](docs/api-contract.md)** — contractul API REST (sursă unică de adevăr pentru shape-uri).
 - **[docs/progress.md](docs/progress.md)** — jurnal cronologic de schimbări + registru de funcții.

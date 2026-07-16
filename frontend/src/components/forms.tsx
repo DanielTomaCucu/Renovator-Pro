@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import Spinner from "./Spinner";
 
 export function Field({
   label,
@@ -24,13 +25,18 @@ export const inputCls =
 
 export function PrimaryButton({
   children,
+  pending = false,
+  disabled,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { pending?: boolean }) {
   return (
     <button
       {...props}
-      className="w-full rounded-md bg-primary py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+      disabled={disabled || pending}
+      aria-busy={pending}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
     >
+      {pending && <Spinner />}
       {children}
     </button>
   );
