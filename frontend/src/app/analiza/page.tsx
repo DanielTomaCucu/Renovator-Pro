@@ -3,17 +3,7 @@
 import { useMemo } from "react";
 import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/shared/store";
-import {
-  boughtCount,
-  budgetRemaining,
-  costPerCategory,
-  costPerRoom,
-  donutSegments,
-  formatMoney,
-  purchaseProgress,
-  totalEstimated,
-  totalSpent,
-} from "@/shared/functions";
+import { donutSegments, formatMoney, totalEstimated } from "@/shared/functions";
 import { ItemStatus } from "@/shared/types";
 import { ACTION_ICONS, ANALYTICS_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
 import DashboardSummaryCard, {
@@ -28,14 +18,11 @@ const PIE_COLORS = ["#a7f3d0", "#ddd6fe", "#fecaca", "#bae6fd", "#fde68a"];
 const MOBILE_PIE_COLORS = ["#000000", "#45464d", "#76777d", "#c6c6cd", "#e2e8f0"];
 
 export default function AnalizaPage() {
-  const { project, rooms, items } = useStore();
+  const { project, rooms, items, summary } = useStore();
   const money = (value: number) => formatMoney(value, project.currency);
 
-  const estimated = useMemo(() => totalEstimated(items), [items]);
-  const spent = useMemo(() => totalSpent(items), [items]);
-  const remaining = budgetRemaining(project.totalBudget, items);
-  const bought = boughtCount(items);
-  const progress = purchaseProgress(items);
+  // Totalurile vin din agregarea server-side (summary), nu recalculate client-side (Problema 2 din audit).
+  const { totalEstimated: estimated, totalSpent: spent, budgetRemaining: remaining, boughtCount: bought, purchaseProgress: progress } = summary;
 
   const spentPct = project.totalBudget
     ? Math.round((spent / project.totalBudget) * 100)
@@ -44,8 +31,12 @@ export default function AnalizaPage() {
     ? Math.round((remaining / project.totalBudget) * 100)
     : 0;
 
-  const perRoom = useMemo(() => costPerRoom(rooms, items), [rooms, items]);
-  const perCategory = useMemo(() => costPerCategory(items), [items]);
+  const perRoom = summary.costPerRoom;
+  // Adaptare la shape-ul [categorie, {total, spent}] folosit de progress bars mai jos.
+  const perCategory = useMemo(
+    () => summary.costPerCategory.map((c) => [c.materialType, { total: c.total, spent: c.spent }] as const),
+    [summary.costPerCategory]
+  );
 
   const segments = useMemo(
     () =>

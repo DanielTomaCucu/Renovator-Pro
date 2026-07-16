@@ -11,13 +11,9 @@ export const totalEstimated = (items: Item[]): number =>
 export const totalSpent = (items: Item[]): number =>
   totalEstimated(items.filter((i) => i.status === ItemStatus.Cumparat));
 
-/** Numărul de elemente achiziționate (status Cumparat). */
+/** Numărul de elemente Cumparat dintr-o listă (folosit per-cameră; totalul de proiect vine din `summary`). */
 export const boughtCount = (items: Item[]): number =>
   items.filter((i) => i.status === ItemStatus.Cumparat).length;
-
-/** Progresul achizițiilor în procente întregi (0–100). 0 dacă lista e goală. */
-export const purchaseProgress = (items: Item[]): number =>
-  items.length ? Math.round((boughtCount(items) / items.length) * 100) : 0;
 
 /** Elementele care aparțin unei camere. */
 export const itemsForRoom = (items: Item[], roomId: string): Item[] =>

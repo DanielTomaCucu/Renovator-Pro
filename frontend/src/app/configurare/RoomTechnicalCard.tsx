@@ -25,7 +25,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import RoomSketch from "./RoomSketch";
 import { RoomShapeSelect, RoomShapeLengthInputs } from "./RoomShapeWallsEditor";
 import { buildRoomCalcRows } from "./roomCalcRows";
-import { baseboardLength, estimatedSquareWallSide, hasFloorConfig, wallTilingArea } from "@/shared/functions";
+import { computeRoomDimensions, estimatedSquareWallSide, hasFloorConfig } from "@/shared/functions";
 
 const floorMaterials = Object.values(FlooringType);
 const tileSizes = Object.values(TileSize);
@@ -431,9 +431,12 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
     });
   };
 
-  const baseboard = baseboardLength(draft);
-  const tilingArea = wallTilingArea(draft);
-  const calcRows = buildRoomCalcRows(draft);
+  // Preview instant la editare: calculăm dimensiunile pe `draft` client-side (oglinda backend-ului,
+  // care rămâne sursa de adevăr pentru valorile SALVATE — vezi computeRoomDimensions/Problema 2).
+  const dims = computeRoomDimensions(draft);
+  const baseboard = dims.baseboardLength;
+  const tilingArea = dims.wallTilingArea;
+  const calcRows = buildRoomCalcRows(draft, dims);
   const windowCount = Object.keys(draft.windows ?? {}).length;
   const doorCount = Object.keys(draft.doors ?? {}).length;
   // Numerotarea secțiunilor se ajustează dinamic — „Ferestre" ocupă locul 2 sau 3 după cum e activată

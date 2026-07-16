@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/shared/store";
 import {
@@ -9,8 +9,6 @@ import {
   itemTotal,
   itemsForRoom,
   roomSubtotal,
-  totalEstimated,
-  totalSpent,
 } from "@/shared/functions";
 import { ItemStatus, MaterialType } from "@/shared/types";
 import {
@@ -54,13 +52,14 @@ const STATUS_DOT: Record<ItemStatus, { icon: string; className: string }> = {
 };
 
 export default function CentralizatorPage() {
-  const { project, rooms, items } = useStore();
+  const { project, rooms, items, summary } = useStore();
   const money = (value: number) => formatMoney(value, project.currency);
   const [showSubtotals, setShowSubtotals] = useState(true);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  const estimated = useMemo(() => totalEstimated(items), [items]);
-  const spent = useMemo(() => totalSpent(items), [items]);
+  // Totalurile de proiect vin din agregarea server-side (Problema 2 din audit); subtotalul/itemii
+  // per cameră rămân calculați client-side (randare de detaliu, nu agregat de dashboard).
+  const { totalEstimated: estimated, totalSpent: spent } = summary;
   const efficiency = budgetEfficiency(estimated, spent);
 
   function toggleRoom(roomId: string) {

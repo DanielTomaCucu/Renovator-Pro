@@ -1,38 +1,30 @@
-import { FlooringType, Room } from "@/shared/types";
-import {
-  baseboardLength,
-  baseboardTileArea,
-  floorMaterialNeeded,
-  hasFloorConfig,
-  totalDoorWidth,
-  wallFinishArea,
-  wallTilingArea,
-  windowTrimLength,
-} from "@/shared/functions";
-import { WallFinishType } from "@/shared/types";
+import { FlooringType, Room, RoomDimensions } from "@/shared/types";
 
 export type RoomCalcRow = { label: string; value: string; formula: string; math: string };
 
 /**
  * Rândurile din panoul „Calcule Detaliate" al unui card de cameră — extrase într-o funcție pură ca să
  * poată fi refolosite identic în PDF-ul exportat (`ApartmentPdfDocument.tsx`), nu doar în UI
- * (`RoomTechnicalCard.tsx`). Aceleași formule, exact același text — un constructor care compară PDF-ul
- * cu ecranul trebuie să vadă mereu aceleași cifre.
+ * (`RoomTechnicalCard.tsx`). Aceleași formule, exact același text.
+ *
+ * `dims` = breakdown-ul numeric (necesarul de material). SURSA DE ADEVĂR e backend-ul: se pasează
+ * `room.dimensions` (valorile salvate) pentru camerele venite din API, sau `computeRoomDimensions(draft)`
+ * ca preview instant la editare (Problema 2 din audit — nu recalculăm aici regulile de business).
  */
-export function buildRoomCalcRows(room: Room): RoomCalcRow[] {
+export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow[] {
   const isGresie = room.floorMaterial === FlooringType.Gresie;
-  const baseboard = baseboardLength(room);
-  const baseboardTiles = baseboardTileArea(room);
-  const materialNeeded = floorMaterialNeeded(room);
-  const tilingArea = wallTilingArea(room);
-  const paintArea = wallFinishArea(room, WallFinishType.Vopsea);
-  const wallpaperArea = wallFinishArea(room, WallFinishType.Tapet);
-  const windowTrim = windowTrimLength(room);
+  const baseboard = dims.baseboardLength;
+  const baseboardTiles = dims.baseboardTileArea;
+  const materialNeeded = dims.floorMaterialNeeded;
+  const tilingArea = dims.wallTilingArea;
+  const paintArea = dims.paintArea;
+  const wallpaperArea = dims.wallpaperArea;
+  const windowTrim = dims.windowTrimLength;
   const windowCount = Object.keys(room.windows ?? {}).length;
 
   const rows: RoomCalcRow[] = [];
 
-  if (hasFloorConfig(room)) {
+  if (dims.hasFloorConfig) {
     rows.push({
       label: `${room.floorMaterial} (Pardoseală${baseboardTiles > 0 ? " + Plintă" : ""})`,
       value: `${materialNeeded.toFixed(2)} mp`,
@@ -52,7 +44,7 @@ export function buildRoomCalcRows(room: Room): RoomCalcRow[] {
       label: "Plintă",
       value: `${baseboard.toFixed(2)} ml`,
       formula: "(Perimetru − Σ lățime uși) + 5% pierdere",
-      math: `(${room.perimeter.toFixed(2)} − ${totalDoorWidth(room).toFixed(2)}) × 1.05 = ${baseboard.toFixed(2)} ml`,
+      math: `(${room.perimeter.toFixed(2)} − ${dims.totalDoorWidth.toFixed(2)}) × 1.05 = ${baseboard.toFixed(2)} ml`,
     });
   }
 

@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, Font, StyleSheet } from "@react-pdf/renderer";
-import { Currency, Project, Room, RoomShape, Wall } from "@/shared/types";
-import { formatMoney, projectTechnicalSummary } from "@/shared/functions";
+import { Currency, Project, Room, RoomShape, TechnicalSummary, Wall } from "@/shared/types";
+import { computeRoomDimensions, formatMoney } from "@/shared/functions";
 import { WALL_LABELS, ROOM_TYPE_DESCRIPTION } from "./RoomTechnicalCard";
 import { buildRoomCalcRows } from "./roomCalcRows";
 import RoomSketchPdf from "./RoomSketchPdf";
@@ -211,7 +211,9 @@ function RoomPage({
   currency: Currency;
 }) {
   const specs = buildRoomSpecs(room);
-  const calcRows = buildRoomCalcRows(room);
+  // Valorile SALVATE, autoritative, vin de la server (`room.dimensions`); fallback la calculul client
+  // pentru o cameră fără breakdown-ul de la server (Problema 2 din audit).
+  const calcRows = buildRoomCalcRows(room, room.dimensions ?? computeRoomDimensions(room));
   const half = Math.ceil(specs.length / 2);
   const leftSpecs = specs.slice(0, half);
   const rightSpecs = specs.slice(half);
@@ -284,8 +286,17 @@ function RoomPage({
  * Camerele fără nicio dată tehnică completată nu apar deloc (nici în cuprins, nici ca pagină) — n-are
  * rost o pagină goală „nu există configurare” pentru o cameră netratată încă.
  */
-export default function ApartmentPdfDocument({ project, rooms }: { project: Project; rooms: Room[] }) {
-  const summary = projectTechnicalSummary(rooms);
+export default function ApartmentPdfDocument({
+  project,
+  rooms,
+  technical,
+}: {
+  project: Project;
+  rooms: Room[];
+  // Sumarul tehnic agregat, calculat server-side (Problema 2 din audit) — pasat din pagina de configurare.
+  technical: TechnicalSummary;
+}) {
+  const summary = technical;
   const generatedAt = new Date().toLocaleDateString("ro-RO", { year: "numeric", month: "long", day: "numeric" });
   const configuredRooms = rooms.filter((r) => buildRoomSpecs(r).length > 0);
 

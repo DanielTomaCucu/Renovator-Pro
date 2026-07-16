@@ -18,7 +18,7 @@ const EXCHANGE_RATE_HISTORY = [
 ];
 
 export default function SetariPage() {
-  const { project, updateProject } = useStore();
+  const { project, convertCurrency } = useStore();
   const [pendingCurrency, setPendingCurrency] = useState(project.currency);
   // `project.currency` poate fi actualizat asincron la montare (store-ul citește din localStorage
   // într-un efect propriu, după primul render) — sincronizăm starea locală „pending" fără useEffect,
@@ -31,9 +31,27 @@ export default function SetariPage() {
   }
   const [exchangeRate, setExchangeRate] = useState("4.97");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Conversie necesară doar când moneda țintă diferă de cea curentă a proiectului.
+  const conversionNeeded = pendingCurrency !== project.currency;
 
   const handleSave = () => {
-    updateProject({ currency: pendingCurrency });
+    if (!conversionNeeded) {
+      // Nimic de convertit — moneda e deja cea selectată.
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      return;
+    }
+    const rate = Number(exchangeRate);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      setError("Introdu un curs valutar valid (strict pozitiv) înainte de conversie.");
+      return;
+    }
+    setError(null);
+    // Conversie REALĂ: recalculează toate sumele (buget, camere, elemente) pe backend, apoi
+    // reîncarcă snapshot-ul — vezi convertCurrency din store.tsx.
+    convertCurrency(pendingCurrency, rate);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -85,13 +103,13 @@ export default function SetariPage() {
                 </div>
               </div>
 
-              {pendingCurrency === Currency.EUR && (
+              {conversionNeeded && (
                 <div className="max-w-xs space-y-2">
                   <label className="flex items-center gap-1 text-[10px] font-bold uppercase text-muted">
                     Curs Valutar (1 EUR = ... RON)
                     <span
                       className="material-symbols-outlined text-[14px] text-muted"
-                      title="Folosit pentru conversia automată a ofertelor în RON"
+                      title="Folosit pentru conversia tuturor sumelor între EUR și RON"
                     >
                       {TECHNICAL_ICONS.info}
                     </span>
@@ -110,22 +128,27 @@ export default function SetariPage() {
                     </span>
                   </div>
                   <p className="text-xs italic text-muted">
-                    Cursul este utilizat pentru sincronizarea automată a costurilor de la
-                    furnizori externi.
+                    La salvare, {pendingCurrency === Currency.RON ? "sumele în EUR se înmulțesc" : "sumele în RON se împart"}{" "}
+                    cu acest curs. Se convertesc toate valorile: buget total, buget pe camere și prețurile elementelor.
                   </p>
                 </div>
               )}
             </div>
 
             <div className="flex items-center justify-end gap-3 border-t border-line p-6">
-              {saved && <span className="text-xs font-bold text-secondary">Salvat ✓</span>}
+              {error && <span className="mr-auto text-xs font-bold text-tertiary">{error}</span>}
+              {saved && (
+                <span className="text-xs font-bold text-secondary">
+                  {conversionNeeded ? "Conversie aplicată ✓" : "Salvat ✓"}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={handleSave}
                 className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform hover:opacity-90 active:scale-[0.98]"
               >
                 <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.save}</span>
-                Salvează Setările
+                {conversionNeeded ? "Convertește și Salvează" : "Salvează Setările"}
               </button>
             </div>
           </div>
@@ -140,9 +163,10 @@ export default function SetariPage() {
                 De Reținut
               </h4>
               <p className="text-sm leading-relaxed text-white/80">
-                Schimbarea monedei de raportare nu modifică valorile introduse deja, ci doar
-                modul în care sunt afișate totalurile în tabloul de bord. Recomandăm stabilirea
-                monedei la începutul proiectului.
+                Schimbarea monedei convertește efectiv toate sumele proiectului (buget total, buget
+                pe camere și prețurile elementelor) la cursul introdus. Conversia este distructivă —
+                dus-întors repetat pierde precizie prin rotunjire — deci stabilește moneda la
+                începutul proiectului și schimb-o rar.
               </p>
             </div>
 

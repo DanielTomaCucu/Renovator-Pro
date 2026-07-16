@@ -13,33 +13,28 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | Funcție | Fișier / Locație | Ce face | Folosită în |
 |---|---|---|---|
 | `formatMoney(value, currency?)` | `shared/functions/money.ts` | formatare Intl ro-RO, 2 zecimale, implicit `Currency.EUR` | peste tot unde se afișează bani |
-| `itemTotal(item)` | `shared/functions/items.ts` | cantitate × preț unitar | `elemente`, `centralizator`, `analiza`, intern în `items.ts`/`charts.ts` |
-| `totalEstimated(items)` | `shared/functions/items.ts` | suma tuturor elementelor, indiferent de status | `elemente`, `centralizator`, `analiza` |
-| `totalSpent(items)` | `shared/functions/items.ts` | suma elementelor cu status `ItemStatus.Cumparat` | `elemente`, `centralizator`, `analiza`, intern în `budget.ts` |
-| `boughtCount(items)` | `shared/functions/items.ts` | număr elemente `ItemStatus.Cumparat` | `elemente`, `analiza`, intern în `items.ts` (purchaseProgress) |
-| `purchaseProgress(items)` | `shared/functions/items.ts` | % achiziții finalizate (0 dacă listă goală) | `elemente`, `centralizator` |
+| `itemTotal(item)` | `shared/functions/items.ts` | cantitate × preț unitar (randare per-rând) | `elemente`, `centralizator`, intern în `items.ts` |
+| `totalEstimated(items)` | `shared/functions/items.ts` | suma unei liste (indiferent de status) — subtotaluri ad-hoc; totalul de proiect vine din `summary` | `analiza` (pendingTotal), intern (`totalSpent`, `roomSubtotal`) |
+| `totalSpent(items)` | `shared/functions/items.ts` | suma elementelor cu status `ItemStatus.Cumparat` | intern (`roomSpent`) — totalul de proiect vine din `summary` |
+| `boughtCount(items)` | `shared/functions/items.ts` | număr elemente `ItemStatus.Cumparat` (per-cameră) | `elemente` (per-cameră) — totalul de proiect vine din `summary` |
 | `itemsForRoom(items, roomId)` | `shared/functions/items.ts` | filtrare elemente după cameră | `elemente`, `centralizator`, intern (roomSubtotal, roomSpent) |
-| `roomSubtotal(items, roomId)` | `shared/functions/items.ts` | total estimat al unei camere | `elemente`, `centralizator`, intern în `charts.ts` (costPerRoom) |
-| `roomSpent(items, roomId)` | `shared/functions/items.ts` | cheltuit efectiv într-o cameră | `elemente` |
-| `budgetRemaining(totalBudget, items)` | `shared/functions/budget.ts` | buget total − cheltuit | `analiza` |
-| `budgetEfficiency(estimated, spent)` | `shared/functions/budget.ts` | % din estimat efectiv cheltuit (0 dacă nu există estimat) | `centralizator` |
-| `costPerRoom(rooms, items)` | `shared/functions/charts.ts` | distribuție cost pe cameră, sortată desc, fără camere goale | `analiza` (donut chart) |
-| `costPerCategory(items)` | `shared/functions/charts.ts` | agregare {total, spent} per `MaterialType`, sortată desc | `analiza` (progress bars) |
-| `donutSegments(data)` | `shared/functions/charts.ts` | transformă `{name, total}[]` în `DonutSegment[]` cumulative (start/end 0–1) pt. SVG donut | `analiza` |
-| `hasFloorConfig(room)` | `shared/functions/dimensions.ts` | `true` dacă material + suprafață pardoseală sunt completate | `configurare`, `auto-items.ts` |
-| `totalDoorWidth(room)` | `shared/functions/dimensions.ts` | suma lățimilor tuturor ușilor camerei (indiferent de perete) | intern în `baseboardLength`; `configurare` (afișaj calcul) |
+| `roomSubtotal(items, roomId)` | `shared/functions/items.ts` | total estimat al unei camere (randare per-cameră) | `centralizator` |
+| `roomSpent(items, roomId)` | `shared/functions/items.ts` | cheltuit efectiv într-o cameră (randare per-cameră) | `elemente` |
+| `budgetEfficiency(estimated, spent)` | `shared/functions/budget.ts` | % din estimat efectiv cheltuit — rație de prezentare peste totalurile din `summary` | `centralizator` |
+| `donutSegments(data)` | `shared/functions/charts.ts` | transformă `{name, total}[]` (din `summary.costPerRoom`) în `DonutSegment[]` cumulative — geometrie de prezentare | `analiza` |
+| `hasFloorConfig(room)` | `shared/functions/dimensions.ts` | `true` dacă material + suprafață pardoseală sunt completate | `configurare`, intern (`computeRoomDimensions`, `floorMaterialNeeded`) |
+| `totalDoorWidth(room)` | `shared/functions/dimensions.ts` | suma lățimilor tuturor ușilor camerei (indiferent de perete) | intern (`baseboardLength`, `computeRoomDimensions`) |
 | `doorArea(room, wall)` | `shared/functions/dimensions.ts` | aria ușii unui perete dat (0 dacă nu are ușă) | intern în `wallTilingArea`/`wallFinishArea` |
-| `baseboardLength(room)` | `shared/functions/dimensions.ts` | plintă (ml) = (perimetru − Σ lățime uși) + 5% pierdere | `configurare`, `auto-items.ts`, intern (`baseboardTileArea`, `projectTechnicalSummary`) |
-| `baseboardTileArea(room)` | `shared/functions/dimensions.ts` | suprafață de plintă (mp) tăiată din plăcile de gresie — 0 dacă pardoseala nu e Gresie sau nu are `baseboardHeight` completat | `configurare`, intern în `floorMaterialNeeded` |
-| `floorMaterialNeeded(room)` | `shared/functions/dimensions.ts` | necesar material pardoseală (+10% pierdere) — la Gresie include și `baseboardTileArea` (plinta consumă din același material) | `configurare`, `auto-items.ts` |
-| `wallTilingArea(room)` | `shared/functions/dimensions.ts` | suprafață faianță pe pereții placați, minus golurile ușilor și ferestrelor de pe acei pereți — doar la Gresie (0 la Parchet/Mochetă) | `configurare`, `auto-items.ts` |
-| `wallFinishArea(room, type)` | `shared/functions/dimensions.ts` | suprafață vopsea/tapet pe pereții cu finisajul `type`, minus golurile ușilor și ferestrelor de pe acei pereți — doar la Parchet/Mochetă (alternativa la faianță); pierdere 10% (vopsea) sau 15% (tapet) | `configurare`, `auto-items.ts` |
-| `estimatedSquareWallSide(room)` | `shared/functions/dimensions.ts` | lungime sugerată de perete (√suprafață, presupunând camera pătrată) — doar valoare implicită la activarea faianței/finisajului, nu resincronizată după | `configurare` |
+| `baseboardLength(room)` | `shared/functions/dimensions.ts` | plintă (ml) = (perimetru − Σ lățime uși) + 5% pierdere | intern (`baseboardTileArea`, `computeRoomDimensions`) |
+| `baseboardTileArea(room)` | `shared/functions/dimensions.ts` | suprafață de plintă (mp) tăiată din plăcile de gresie — 0 dacă pardoseala nu e Gresie sau nu are `baseboardHeight` completat | intern (`floorMaterialNeeded`, `computeRoomDimensions`) |
+| `floorMaterialNeeded(room)` | `shared/functions/dimensions.ts` | necesar material pardoseală (+10% pierdere) — la Gresie include și `baseboardTileArea` | intern (`computeRoomDimensions`) |
+| `wallTilingArea(room)` | `shared/functions/dimensions.ts` | suprafață faianță pe pereții placați, minus golurile ușilor și ferestrelor — doar la Gresie | intern (`computeRoomDimensions`) |
+| `wallFinishArea(room, type)` | `shared/functions/dimensions.ts` | suprafață vopsea/tapet, minus goluri — doar la Parchet/Mochetă; pierdere 10% (vopsea) / 15% (tapet) | intern (`computeRoomDimensions`) |
+| `estimatedSquareWallSide(room)` | `shared/functions/dimensions.ts` | lungime sugerată de perete (√suprafață) — valoare implicită la activarea faianței/finisajului | `configurare` (RoomTechnicalCard) |
 | `windowArea(room, wall)` | `shared/functions/dimensions.ts` | aria ferestrei unui perete dat (0 dacă nu are fereastră) | intern în `wallTilingArea`/`wallFinishArea` |
-| `windowTrimLength(room)` | `shared/functions/dimensions.ts` | lungime totală de glaf/bordură pt. toate ferestrele camerei (Σ perimetru fereastră) + 5% pierdere — indiferent de pardoseală | `configurare`, `auto-items.ts` |
-| `projectTechnicalSummary(rooms)` | `shared/functions/dimensions.ts` | suprafață utilă totală + % camere complet configurate | `configurare` (card „Sumar Proiect”, bara de progres) |
-| `generateAutoItems(room)` | `shared/functions/auto-items.ts` | construiește elementele „de cumpărat" derivate din pardoseală (+ plintă la Gresie), plintă separată/faianță/vopsea/tapet/glaf fereastră (după caz), fără preț, `origin: ItemOrigin.Configurare` | `store.tsx` (intern, prin `syncAutoItemsForRoom`) |
-| `syncAutoItemsForRoom(items, room, createId)` | `shared/functions/auto-items.ts` | reconciliază elementele auto-generate ale unei camere cu noua configurare tehnică — păstrează id/preț/status editate manual, adaugă/actualizează/elimină după caz; nu atinge elementele `ItemOrigin.Manual` | `store.tsx` (`updateRoom`) |
+| `windowTrimLength(room)` | `shared/functions/dimensions.ts` | lungime totală de glaf/bordură pt. toate ferestrele (Σ perimetru) + 5% pierdere | intern (`computeRoomDimensions`) |
+| `computeRoomDimensions(room)` | `shared/functions/dimensions.ts` | breakdown complet de necesar material (oglinda `RoomDimensionsCalculator.java`) — PREVIEW client la editare + fallback; sursa de adevăr e `room.dimensions` de la server | `configurare` (RoomTechnicalCard preview), `ApartmentPdfDocument` (fallback), `roomCalcRows.ts` |
+| `buildRoomCalcRows(room, dims)` | `app/configurare/roomCalcRows.ts` (local) | rândurile din „Calcule Detaliate" (label/valoare/formulă/math) din `dims` (server sau preview) | `RoomTechnicalCard`, `ApartmentPdfDocument` |
 
 ### Funcții locale de pagină
 
@@ -877,3 +872,39 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `docs/audit-remedieri.md` (nou), `README.md`, `docs/progress.md`.
 
 **Branch:** `022-audit-probleme-remedieri`.
+
+### 2026-07-15 — Audit Problema 1: conversie REALĂ de monedă EUR↔RON (nu doar schimbare de simbol)
+**De ce:** din `docs/audit-remedieri.md` (Problema 1, severitate mare, cerută explicit de user): comutarea RON↔EUR din Setări schimba doar eticheta monedei, nu convertea valorile; câmpul „Curs Valutar" era pur decorativ. Abordarea aleasă: conversie reală, persistată, în backend (sursa de adevăr), ca să nu dublăm logica.
+
+- **Contract-first** (`docs/api-contract.md`): endpoint nou `POST /api/projects/{id}/currency`, body `{ targetCurrency, exchangeRate }` (rate = câți RON per 1 EUR). Documentat caveat-ul distructiv + bifat item-ul „curs valutar" din „De decis".
+- **Backend** (arhitectură hexagonală, `BigDecimal`/`HALF_UP`):
+  - `domain/service/CurrencyConverter.java` (nou) — funcție pură de conversie (EUR→RON ×rate; RON→EUR ÷rate; aceeași monedă = identitate; rate ≤ 0 respins). Sursa unică de adevăr a regulii.
+  - `application/port/in/ConvertProjectCurrencyUseCase.java` + `application/usecase/ConvertProjectCurrencyService.java` (noi) — o singură tranzacție care convertește `project.totalBudget` + toate `room.allocatedBudget` + toate `item.unitPrice`, apoi setează `project.currency = target`. Câmpurile tehnice ale camerelor și restul câmpurilor elementelor rămân neatinse (reconstruite via builder/constructor).
+  - `adapter/in/web/dto/ConvertCurrencyRequest.java` (nou, `@NotNull` + `@Positive` pe rate), endpoint în `ProjectController`, mapare `toConvertCommand` în `ProjectDtoMapper` (String label → `Currency` via `DtoConversionSupport`).
+  - Teste: `CurrencyConverterTest` (6, regula pură + rotunjire + dus-întors), `UseCasesTest.convertCurrency...` (end-to-end pe fake repos), 3 teste noi în `ProjectControllerTest` (happy path + rate 0 → 400 + rate lipsă → 400). **Total: 77 teste, toate verzi.**
+- **Frontend:**
+  - `shared/functions/currency.ts` (nou) — `convertAmount`, OGLINDA `CurrencyConverter.java`, folosită DOAR de store-ul mock offline (demo). Adăugat în barrel.
+  - `RenovationStore` + `store.tsx`: metodă nouă `convertCurrency(target, rate)`. `ApiStoreProvider` apelează endpoint-ul și **reîncarcă snapshot-ul complet** (project+rooms+items) ca toate paginile/headerele să reflecte sumele convertite. `MockStoreProvider` aplică conversia local (3 updatere pure, fără setState imbricat — sigur în StrictMode).
+  - `app/setari/page.tsx`: butonul Salvează apelează acum `convertCurrency` când moneda diferă (nu `updateProject({currency})`); câmpul de curs apare ori de câte ori e nevoie de conversie (ambele direcții), cu hint direcțional; validare rate > 0 cu mesaj de eroare; butonul devine „Convertește și Salvează"; textul „De Reținut" rescris să descrie corect conversia + caveat-ul distructiv.
+- **Verificat efectiv** (nu doar compilat): `mvn test` (77 verzi), `npx tsc --noEmit` + `npm run lint` (0 erori, 1 warning preexistent) + `npm run build` (succes). **Testat end-to-end pe backend-ul real local** (Postgres via docker compose + `spring-boot:run` profil dev): `curl` conversie EUR→RON @5 → project 1000→5000, room 500→2500, item 100→500; invers RON→EUR @5 → revine la original; validări 400 (rate 0/negativ/lipsă, monedă invalidă) + 404 (proiect inexistent). **Testat în browser** (`/setari`): selectat RON → apărut câmp curs + buton „Convertește și Salvează"; setat 5, convertit → moneda proiectului RON, valorile scrise prin backend (confirmat `curl`), iar `/centralizator` afișează „1.000 RON" (Robinet 2×500 RON). Datele de test curățate, proiectul readus la starea seed.
+
+**Nefăcut aici:** conversia nu are sursă automată de curs (userul introduce rata manual, ca în cerință). Restul problemelor din audit (2–8) rămân neatinse.
+
+**Fișiere atinse:** `docs/api-contract.md`, `docs/progress.md`; backend nou: `domain/service/CurrencyConverter.java`, `application/port/in/ConvertProjectCurrencyUseCase.java`, `application/usecase/ConvertProjectCurrencyService.java`, `adapter/in/web/dto/ConvertCurrencyRequest.java`; backend modificat: `adapter/in/web/ProjectController.java`, `adapter/in/web/mapper/ProjectDtoMapper.java`; teste: `domain/service/CurrencyConverterTest.java` (nou), `application/usecase/UseCasesTest.java`, `adapter/in/web/ProjectControllerTest.java`; frontend nou: `shared/functions/currency.ts`; frontend modificat: `shared/functions/index.ts`, `shared/types/RenovationStore.ts`, `shared/store.tsx`, `app/setari/page.tsx`.
+
+**Branch:** `023-conversie-moneda-reala`.
+
+### 2026-07-15 — Audit Problema 2: de-duplicare logică frontend↔backend (agregări + dimensiuni server-side)
+**De ce:** din `docs/audit-remedieri.md` (Problema 2, severitate mare arhitecturală, cerută explicit de user): fiecare regulă de business exista în DOUĂ locuri (TS + Java), risc de divergență silențioasă. Decizii luate cu userul: **(1)** scope complet, inclusiv dimensiuni; **(2)** dimensiuni = backend autoritativ + preview client; **(3)** ștergere mock store + cod mort.
+
+- **Backend — endpoint de agregare** (`GET /api/projects/{id}/summary`, contract-first în `api-contract.md`): `GetProjectSummaryUseCase`/`Service` (nou) compune într-o citire `{ totalEstimated, totalSpent, budgetRemaining, purchaseProgress, boughtCount, costPerRoom[], costPerCategory[], technical{totalFloorArea, configuredRoomsRatio} }`, TOT din `BudgetCalculator`/`RoomDimensionsCalculator` (nereinventat). DTO `ProjectSummaryResponse` + mapper scris de mână (`ProjectSummaryDtoMapper`).
+- **Backend — dimensiuni autoritative**: `RoomResponse` primește un câmp `dimensions` (`RoomDimensionsDto`) calculat server-side din `RoomDimensionsCalculator` (via `RoomDtoMapper.toDimensions`) — sursa de adevăr pentru necesarul de material.
+- **Frontend — consum**: `store.tsx` rescris — expune `summary`, reîncărcat după FIECARE mutație. `RenovationStore.summary` (tip nou `ProjectSummary`). Paginile `analiza`/`centralizator`/`elemente` consumă `summary` pentru KPI + donut + progress bars; `configurare` consumă `summary.technical` pentru cardul „Sumar Tehnic Global". `Room.dimensions` (tip nou `RoomDimensions`) vine de la server; `buildRoomCalcRows(room, dims)` refactorizat să primească dims (server pentru PDF, `computeRoomDimensions(draft)` ca preview client la editare — documentat ne-autoritativ).
+- **Ștergeri (cod mort/duplicat)**: `MockStoreProvider` + `mock-data.ts` + `auto-items.ts` (`syncAutoItemsForRoom`/`generateAutoItems`, folosite doar de mock) + `currency.ts` (`convertAmount`, folosit doar de mock) — API-ul e acum singurul mod. Funcțiile de agregare acum inutile client-side ȘTERSE: `costPerRoom`, `costPerCategory` (`charts.ts`), `budgetRemaining` (`budget.ts`), `purchaseProgress` (`items.ts`), `projectTechnicalSummary` (`dimensions.ts`). Grep confirmat 0 utilizări înainte de ștergere. `NEXT_PUBLIC_USE_MOCK_DATA` eliminat din `.env.example`.
+- **Verificat efectiv**: backend `mvn test` → **79 teste verzi** (nou: `GetProjectSummaryService` end-to-end în `UseCasesTest`, endpoint în `ProjectControllerTest`). Frontend `tsc`/`lint`/`build` OK (1 warning preexistent). **Testat end-to-end pe backend real** (curl): `/summary` agregă corect (estimat 370, cheltuit 250 doar Cumparat, progres, cost/cameră, cost/categorie cu label diacritice, technical); `room.dimensions` calculat corect (Gresie 20mp → floorMaterialNeeded 23.89 = 22 + plintă 1.89). **Testat în browser**: `/analiza` afișează KPI + donut din summary (cheltuit 250, rămas 9.750, 1/3 33%, donut Dormitor Mare 370); `/configurare` afișează sumarul tehnic din server; panoul „Calcule Detaliate" randează preview-ul client (23.89 mp) IDENTIC cu valoarea server (paritate confirmată); 0 erori în consolă.
+
+**Nefăcut aici:** calculele per-RÂND/per-cameră de detaliu (`itemTotal`, `roomSubtotal`, `roomSpent`, `itemsForRoom`, `boughtCount` per-cameră) rămân client-side — sunt randare de tabel, nu agregat de dashboard (documentat). Restul problemelor din audit (3–8) neatinse.
+
+**Fișiere atinse:** `docs/{api-contract,progress}.md`, `CLAUDE.md`, `README.md`, `frontend/.env.example`; backend nou: `application/port/in/GetProjectSummaryUseCase.java`, `application/usecase/GetProjectSummaryService.java`, `adapter/in/web/dto/{ProjectSummaryResponse,RoomDimensionsDto}.java`, `adapter/in/web/mapper/ProjectSummaryDtoMapper.java`; backend modificat: `adapter/in/web/ProjectController.java`, `adapter/in/web/dto/RoomResponse.java`, `adapter/in/web/mapper/RoomDtoMapper.java`, teste `UseCasesTest`/`ProjectControllerTest`; frontend nou: `shared/types/{ProjectSummary,RoomDimensions}.ts`; frontend modificat: `shared/types/{index,Room,RenovationStore}.ts`, `shared/store.tsx`, `shared/functions/{index,items,budget,charts,dimensions}.ts`, `app/{analiza,centralizator,elemente,configurare}/page.tsx`, `app/configurare/{roomCalcRows,RoomTechnicalCard,ApartmentPdfDocument}.tsx`; ȘTERSE: `shared/mock-data.ts`, `shared/functions/{auto-items,currency}.ts`.
+
+**Branch:** `023-conversie-moneda-reala` (același MR ca Problema 1).

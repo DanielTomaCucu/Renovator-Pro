@@ -4,7 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ro.renovatorpro.application.port.in.AddItemUseCase;
 import ro.renovatorpro.application.port.in.AddRoomUseCase;
+import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
 import ro.renovatorpro.application.port.in.DeleteItemUseCase;
+import ro.renovatorpro.application.port.in.GetProjectSummaryUseCase;
 import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
 import ro.renovatorpro.application.port.in.GetItemsUseCase;
 import ro.renovatorpro.application.port.in.GetProjectUseCase;
@@ -51,6 +53,8 @@ class UseCasesTest {
     private AddItemUseCase addItem;
     private UpdateItemUseCase updateItem;
     private DeleteItemUseCase deleteItem;
+    private ConvertProjectCurrencyUseCase convertCurrency;
+    private GetProjectSummaryUseCase getSummary;
 
     @BeforeEach
     void setUp() {
@@ -71,6 +75,8 @@ class UseCasesTest {
         addItem = new AddItemService(itemRepository, idGenerator);
         updateItem = new UpdateItemService(itemRepository);
         deleteItem = new DeleteItemService(itemRepository);
+        convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository);
+        getSummary = new GetProjectSummaryService(projectRepository, roomRepository, itemRepository);
     }
 
     @Test
@@ -175,5 +181,45 @@ class UseCasesTest {
 
         deleteItem.execute(USER, item.id());
         assertThat(itemRepository.findById(item.id())).isEmpty();
+    }
+
+    @Test
+    void convertCurrencyConvertesteTotBugetulCamereleSiElementele() {
+        // Proiect seedat: EUR, buget 1000. Adăugăm o cameră (buget 500) și un element (preț 100 EUR).
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
+
+        // Conversie EUR → RON la 5.00: toate sumele × 5.
+        Project result = convertCurrency.execute(USER, PROJECT_ID,
+                new ConvertProjectCurrencyUseCase.Command(Currency.RON, new BigDecimal("5.00")));
+
+        assertThat(result.currency()).isEqualTo(Currency.RON);
+        assertThat(result.totalBudget().amount()).isEqualByComparingTo("5000.00");
+        assertThat(projectRepository.findById(PROJECT_ID).orElseThrow().currency()).isEqualTo(Currency.RON);
+        assertThat(roomRepository.findById(room.id()).orElseThrow().allocatedBudget().amount()).isEqualByComparingTo("2500.00");
+        assertThat(itemRepository.findById(item.id()).orElseThrow().unitPrice().amount()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void summaryAgregaTotalurileCumpparatulSiDistributiile() {
+        Room baie = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        // 2 × 100 = 200 estimat, Cumparat → cheltuit
+        addItem.execute(USER, new AddItemUseCase.Command(baie.id(), "Gresie", MaterialType.GRESIE, "",
+                ItemStatus.CUMPARAT, BigDecimal.valueOf(2), Money.of(100), null, null, ItemOrigin.MANUAL));
+        // 1 × 300 = 300 estimat, NEcumpărat → nu intră la cheltuit
+        addItem.execute(USER, new AddItemUseCase.Command(baie.id(), "Robinet", MaterialType.SANITARE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(300), null, null, ItemOrigin.MANUAL));
+
+        GetProjectSummaryUseCase.ProjectSummary s = getSummary.execute(USER, PROJECT_ID);
+
+        assertThat(s.totalEstimated().amount()).isEqualByComparingTo("500.00"); // 200 + 300
+        assertThat(s.totalSpent().amount()).isEqualByComparingTo("200.00");     // doar Cumparat
+        assertThat(s.budgetRemaining()).isEqualByComparingTo("800.00");         // 1000 buget − 200 cheltuit
+        assertThat(s.boughtCount()).isEqualTo(1);
+        assertThat(s.purchaseProgress()).isEqualTo(50);                          // 1 din 2 elemente
+        assertThat(s.costPerRoom()).singleElement()
+                .satisfies(rc -> assertThat(rc.total().amount()).isEqualByComparingTo("500.00"));
+        assertThat(s.costPerCategory()).containsKey(MaterialType.GRESIE).containsKey(MaterialType.SANITARE);
     }
 }

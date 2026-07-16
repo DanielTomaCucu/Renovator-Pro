@@ -8,4 +8,3 @@ export * from "./items";
 export * from "./budget";
 export * from "./charts";
 export * from "./dimensions";
-export * from "./auto-items";

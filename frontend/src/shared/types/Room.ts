@@ -8,6 +8,7 @@ import { WallFinish } from "./WallFinish";
 import { Wall } from "./Wall";
 import { RoomWindow } from "./RoomWindow";
 import { RoomShape } from "./RoomShape";
+import { RoomDimensions } from "./RoomDimensions";
 
 /**
  * O cameră a apartamentului, cu buget alocat propriu.
@@ -41,4 +42,9 @@ export interface Room {
   wallFinish?: WallFinish;
   /** Ferestre — max. o fereastră per perete, indiferent de tipul de pardoseală. Reduc aria de faianță/vopsea/tapet a peretelui și adaugă glaf de bordură. */
   windows?: Partial<Record<Wall, RoomWindow>>;
+  /**
+   * Necesarul de material calculat server-side (sursa de adevăr). Prezent pe camerele venite din API
+   * (`GET .../rooms`); absent pe o cameră construită local (ex. `draft` în curs de editare). Vezi `RoomDimensions`.
+   */
+  dimensions?: RoomDimensions;
 }
