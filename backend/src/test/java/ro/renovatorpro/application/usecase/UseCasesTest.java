@@ -11,6 +11,7 @@ import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
 import ro.renovatorpro.application.port.in.GetItemsUseCase;
 import ro.renovatorpro.application.port.in.GetProjectUseCase;
 import ro.renovatorpro.application.port.in.GetRoomsUseCase;
+import ro.renovatorpro.application.port.in.GetSpendingTimelineUseCase;
 import ro.renovatorpro.application.port.in.UpdateItemUseCase;
 import ro.renovatorpro.application.port.in.UpdateProjectUseCase;
 import ro.renovatorpro.application.port.in.UpdateRoomUseCase;
@@ -26,6 +27,8 @@ import ro.renovatorpro.domain.model.Room;
 import ro.renovatorpro.domain.model.RoomType;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.YearMonth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +45,7 @@ class UseCasesTest {
     private FakeRoomRepository roomRepository;
     private FakeItemRepository itemRepository;
     private FakeIdGenerator idGenerator;
+    private FakeTimeProvider timeProvider;
 
     private GetProjectUseCase getProject;
     private GetRoomsUseCase getRooms;
@@ -55,6 +59,7 @@ class UseCasesTest {
     private DeleteItemUseCase deleteItem;
     private ConvertProjectCurrencyUseCase convertCurrency;
     private GetProjectSummaryUseCase getSummary;
+    private GetSpendingTimelineUseCase getSpendingTimeline;
 
     @BeforeEach
     void setUp() {
@@ -62,6 +67,7 @@ class UseCasesTest {
         roomRepository = new FakeRoomRepository();
         itemRepository = new FakeItemRepository();
         idGenerator = new FakeIdGenerator();
+        timeProvider = new FakeTimeProvider();
 
         projectRepository.seed(new Project(PROJECT_ID, "Proiectul Meu", Money.of(1000), Currency.EUR, null));
 
@@ -70,13 +76,14 @@ class UseCasesTest {
         getItems = new GetItemsService(roomRepository, itemRepository);
         updateProject = new UpdateProjectService(projectRepository);
         addRoom = new AddRoomService(roomRepository, idGenerator);
-        updateRoom = new UpdateRoomService(roomRepository, itemRepository, idGenerator);
+        updateRoom = new UpdateRoomService(roomRepository, itemRepository, idGenerator, timeProvider);
         deleteRoom = new DeleteRoomService(roomRepository, itemRepository);
-        addItem = new AddItemService(itemRepository, idGenerator);
-        updateItem = new UpdateItemService(itemRepository);
+        addItem = new AddItemService(itemRepository, idGenerator, timeProvider);
+        updateItem = new UpdateItemService(itemRepository, timeProvider);
         deleteItem = new DeleteItemService(itemRepository);
         convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository);
         getSummary = new GetProjectSummaryService(projectRepository, roomRepository, itemRepository);
+        getSpendingTimeline = new GetSpendingTimelineService(roomRepository, itemRepository);
     }
 
     @Test
@@ -221,5 +228,85 @@ class UseCasesTest {
         assertThat(s.costPerRoom()).singleElement()
                 .satisfies(rc -> assertThat(rc.total().amount()).isEqualByComparingTo("500.00"));
         assertThat(s.costPerCategory()).containsKey(MaterialType.GRESIE).containsKey(MaterialType.SANITARE);
+    }
+
+    @Test
+    void addItemSeteazaCreatedAtSiPurchasedAtDoarDacaEDejaCumparat() {
+        timeProvider.set(Instant.parse("2026-03-01T10:00:00Z"));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+
+        Item planificat = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
+        assertThat(planificat.createdAt()).isEqualTo(Instant.parse("2026-03-01T10:00:00Z"));
+        assertThat(planificat.purchasedAt()).isNull();
+
+        Item cumparatDejaLaCreare = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "",
+                ItemStatus.CUMPARAT, BigDecimal.TEN, Money.of(50), null, null, ItemOrigin.MANUAL));
+        assertThat(cumparatDejaLaCreare.purchasedAt()).isEqualTo(cumparatDejaLaCreare.createdAt());
+    }
+
+    @Test
+    void updateItemSeteazaPurchasedAtDoarLaTranzitieSpreCumparat() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        timeProvider.set(Instant.parse("2026-01-10T00:00:00Z"));
+        Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.TEN, Money.of(50), null, null, ItemOrigin.MANUAL));
+        assertThat(item.purchasedAt()).isNull();
+
+        timeProvider.set(Instant.parse("2026-02-15T00:00:00Z"));
+        Item cumparat = updateItem.execute(USER, item.id(), new UpdateItemUseCase.Command(
+                null, null, null, ItemStatus.CUMPARAT, null, null, null, null));
+        assertThat(cumparat.purchasedAt()).isEqualTo(Instant.parse("2026-02-15T00:00:00Z"));
+
+        // Editare ulterioară fără schimbare de status reală (rămâne Cumparat) — purchasedAt NU se reîmprospătează.
+        timeProvider.set(Instant.parse("2026-03-01T00:00:00Z"));
+        Item redenumit = updateItem.execute(USER, item.id(), new UpdateItemUseCase.Command(
+                "Gresie Premium", null, null, ItemStatus.CUMPARAT, null, null, null, null));
+        assertThat(redenumit.purchasedAt()).isEqualTo(Instant.parse("2026-02-15T00:00:00Z"));
+
+        // Revenire la Planificat — purchasedAt rămâne (istoric), createdAt neschimbat.
+        Item revenit = updateItem.execute(USER, item.id(), new UpdateItemUseCase.Command(
+                null, null, null, ItemStatus.PLANIFICAT, null, null, null, null));
+        assertThat(revenit.purchasedAt()).isEqualTo(Instant.parse("2026-02-15T00:00:00Z"));
+        assertThat(revenit.createdAt()).isEqualTo(Instant.parse("2026-01-10T00:00:00Z"));
+    }
+
+    @Test
+    void spendingTimelineAgregaCumulativPeLunaCumparariiDoarElementeleCumparate() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+
+        // Ianuarie: 2 × 50 = 100 cumpărat.
+        timeProvider.set(Instant.parse("2026-01-15T00:00:00Z"));
+        Item ian = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "",
+                ItemStatus.CUMPARAT, BigDecimal.valueOf(2), Money.of(50), null, null, ItemOrigin.MANUAL));
+
+        // Februarie: 1 × 300 = 300 cumpărat → cumulativ 400.
+        timeProvider.set(Instant.parse("2026-02-10T00:00:00Z"));
+        addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
+                ItemStatus.CUMPARAT, BigDecimal.ONE, Money.of(300), null, null, ItemOrigin.MANUAL));
+
+        // Element NEcumpărat — ignorat de serie.
+        addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Oglindă", MaterialType.ALTELE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(999), null, null, ItemOrigin.MANUAL));
+
+        var timeline = getSpendingTimeline.execute(USER, PROJECT_ID);
+
+        assertThat(timeline).hasSize(2);
+        assertThat(timeline.get(0).month()).isEqualTo(YearMonth.of(2026, 1));
+        assertThat(timeline.get(0).cumulativeSpent().amount()).isEqualByComparingTo("100.00");
+        assertThat(timeline.get(1).month()).isEqualTo(YearMonth.of(2026, 2));
+        assertThat(timeline.get(1).cumulativeSpent().amount()).isEqualByComparingTo("400.00"); // cumulativ
+
+        // Sanity: elementul din ianuarie chiar există și e Cumparat (evită un test fals-pozitiv).
+        assertThat(ian.status()).isEqualTo(ItemStatus.CUMPARAT);
+    }
+
+    @Test
+    void spendingTimelineEsteGoalaCandNimicNuECumparat() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
+
+        assertThat(getSpendingTimeline.execute(USER, PROJECT_ID)).isEmpty();
     }
 }

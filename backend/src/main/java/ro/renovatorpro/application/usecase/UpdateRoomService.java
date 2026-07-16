@@ -7,6 +7,7 @@ import ro.renovatorpro.application.port.in.UpdateRoomUseCase;
 import ro.renovatorpro.application.port.out.IdGenerator;
 import ro.renovatorpro.application.port.out.ItemRepository;
 import ro.renovatorpro.application.port.out.RoomRepository;
+import ro.renovatorpro.application.port.out.TimeProvider;
 import ro.renovatorpro.domain.exception.RoomNotFoundException;
 import ro.renovatorpro.domain.model.Item;
 import ro.renovatorpro.domain.model.Room;
@@ -22,6 +23,7 @@ public class UpdateRoomService implements UpdateRoomUseCase {
     private final RoomRepository roomRepository;
     private final ItemRepository itemRepository;
     private final IdGenerator idGenerator;
+    private final TimeProvider timeProvider;
 
     @Override
     @Transactional
@@ -50,7 +52,7 @@ public class UpdateRoomService implements UpdateRoomUseCase {
 
         if (command.touchesTechnicalFields()) {
             List<Item> roomItems = itemRepository.findByRoomId(roomId);
-            List<Item> reconciled = AutoItemReconciler.reconcile(roomItems, saved, idGenerator::newId);
+            List<Item> reconciled = AutoItemReconciler.reconcile(roomItems, saved, idGenerator::newId, timeProvider.now());
             for (Item item : reconciled) {
                 itemRepository.save(item);
             }

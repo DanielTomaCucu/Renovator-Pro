@@ -12,6 +12,7 @@ import ro.renovatorpro.domain.model.WallTiling;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -141,7 +142,7 @@ public final class AutoItemReconciler {
      * doar numele/cantitatea, adaugă cele noi apărute (via {@code idGenerator}) și elimină cele a căror
      * măsurătoare a fost ștearsă. Elementele adăugate manual de user (origin Manual) nu sunt niciodată atinse.
      */
-    public static List<Item> reconcile(List<Item> items, Room room, Supplier<String> idGenerator) {
+    public static List<Item> reconcile(List<Item> items, Room room, Supplier<String> idGenerator, Instant now) {
         List<ItemDraft> freshAutoItems = generateAutoItems(room);
 
         List<Item> untouchedItems = items.stream()
@@ -158,16 +159,18 @@ public final class AutoItemReconciler {
                     .findFirst()
                     .orElse(null);
             if (existing != null) {
+                // createdAt/purchasedAt se păstrează neschimbate — la fel ca id/preț/status/sursă.
                 mergedAutoItems.add(new Item(
                         existing.id(), existing.roomId(), fresh.name(), existing.materialType(),
                         existing.source(), existing.status(), fresh.quantity(), existing.unitPrice(),
-                        existing.productUrl(), existing.imageUrl(), existing.origin()
+                        existing.productUrl(), existing.imageUrl(), existing.origin(),
+                        existing.createdAt(), existing.purchasedAt()
                 ));
             } else {
                 mergedAutoItems.add(new Item(
                         idGenerator.get(), fresh.roomId(), fresh.name(), fresh.materialType(),
                         "", ItemStatus.IN_ASTEPTARE, fresh.quantity(), Money.zero(),
-                        null, null, ItemOrigin.CONFIGURARE
+                        null, null, ItemOrigin.CONFIGURARE, now, null
                 ));
             }
         }

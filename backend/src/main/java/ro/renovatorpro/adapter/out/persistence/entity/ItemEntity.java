@@ -18,6 +18,7 @@ import ro.renovatorpro.domain.model.MaterialType;
 import ro.renovatorpro.domain.model.Money;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 @Entity
 @Table(name = "items")
@@ -62,4 +63,10 @@ public class ItemEntity {
     @Convert(converter = ItemOriginConverter.class)
     @Column(nullable = false)
     private ItemOrigin origin;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "purchased_at")
+    private Instant purchasedAt;
 }

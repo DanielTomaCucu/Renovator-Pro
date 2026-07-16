@@ -3,6 +3,7 @@ import { Item } from "./Item";
 import { Project } from "./Project";
 import { ProjectSummary } from "./ProjectSummary";
 import { Room } from "./Room";
+import { SpendingTimelinePoint } from "./SpendingTimelinePoint";
 
 /** Contractul stării globale a aplicației — implementat de StoreProvider peste API-ul real. */
 export interface RenovationStore {
@@ -14,6 +15,12 @@ export interface RenovationStore {
    * cost/cameră, cost/categorie și sumarul tehnic. Reîncărcat după FIECARE mutație (Problema 2 din audit).
    */
   summary: ProjectSummary;
+  /**
+   * Serie temporală de cheltuieli cumulate (`GET /api/projects/{id}/spending-timeline`), pe baza
+   * momentului cumpărării — sursa graficului „Evoluția Cheltuielilor" (Problema 3 din audit). Goală
+   * dacă nimic nu a fost încă marcat Cumpărat. Reîncărcată după fiecare mutație de item.
+   */
+  spendingTimeline: SpendingTimelinePoint[];
   updateProject: (patch: Partial<Project>) => void;
   /**
    * Conversie REALĂ a monedei: recalculează toate sumele (buget proiect, buget alocat pe camere,
@@ -24,7 +31,8 @@ export interface RenovationStore {
   addRoom: (room: Omit<Room, "id">) => void;
   updateRoom: (id: string, patch: Partial<Room>) => void;
   deleteRoom: (id: string) => void;
-  addItem: (item: Omit<Item, "id">) => void;
+  /** `createdAt`/`purchasedAt` sunt gestionate exclusiv de server — niciodată furnizate de client la creare. */
+  addItem: (item: Omit<Item, "id" | "createdAt" | "purchasedAt">) => void;
   updateItem: (id: string, patch: Partial<Item>) => void;
   deleteItem: (id: string) => void;
 }

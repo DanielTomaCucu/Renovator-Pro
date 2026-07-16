@@ -35,6 +35,8 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `windowTrimLength(room)` | `shared/functions/dimensions.ts` | lungime totală de glaf/bordură pt. toate ferestrele (Σ perimetru) + 5% pierdere | intern (`computeRoomDimensions`) |
 | `computeRoomDimensions(room)` | `shared/functions/dimensions.ts` | breakdown complet de necesar material (oglinda `RoomDimensionsCalculator.java`) — PREVIEW client la editare + fallback; sursa de adevăr e `room.dimensions` de la server | `configurare` (RoomTechnicalCard preview), `ApartmentPdfDocument` (fallback), `roomCalcRows.ts` |
 | `buildRoomCalcRows(room, dims)` | `app/configurare/roomCalcRows.ts` (local) | rândurile din „Calcule Detaliate" (label/valoare/formulă/math) din `dims` (server sau preview) | `RoomTechnicalCard`, `ApartmentPdfDocument` |
+| `timelinePoints(data)` | `shared/functions/charts.ts` | normalizează `SpendingTimelinePoint[]` (din `spending-timeline`) în puncte {x,y}∈[0,1] pt. graficul de evoluție — geometrie de prezentare | `analiza` |
+| `formatMonthLabel(month)` | `app/analiza/dates.ts` (local) | formatează "yyyy-MM" într-o etichetă scurtă RO ("Ian", "Ian 2025" dacă anul diferă de cel curent) | `analiza` (axa graficului de evoluție) |
 
 ### Funcții locale de pagină
 
@@ -59,9 +61,12 @@ _(niciuna momentan — `dimensions.ts` a fost promovat în `shared/functions/` d
 | `WallFinish` | `WallFinish.ts` | interface (wallHeight, wallLengths per `Wall`, finishes: `Partial<Record<Wall, WallFinishType>>`) — doar la Parchet/Mochetă, alternativa la `WallTiling` |
 | `RoomWindow` | `RoomWindow.ts` | interface (width, height) — o fereastră, max. 1 per perete |
 | `RoomShape` | `RoomShape.ts` | enum (Pătrat / Dreptunghi / Neregulată) — controlează câte lungimi de perete cere UI-ul la `wallTiling`/`wallFinish` |
-| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `doors?: Partial<Record<Wall, RoomDoor>>`, `baseboardHeight?: number`, `wallShape?: RoomShape`, `wallTiling?: WallTiling`, `wallFinish?: WallFinish`, `windows?: Partial<Record<Wall, RoomWindow>>`) |
-| `Item` | `Item.ts` | interface (extins cu `origin: ItemOrigin`) |
+| `RoomDimensions` | `RoomDimensions.ts` | interface (breakdown necesar material, autoritativ de la server — `hasFloorConfig`, `floorMaterialNeeded`, `baseboardLength`, `baseboardTileArea`, `wallTilingArea`, `paintArea`, `wallpaperArea`, `windowTrimLength`, `totalDoorWidth`) |
+| `Room` | `Room.ts` | interface (extins cu `floorMaterial?`, `floorArea?`, `perimeter?`, `tileSize?`, `installationType?`, `doors?: Partial<Record<Wall, RoomDoor>>`, `baseboardHeight?: number`, `wallShape?: RoomShape`, `wallTiling?: WallTiling`, `wallFinish?: WallFinish`, `windows?: Partial<Record<Wall, RoomWindow>>`, `dimensions?: RoomDimensions`) |
+| `Item` | `Item.ts` | interface (extins cu `origin: ItemOrigin`, `createdAt: string`, `purchasedAt?: string`) |
 | `Project` | `Project.ts` | interface (extins cu `totalArea?: number`) |
+| `ProjectSummary` | `ProjectSummary.ts` | interface (agregări server-side: `totalEstimated`, `totalSpent`, `budgetRemaining`, `purchaseProgress`, `boughtCount`, `costPerRoom: RoomCost[]`, `costPerCategory: CategoryCost[]`, `technical: TechnicalSummary`) |
+| `SpendingTimelinePoint` | `SpendingTimelinePoint.ts` | interface (`month: string` "yyyy-MM", `cumulativeSpent: number`) — serie cumulativă pe luna cumpărării |
 | `RenovationStore` | `RenovationStore.ts` | interface |
 | `DonutSegment` | `DonutSegment.ts` | interface |
 
@@ -908,3 +913,30 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `docs/{api-contract,progress}.md`, `CLAUDE.md`, `README.md`, `frontend/.env.example`; backend nou: `application/port/in/GetProjectSummaryUseCase.java`, `application/usecase/GetProjectSummaryService.java`, `adapter/in/web/dto/{ProjectSummaryResponse,RoomDimensionsDto}.java`, `adapter/in/web/mapper/ProjectSummaryDtoMapper.java`; backend modificat: `adapter/in/web/ProjectController.java`, `adapter/in/web/dto/RoomResponse.java`, `adapter/in/web/mapper/RoomDtoMapper.java`, teste `UseCasesTest`/`ProjectControllerTest`; frontend nou: `shared/types/{ProjectSummary,RoomDimensions}.ts`; frontend modificat: `shared/types/{index,Room,RenovationStore}.ts`, `shared/store.tsx`, `shared/functions/{index,items,budget,charts,dimensions}.ts`, `app/{analiza,centralizator,elemente,configurare}/page.tsx`, `app/configurare/{roomCalcRows,RoomTechnicalCard,ApartmentPdfDocument}.tsx`; ȘTERSE: `shared/mock-data.ts`, `shared/functions/{auto-items,currency}.ts`.
 
 **Branch:** `023-conversie-moneda-reala` (același MR ca Problema 1).
+
+### 2026-07-16 — Audit Problemele 3+4: timestamp-uri pe items + grafic „Evoluția Cheltuielilor" real
+**De ce:** din `docs/audit-remedieri.md`. Problema 4 (severitate mare): `Item` nu avea niciun câmp de dată — imposibil de construit o evoluție reală. Problema 3 (severitate mare): graficul „Evoluția Cheltuielilor" era o curbă SVG hardcodată + bare mobile fixe, indiferent de date. Auditul le leagă explicit (3 depinde de 4) și recomandă „evoluție = după momentul cumpărării" — decizie aplicată (nu doar `createdAt`, ci și `purchasedAt` separat).
+
+- **Migrare** `V3__items_timestamps.sql` (nouă, nu modifică V1/V2): `items.created_at TIMESTAMPTZ NOT NULL DEFAULT now()` + `items.purchased_at TIMESTAMPTZ` (nullable — elementele deja Cumpărate înainte de migrare nu au un moment real cunoscut, rămân NULL).
+- **Backend — port nou** `TimeProvider` (`application/port/out` + `adapter/out/time/SystemTimeProvider`) — `Instant.now()` niciodată direct în use case, testabil via `FakeTimeProvider`.
+- **`Item.java`** (domain): +`Instant createdAt` (obligatoriu), +`Instant purchasedAt` (nullable). Toate cele ~15 puncte de construcție (`AddItemService`, `UpdateItemService`, `AutoItemReconciler`, `ConvertProjectCurrencyService`, + teste) actualizate.
+  - `AddItemService`: `createdAt = now()`; `purchasedAt = now()` DOAR dacă elementul e creat direct cu status Cumpărat (rar, dar posibil).
+  - `UpdateItemService`: `purchasedAt` se actualizează DOAR la tranziția SPRE Cumpărat (era altceva → devine Cumpărat) — nu se „reîmprospătează" dacă rămâne Cumpărat, nu se șterge dacă revine la alt status (istoric).
+  - `AutoItemReconciler.reconcile`: semnătură nouă cu `Instant now` — elementele auto existente păstrează `createdAt`/`purchasedAt` neschimbate (la fel ca id/preț/status), cele noi primesc `createdAt = now`, `purchasedAt = null`.
+- **Backend — endpoint nou** `GET /api/projects/{id}/spending-timeline` (`GetSpendingTimelineUseCase`/`Service`): grupează elementele Cumpărate pe luna (UTC) lui `purchasedAt`, însumează `itemTotal` (din `BudgetCalculator`, nereinventat), calculează suma cumulativă crescătoare (`TreeMap<YearMonth,...>`, sortare naturală). Listă goală dacă nimic nu-i cumpărat.
+- **`ItemEntity`/`ItemResponse`**: +2 coloane/`Instant` (Jackson serializează ISO-8601 automat, fără conversie custom — la fel ca `Double floorArea` pe `RoomResponse`).
+- Teste: `mvn test` → **85 verzi** (+6 față de sesiunea Problema 1+2): `addItem`/`updateItem` setează corect `createdAt`/`purchasedAt` (tranziție, non-reîmprospătare, păstrare la revenire), `spendingTimeline` agregă cumulativ corect + listă goală, endpoint nou în `ProjectControllerTest`, round-trip Postgres real pe `PersistenceAdapterIntegrationTest` (cu trunchiere la microsecunde — Postgres TIMESTAMPTZ nu păstrează nanosecunde).
+- **Frontend:**
+  - `Item.ts`: +`createdAt: string`, +`purchasedAt?: string` (gestionate exclusiv de server — `RenovationStore.addItem` exclude ambele din tipul param, `Omit<Item, "id" | "createdAt" | "purchasedAt">`).
+  - `SpendingTimelinePoint.ts` (nou, shared) — oglinda răspunsului.
+  - `store.tsx`: `reloadSummary` redenumit `reloadAggregates` — reîncarcă ACUM `summary` + `spendingTimeline` în paralel, la fiecare mutație + load inițial.
+  - `shared/functions/charts.ts`: +`timelinePoints(data)` (normalizare {x,y}∈[0,1], geometrie de prezentare, alături de `donutSegments`).
+  - `app/analiza/dates.ts` (nou, LOCAL — folosit doar în `/analiza`, nu promovat în shared): `formatMonthLabel("yyyy-MM")` → etichetă RO scurtă, cu anul doar dacă diferă de cel curent.
+  - `app/analiza/page.tsx`: graficul desktop (SVG hardcodat cu curbă Bezier falsă) înlocuit cu polilinie reală prin punctele din `spendingTimeline` (sau un singur punct → cerc, sau listă goală → empty-state explicit, NICIODATĂ o curbă falsă — regulă explicită din audit); graficul mobil (bare cu înălțimi fixe) înlocuit cu bare reale, o bară per lună. Legenda „Realizat/Estimare" (implica două serii) simplificată la o singură etichetă „Cheltuit cumulat" (avem o singură serie reală).
+- **Verificat efectiv**: `mvn test` (85 verzi), `npx tsc --noEmit`/`npm run lint`/`npm run build` (0 erori, 1 warning preexistent).
+
+**Nefăcut aici:** restul problemelor din audit (5–8) neatinse. Nu există sursă automată de curs sau alt element în afara scopului celor două probleme.
+
+**Fișiere atinse:** `docs/{api-contract,progress}.md`, `CLAUDE.md`; backend nou: `db/migration/V3__items_timestamps.sql`, `application/port/out/TimeProvider.java`, `adapter/out/time/{SystemTimeProvider,package-info}.java`, `application/port/in/GetSpendingTimelineUseCase.java`, `application/usecase/GetSpendingTimelineService.java`, `adapter/in/web/dto/SpendingTimelinePointResponse.java`, `adapter/in/web/mapper/SpendingTimelineDtoMapper.java`; backend modificat: `domain/model/Item.java`, `application/usecase/{AddItemService,UpdateItemService,ConvertProjectCurrencyService,UpdateRoomService}.java`, `domain/service/AutoItemReconciler.java`, `adapter/out/persistence/entity/ItemEntity.java`, `adapter/in/web/dto/ItemResponse.java`, `adapter/in/web/ProjectController.java`; teste noi/modificate: `FakeTimeProvider.java` (nou), `UseCasesTest`, `ItemControllerTest`, `ProjectControllerTest`, `PersistenceAdapterIntegrationTest`, `DomainInvariantsTest`, `BudgetCalculatorTest`, `AutoItemReconcilerTest`; frontend nou: `shared/types/SpendingTimelinePoint.ts`, `app/analiza/dates.ts`; frontend modificat: `shared/types/{Item,RenovationStore,index}.ts`, `shared/store.tsx`, `shared/functions/charts.ts`, `app/analiza/page.tsx`.
+
+**Branch:** `024-timestamp-si-grafic-evolutie`.

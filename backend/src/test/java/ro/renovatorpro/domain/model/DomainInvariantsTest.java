@@ -3,6 +3,7 @@ package ro.renovatorpro.domain.model;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,7 +19,8 @@ class DomainInvariantsTest {
     @Test
     void elementulRefuzaCantitateNegativa() {
         assertThatThrownBy(() -> new Item("i1", "r1", "Gresie", MaterialType.GRESIE, "",
-                ItemStatus.IN_ASTEPTARE, new BigDecimal("-1"), Money.zero(), null, null, ItemOrigin.MANUAL))
+                ItemStatus.IN_ASTEPTARE, new BigDecimal("-1"), Money.zero(), null, null, ItemOrigin.MANUAL,
+                Instant.now(), null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
