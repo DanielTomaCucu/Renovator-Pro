@@ -36,12 +36,14 @@ export default function RootLayout({
       className={`${inter.variable} ${hanken.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <StoreProvider>
-          <div className="flex min-h-screen flex-col md:flex-row">
-            <Sidebar />
-            <main className="min-w-0 flex-1">{children}</main>
-          </div>
-        </StoreProvider>
+        {/* Sidebar-ul NU folosește useStore() — rămâne în afara StoreProvider ca să fie vizibil și
+            navigabil cât timp datele se încarcă (backend-ul poate avea cold-start de zeci de secunde). */}
+        <div className="flex min-h-screen flex-col md:flex-row">
+          <Sidebar />
+          <main className="min-w-0 flex-1">
+            <StoreProvider>{children}</StoreProvider>
+          </main>
+        </div>
       </body>
     </html>
   );

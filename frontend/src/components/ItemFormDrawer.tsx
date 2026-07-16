@@ -5,6 +5,7 @@ import Drawer from "./Drawer";
 import { Field, PrimaryButton, inputCls } from "./forms";
 import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { useStore } from "@/shared/store";
+import { useAsyncAction } from "@/shared/useAsyncAction";
 
 const materialTypes = Object.values(MaterialType);
 const statuses = Object.values(ItemStatus);
@@ -52,7 +53,7 @@ export default function ItemFormDrawer({
     }
   }
 
-  function submit(e: React.FormEvent) {
+  const { run: submit, pending } = useAsyncAction(async (e: React.FormEvent) => {
     e.preventDefault();
     const data = {
       name,
@@ -65,10 +66,10 @@ export default function ItemFormDrawer({
       imageUrl: imageUrl || undefined,
       roomId: room,
     };
-    if (editing && item) updateItem(item.id, data);
-    else addItem({ ...data, origin: ItemOrigin.Manual });
+    if (editing && item) await updateItem(item.id, data);
+    else await addItem({ ...data, origin: ItemOrigin.Manual });
     onClose();
-  }
+  });
 
   return (
     <Drawer
@@ -179,13 +180,14 @@ export default function ItemFormDrawer({
         </Field>
 
         <div className="pt-2 space-y-3">
-          <PrimaryButton type="submit">
+          <PrimaryButton type="submit" pending={pending}>
             {editing ? "Salvează Modificările" : "Adaugă Element"}
           </PrimaryButton>
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2 text-sm text-muted hover:text-foreground"
+            disabled={pending}
+            className="w-full py-2 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
             Anulează
           </button>

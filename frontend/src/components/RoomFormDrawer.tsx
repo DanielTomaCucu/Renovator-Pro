@@ -5,6 +5,7 @@ import Drawer from "./Drawer";
 import { Field, PrimaryButton, inputCls } from "./forms";
 import { RoomType } from "@/shared/types";
 import { useStore } from "@/shared/store";
+import { useAsyncAction } from "@/shared/useAsyncAction";
 
 // TODO (backlog CLAUDE.md #2): înlocuit cu ROOM_TYPE_ICONS (Material Symbols)
 // din "@/shared/icons" când fontul Material Symbols e încărcat în layout.tsx.
@@ -44,11 +45,11 @@ export default function RoomFormDrawer({
     }
   }
 
-  function submit(e: React.FormEvent) {
+  const { run: submit, pending } = useAsyncAction(async (e: React.FormEvent) => {
     e.preventDefault();
-    addRoom({ type, name, allocatedBudget: Number(budget) || 0 });
+    await addRoom({ type, name, allocatedBudget: Number(budget) || 0 });
     onClose();
-  }
+  });
 
   return (
     <Drawer open={open} onClose={onClose} title="Adaugă Cameră Nouă">
@@ -98,11 +99,14 @@ export default function RoomFormDrawer({
         </Field>
 
         <div className="pt-2 space-y-3">
-          <PrimaryButton type="submit">Salvează Camera</PrimaryButton>
+          <PrimaryButton type="submit" pending={pending}>
+            Salvează Camera
+          </PrimaryButton>
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2 text-sm text-muted hover:text-foreground"
+            disabled={pending}
+            className="w-full py-2 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
             Anulează
           </button>

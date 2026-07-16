@@ -1,6 +1,8 @@
 "use client";
 
 import { useLockBodyScroll } from "@/shared/useLockBodyScroll";
+import { useAsyncAction } from "@/shared/useAsyncAction";
+import Spinner from "./Spinner";
 
 export default function ConfirmDialog({
   open,
@@ -12,10 +14,13 @@ export default function ConfirmDialog({
   open: boolean;
   title: string;
   message: string;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
   onCancel: () => void;
 }) {
   useLockBodyScroll(open);
+  // Pending-ul e gestionat aici, intern — consumatorii doar dau mutația în `onConfirm`, fără să-și
+  // țină fiecare propriul `useState` de loading.
+  const { run: handleConfirm, pending } = useAsyncAction(onConfirm);
 
   if (!open) return null;
 
@@ -23,7 +28,7 @@ export default function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm sm:backdrop-blur-none"
-        onClick={onCancel}
+        onClick={pending ? undefined : onCancel}
         aria-hidden
       />
       {/* Mobil: bottom sheet (colțuri sus rotunjite, handle bar, butoane full-width stivuite) —
@@ -34,14 +39,18 @@ export default function ConfirmDialog({
         <p className="mt-2 text-center text-sm text-muted sm:text-left">{message}</p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse sm:gap-3">
           <button
-            onClick={onConfirm}
-            className="w-full rounded-xl bg-red-600 py-4 text-sm font-bold uppercase tracking-widest text-white transition-transform active:scale-[0.98] sm:flex-1 sm:rounded-md sm:py-2.5 sm:text-sm sm:font-semibold sm:normal-case sm:tracking-normal sm:hover:bg-red-700"
+            onClick={handleConfirm}
+            disabled={pending}
+            aria-busy={pending}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-4 text-sm font-bold uppercase tracking-widest text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:py-2.5 sm:text-sm sm:font-semibold sm:normal-case sm:tracking-normal sm:hover:bg-red-700"
           >
+            {pending && <Spinner />}
             Șterge
           </button>
           <button
             onClick={onCancel}
-            className="w-full rounded-xl py-3 text-sm font-medium uppercase tracking-widest text-muted transition-transform hover:bg-surface-low active:scale-[0.98] sm:flex-1 sm:rounded-md sm:border sm:border-line sm:py-2.5 sm:text-sm sm:font-medium sm:normal-case sm:tracking-normal"
+            disabled={pending}
+            className="w-full rounded-xl py-3 text-sm font-medium uppercase tracking-widest text-muted transition-transform hover:bg-surface-low active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:border sm:border-line sm:py-2.5 sm:text-sm sm:font-medium sm:normal-case sm:tracking-normal"
           >
             Anulează
           </button>

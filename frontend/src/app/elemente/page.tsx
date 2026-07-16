@@ -8,7 +8,9 @@ import ItemFormDrawer from "@/components/ItemFormDrawer";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import PageHeader from "@/components/PageHeader";
+import Spinner from "@/components/Spinner";
 import { useStore } from "@/shared/store";
+import { useAsyncAction } from "@/shared/useAsyncAction";
 import {
   boughtCount,
   formatMoney,
@@ -63,10 +65,12 @@ export default function ElementePage() {
   // (roomSpent, boughtCount(roomItems)) rămân client-side — randare de detaliu, nu agregat de dashboard.
   const { totalSpent: spent, boughtCount: bought, purchaseProgress: progress } = summary;
 
-  function quickAdd(e: React.FormEvent) {
+  // Un singur `pending` pentru butoanele de Adăugare Rapidă desktop + mobil — trimit ambele la același
+  // handler și nu pot fi apăsate simultan (unul e `md:hidden`, celălalt `hidden md:flex`).
+  const { run: quickAdd, pending: quickAddPending } = useAsyncAction(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!qaName || !qaRoom) return;
-    addItem({
+    await addItem({
       name: qaName,
       roomId: qaRoom,
       materialType: MaterialType.Altele,
@@ -80,7 +84,7 @@ export default function ElementePage() {
     setQaName("");
     setQaPrice("");
     setQaImage(undefined);
-  }
+  });
 
   return (
     <div>
@@ -216,9 +220,15 @@ export default function ElementePage() {
             {/* Salvează — mereu ultimul buton din formular, aliniat cu rândul poza pe sm+. */}
             <button
               type="submit"
-              className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-secondary px-6 text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98] sm:w-auto"
+              disabled={quickAddPending}
+              aria-busy={quickAddPending}
+              className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-secondary px-6 text-sm font-bold text-white shadow-md transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
-              <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
+              {quickAddPending ? (
+                <Spinner />
+              ) : (
+                <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
+              )}
               Salvează
             </button>
           </div>
@@ -437,8 +447,8 @@ export default function ElementePage() {
           </button>
           {mobileQuickAddOpen && (
             <form
-              onSubmit={(e) => {
-                quickAdd(e);
+              onSubmit={async (e) => {
+                await quickAdd(e);
                 setMobileQuickAddOpen(false);
               }}
               className="space-y-3 bg-white px-4 py-4"
@@ -524,8 +534,11 @@ export default function ElementePage() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded-lg bg-primary py-4 text-[12px] font-bold uppercase tracking-widest text-white transition-transform active:scale-[0.98]"
+                disabled={quickAddPending}
+                aria-busy={quickAddPending}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-4 text-[12px] font-bold uppercase tracking-widest text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
+                {quickAddPending && <Spinner />}
                 Salvează Articol
               </button>
             </form>
@@ -705,10 +718,10 @@ export default function ElementePage() {
             : `Sigur ștergi elementul „${deleteTarget?.name}"?`
         }
         onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!deleteTarget) return;
-          if (deleteTarget.kind === "room") deleteRoom(deleteTarget.id);
-          else deleteItem(deleteTarget.id);
+          if (deleteTarget.kind === "room") await deleteRoom(deleteTarget.id);
+          else await deleteItem(deleteTarget.id);
           setDeleteTarget(null);
         }}
       />
