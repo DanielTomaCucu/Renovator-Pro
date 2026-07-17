@@ -69,19 +69,21 @@ function matchesSearch(item: Item, query: string): boolean {
 }
 
 /** Culoare de fundal/text a badge-ului „Tip” per categorie de material — vezi design Stitch. */
+/** O culoare distinctă per categorie — înainte erau doar 4 nuanțe reale pentru 12 tipuri (mult
+    albastru/gri repetat, greu de deosebit dintr-o privire); acum fiecare tip are propria culoare. */
 const MATERIAL_BADGE_STYLES: Record<MaterialType, string> = {
-  [MaterialType.Gresie]: "bg-emerald-50 text-emerald-700",
-  [MaterialType.Faianta]: "bg-emerald-50 text-emerald-700",
-  [MaterialType.Plinta]: "bg-emerald-50 text-emerald-700",
-  [MaterialType.Parchet]: "bg-tertiary/10 text-tertiary",
-  [MaterialType.Vopsea]: "bg-surface-low text-muted",
-  [MaterialType.Tapet]: "bg-surface-low text-muted",
-  [MaterialType.GlafFereastra]: "bg-surface-low text-muted",
-  [MaterialType.Sanitare]: "bg-secondary/10 text-secondary",
-  [MaterialType.Mobila]: "bg-secondary/10 text-secondary",
-  [MaterialType.Electrocasnice]: "bg-secondary/10 text-secondary",
-  [MaterialType.CorpuriIluminat]: "bg-secondary/10 text-secondary",
-  [MaterialType.Altele]: "bg-surface-low text-muted",
+  [MaterialType.Gresie]: "bg-stone-100 text-stone-700",
+  [MaterialType.Faianta]: "bg-cyan-50 text-cyan-700",
+  [MaterialType.Plinta]: "bg-lime-50 text-lime-700",
+  [MaterialType.Parchet]: "bg-amber-50 text-amber-700",
+  [MaterialType.Vopsea]: "bg-rose-50 text-rose-700",
+  [MaterialType.Tapet]: "bg-fuchsia-50 text-fuchsia-700",
+  [MaterialType.GlafFereastra]: "bg-teal-50 text-teal-700",
+  [MaterialType.Sanitare]: "bg-indigo-50 text-indigo-700",
+  [MaterialType.Mobila]: "bg-violet-50 text-violet-700",
+  [MaterialType.Electrocasnice]: "bg-red-50 text-red-700",
+  [MaterialType.CorpuriIluminat]: "bg-yellow-50 text-yellow-700",
+  [MaterialType.Altele]: "bg-slate-100 text-slate-600",
 };
 
 const STATUS_DOT: Record<ItemStatus, { icon: string; className: string }> = {
@@ -164,7 +166,7 @@ export default function CentralizatorPage() {
       <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
         {/* Tabel */}
         <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-          <div className="flex items-center justify-between border-b border-line bg-surface-low px-6 py-4 sm:px-8">
+          <div className="flex items-center justify-between border-b border-line bg-surface px-6 py-4 sm:px-8">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-[20px] text-primary/80">
                 {CENTRALIZATOR_ICONS.tabelDetaliat}
@@ -188,7 +190,7 @@ export default function CentralizatorPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
-              <thead className="border-b border-line bg-surface-low/30">
+              <thead className="border-b border-line bg-surface">
                 <tr>
                   <SortableTh
                     label="Element / Tip Lucrare"
@@ -293,16 +295,25 @@ export default function CentralizatorPage() {
                             key={item.id}
                             className="border-b border-line/50 transition-colors hover:bg-background"
                           >
-                            <td className="px-4 py-3 text-[13px] text-foreground">{item.name}</td>
+                            <td className="max-w-[260px] px-4 py-3 text-[13px] text-foreground">
+                              <span className="block truncate" title={item.name}>
+                                {item.name}
+                              </span>
+                            </td>
                             <td className="px-4 py-3 text-[13px]">
                               <span
-                                className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-wider ${MATERIAL_BADGE_STYLES[item.materialType]}`}
+                                title={item.materialType}
+                                className={`inline-block max-w-[140px] truncate whitespace-nowrap rounded-full px-3 py-1 text-[11px] uppercase tracking-wider ${MATERIAL_BADGE_STYLES[item.materialType]}`}
                               >
                                 {item.materialType}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-[13px] text-muted">{item.source}</td>
-                            <td className="px-4 py-3 text-right font-mono text-[13px] text-muted">
+                            <td className="max-w-[160px] px-4 py-3 text-[13px] text-muted">
+                              <span className="block truncate" title={item.source}>
+                                {item.source}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px] text-muted">
                               {item.quantity}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px]">
