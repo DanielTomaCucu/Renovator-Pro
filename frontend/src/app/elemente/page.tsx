@@ -248,7 +248,7 @@ export default function ElementePage() {
                 </div>
               ) : (
                 <label className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 text-[12px] font-bold uppercase text-white transition-colors hover:border-white/40 hover:bg-white/20">
-                  <span className="material-symbols-outlined text-[18px]">
+                  <span className="material-symbols-outlined icon-btn">
                     {ACTION_ICONS.photoCamera}
                   </span>
                   Fă o poză
@@ -306,7 +306,7 @@ export default function ElementePage() {
                         onClick={() =>
                           setDeleteTarget({ kind: "room", id: room.id, name: room.name })
                         }
-                        className="rounded p-1 text-muted hover:text-tertiary"
+                        className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
                         aria-label={`Șterge camera ${room.name}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
@@ -428,7 +428,7 @@ export default function ElementePage() {
                               <div className="flex items-center justify-end gap-3">
                                 <button
                                   onClick={() => setItemDrawer({ open: true, item })}
-                                  className="text-muted transition-colors hover:text-primary"
+                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
                                   aria-label={`Editează ${item.name}`}
                                 >
                                   <span className="material-symbols-outlined icon-btn">
@@ -443,7 +443,7 @@ export default function ElementePage() {
                                       name: item.name,
                                     })
                                   }
-                                  className="text-muted transition-colors hover:text-tertiary"
+                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
                                   aria-label={`Șterge ${item.name}`}
                                 >
                                   <span className="material-symbols-outlined icon-btn">

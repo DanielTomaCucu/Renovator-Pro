@@ -557,7 +557,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               e.stopPropagation();
               setConfirmDelete(true);
             }}
-            className="text-muted hover:text-tertiary"
+            className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
             aria-label="Șterge camera"
           >
             <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
@@ -896,7 +896,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       <button
                         type="button"
                         onClick={() => removeWindow(w)}
-                        className="rounded-lg p-3 text-muted hover:text-tertiary sm:self-end"
+                        className="rounded-lg p-3 text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
                         aria-label={`Elimină fereastra de pe peretele ${w}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
@@ -992,7 +992,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       <button
                         type="button"
                         onClick={() => removeDoor(w)}
-                        className="rounded-lg p-3 text-muted hover:text-tertiary sm:self-end"
+                        className="rounded-lg p-3 text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
                         aria-label={`Elimină ușa de pe peretele ${w}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
