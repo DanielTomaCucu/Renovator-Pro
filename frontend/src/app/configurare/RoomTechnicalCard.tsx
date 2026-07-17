@@ -282,28 +282,35 @@ function ResultRow({
 
 export default function RoomTechnicalCard({ room }: { room: Room }) {
   const { updateRoom, deleteRoom } = useStore();
-  const [open, setOpen] = useState(true);
+  // Cardul pornește ÎNTOTDEAUNA închis (la montare/revenire pe pagină) — cu toate cardurile deschise
+  // odată, pagina devine ilizibilă/greu de navigat cu mai multe camere. Userul deschide explicit doar
+  // camera la care lucrează.
+  const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Draft local — toate editările din card scriu aici, NU direct în store. Nimic nu se propagă către
   // celelalte pagini/calcule globale până la apăsarea explicită a „Salvează" (buton la finalul cardului).
   const [draft, setDraft] = useState<Room>(room);
+  // Secțiunile interne (Pardoseală/Pereți/Ferestre/Uși) pornesc și ele închise — aceeași motivație ca
+  // mai sus: la deschiderea cardului, vrem o listă compactă de secțiuni, nu totul expandat deodată.
   const [sectionsOpen, setSectionsOpen] = useState({
-    floor: true,
-    walls: true,
-    windows: Object.keys(room.windows ?? {}).length > 0,
-    doors: Object.keys(room.doors ?? {}).length > 0,
+    floor: false,
+    walls: false,
+    windows: false,
+    doors: false,
   });
   const toggleSection = (key: keyof typeof sectionsOpen) =>
     setSectionsOpen((s) => ({ ...s, [key]: !s[key] }));
 
-  // Indicator subtil în header: bifă verde dacă ultima editare a fost salvată, ascunsă imediat ce
-  // draftul diverge din nou de ce e în store — ca userul să vadă rapid la care camere a lucrat deja.
-  const [saved, setSaved] = useState(false);
+  // Flag din header: DERIVAT direct din `room` (datele reale de pe server), nu dintr-un state efemeră
+  // de sesiune — așa se menține corect și după ce userul navighează la altă pagină și se întoarce
+  // (componenta se remontează, dar `room` vine proaspăt din store): cameră deja configurată → bifă
+  // verde; cameră fără configurare tehnică încă → indicator neutru (gri), ca userul să vadă dintr-o
+  // privire, cu cardul închis, care cameră mai are de lucru.
+  const isConfigured = hasFloorConfig(room);
 
   const patch = (p: Partial<Room>) => {
     setDraft((prev) => ({ ...prev, ...p }));
-    setSaved(false);
   };
 
   const handleSave = () => {
@@ -324,7 +331,6 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
     });
     setOpen(false);
     setSectionsOpen({ floor: false, walls: false, windows: false, doors: false });
-    setSaved(true);
   };
 
   // Faianța (wallTiling) e disponibilă doar la Gresie — la Parchet/Mochetă alternativa e vopsea/tapet (wallFinish).
@@ -492,13 +498,21 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
           <div className="flex min-w-0 flex-col">
             <span className="flex items-center gap-1.5">
               <h3 className="truncate font-heading text-xl font-bold">{room.name}</h3>
-              {saved && (
+              {isConfigured ? (
                 <span
                   className="material-symbols-outlined icon-btn shrink-0 text-emerald-500/70"
-                  title="Salvat"
-                  aria-label="Salvat"
+                  title="Configurare salvată"
+                  aria-label="Configurare salvată"
                 >
                   {ACTION_ICONS.checkCircle}
+                </span>
+              ) : (
+                <span
+                  className="material-symbols-outlined icon-btn shrink-0 text-muted/50"
+                  title="Neconfigurat încă"
+                  aria-label="Neconfigurat încă"
+                >
+                  {ACTION_ICONS.notConfigured}
                 </span>
               )}
             </span>

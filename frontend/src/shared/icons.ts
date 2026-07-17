@@ -54,6 +54,7 @@ export const ACTION_ICONS = {
   sortDescending: "arrow_downward",
   photoCamera: "photo_camera",
   checkCircle: "check_circle",
+  notConfigured: "radio_button_unchecked",
 } as const;
 
 export const STATUS_ICONS: Record<ItemStatus, string> = {
