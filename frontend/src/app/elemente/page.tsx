@@ -5,6 +5,8 @@ import StatusChip from "@/components/StatusChip";
 import OriginBadge from "@/components/OriginBadge";
 import DashboardSummaryCard, { SummaryProgressFooter } from "@/components/DashboardSummaryCard";
 import ItemFormDrawer from "@/components/ItemFormDrawer";
+import ItemDetailsDrawer from "@/components/ItemDetailsDrawer";
+import ItemRowMenu from "@/components/ItemRowMenu";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import PageHeader from "@/components/PageHeader";
@@ -22,6 +24,7 @@ import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { DeleteTarget } from "./DeleteTarget";
 import { ItemDrawerState } from "./ItemDrawerState";
+import { ItemDetailsState } from "./ItemDetailsState";
 
 type ItemSortKey = "name" | "source" | "quantity" | "unitPrice" | "total" | "status";
 
@@ -59,8 +62,16 @@ export default function ElementePage() {
   const money = (value: number) => formatMoney(value, project.currency);
 
   const [itemDrawer, setItemDrawer] = useState<ItemDrawerState>({ open: false });
+  const [itemDetails, setItemDetails] = useState<ItemDetailsState>({ open: false });
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  /** Închide voletul de detalii și deschide formularul de editare pentru același element. */
+  function editFromDetails() {
+    const item = itemDetails.item;
+    setItemDetails({ open: false });
+    if (item) setItemDrawer({ open: true, item });
+  }
 
   // Căutare (bara din PageHeader) + sortare de coloană — un singur state de sortare, aplicat identic
   // pe fiecare tabel de cameră (fiecare cameră are propriul <table>, dar headerele sunt identice).
@@ -425,7 +436,16 @@ export default function ElementePage() {
                               <StatusChip status={item.status} size="sm" />
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right">
-                              <div className="flex items-center justify-end gap-3">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => setItemDetails({ open: true, item })}
+                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-secondary"
+                                  aria-label={`Vezi detalii ${item.name}`}
+                                >
+                                  <span className="material-symbols-outlined icon-btn">
+                                    {ACTION_ICONS.viewDetails}
+                                  </span>
+                                </button>
                                 <button
                                   onClick={() => setItemDrawer({ open: true, item })}
                                   className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
@@ -611,6 +631,14 @@ export default function ElementePage() {
           )}
         </section>
 
+        <button
+          type="button"
+          onClick={() => setRoomDrawerOpen(true)}
+          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+        >
+          + Adaugă Cameră
+        </button>
+
         {/* Camere — acordeon */}
         <div className="space-y-3">
           {rooms
@@ -656,10 +684,10 @@ export default function ElementePage() {
                             e.stopPropagation();
                             setItemDrawer({ open: true, roomId: room.id });
                           }}
-                          className="p-1 text-muted hover:text-primary"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted hover:bg-surface-low hover:text-primary"
                           aria-label={`Adaugă element în ${room.name}`}
                         >
-                          <span className="material-symbols-outlined text-[20px]">
+                          <span className="material-symbols-outlined icon-btn">
                             {ACTION_ICONS.add}
                           </span>
                         </span>
@@ -670,16 +698,16 @@ export default function ElementePage() {
                             e.stopPropagation();
                             setDeleteTarget({ kind: "room", id: room.id, name: room.name });
                           }}
-                          className="p-1 text-tertiary/70 hover:text-tertiary"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-tertiary/70 hover:bg-surface-low hover:text-tertiary"
                           aria-label={`Șterge camera ${room.name}`}
                         >
-                          <span className="material-symbols-outlined text-[20px]">
+                          <span className="material-symbols-outlined icon-btn">
                             {ACTION_ICONS.delete}
                           </span>
                         </span>
                       </div>
                       <span
-                        className={`material-symbols-outlined text-foreground transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+                        className={`material-symbols-outlined icon-btn text-foreground transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
                       >
                         {ACTION_ICONS.expandMore}
                       </span>
@@ -723,28 +751,14 @@ export default function ElementePage() {
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => setItemDrawer({ open: true, item })}
-                                className="p-1 text-muted transition-colors hover:text-primary active:scale-90"
-                                aria-label={`Editează ${item.name}`}
-                              >
-                                <span className="material-symbols-outlined text-[20px]">
-                                  {ACTION_ICONS.editInline}
-                                </span>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  setDeleteTarget({ kind: "item", id: item.id, name: item.name })
-                                }
-                                className="p-1 text-tertiary/70 transition-colors hover:text-tertiary active:scale-90"
-                                aria-label={`Șterge ${item.name}`}
-                              >
-                                <span className="material-symbols-outlined text-[20px]">
-                                  {ACTION_ICONS.delete}
-                                </span>
-                              </button>
-                            </div>
+                            <ItemRowMenu
+                              itemName={item.name}
+                              onView={() => setItemDetails({ open: true, item })}
+                              onEdit={() => setItemDrawer({ open: true, item })}
+                              onDelete={() =>
+                                setDeleteTarget({ kind: "item", id: item.id, name: item.name })
+                              }
+                            />
                           </div>
                         ))
                       )}
@@ -756,23 +770,17 @@ export default function ElementePage() {
         </div>
       </div>
 
-      {/* FAB „Adaugă Cameră" — doar pe mobil, vezi design Stitch (buton flotant jos-dreapta) */}
-      <button
-        type="button"
-        onClick={() => setRoomDrawerOpen(true)}
-        aria-label="Adaugă Cameră"
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-2xl transition-transform active:scale-95 hover:scale-105 md:hidden"
-      >
-        <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>
-          {ACTION_ICONS.addRoom}
-        </span>
-      </button>
-
       <ItemFormDrawer
         open={itemDrawer.open}
         onClose={() => setItemDrawer({ open: false })}
         roomId={itemDrawer.roomId}
         item={itemDrawer.item}
+      />
+      <ItemDetailsDrawer
+        open={itemDetails.open}
+        item={itemDetails.item}
+        onClose={() => setItemDetails({ open: false })}
+        onEdit={editFromDetails}
       />
       <RoomFormDrawer open={roomDrawerOpen} onClose={() => setRoomDrawerOpen(false)} />
       <ConfirmDialog

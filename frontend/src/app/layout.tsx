@@ -4,6 +4,7 @@ import "material-symbols/outlined.css";
 import "./globals.css";
 import { StoreProvider } from "@/shared/store";
 import Sidebar from "@/components/Sidebar";
+import BottomNav from "@/components/BottomNav";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -39,8 +40,9 @@ export default function RootLayout({
         <StoreProvider>
           <div className="flex min-h-screen flex-col md:flex-row">
             <Sidebar />
-            <main className="min-w-0 flex-1">{children}</main>
+            <main className="min-w-0 flex-1 pb-16 md:pb-0">{children}</main>
           </div>
+          <BottomNav />
         </StoreProvider>
       </body>
     </html>

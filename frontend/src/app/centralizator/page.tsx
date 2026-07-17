@@ -19,6 +19,7 @@ import {
   DOCUMENT_ICONS,
   ROOM_TYPE_ICONS,
   STATUS_ICONS,
+  TECHNICAL_ICONS,
 } from "@/shared/icons";
 import DashboardSummaryCard, {
   SummaryAccentFooter,
@@ -116,6 +117,37 @@ export default function CentralizatorPage() {
   // per cameră rămân calculați client-side (randare de detaliu, nu agregat de dashboard).
   const { totalEstimated: estimated, totalSpent: spent } = summary;
   const efficiency = budgetEfficiency(estimated, spent);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  // Import dinamic — @react-pdf/renderer e destul de greu, nu are rost în bundle-ul inițial al
+  // paginii, doar la apăsarea efectivă a butonului de export (aceeași abordare ca în Configurare).
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const [{ pdf }, { default: CentralizatorPdfDocument }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("./CentralizatorPdfDocument"),
+      ]);
+      const blob = await pdf(
+        <CentralizatorPdfDocument
+          project={project}
+          rooms={rooms}
+          items={items}
+          estimated={estimated}
+          spent={spent}
+          efficiency={efficiency}
+        />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${project.title.replace(/[^\p{L}\p{N}]+/gu, "-")}-tabel-centralizator.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   function toggleRoom(roomId: string) {
     setCollapsed((prev) => {
@@ -399,7 +431,7 @@ export default function CentralizatorPage() {
       </div>
 
       {/* Mobil — vezi „Centralizator Costuri - Mobile Table View" (fără bottom nav, se face în Flutter) */}
-      <div className="pb-24 md:hidden">
+      <div className="pb-40 md:hidden">
         <div className="px-4 py-4">
           {/* Secțiuni per cameră — acordeon cu tabel scrollabil orizontal */}
           <div className="mt-4 flex flex-col gap-6">
@@ -455,7 +487,7 @@ export default function CentralizatorPage() {
                             return (
                               <tr
                                 key={item.id}
-                                className="border-b border-line/50 transition-colors hover:bg-background"
+                                className="border-b border-line/50 bg-surface transition-colors hover:bg-background"
                               >
                                 <td className="px-3 py-3">
                                   <div className="flex items-center gap-2">
@@ -515,8 +547,8 @@ export default function CentralizatorPage() {
           </div>
         </div>
 
-        {/* Rezumat sticky */}
-        <div className="fixed bottom-0 left-0 z-40 flex w-full items-center justify-between border-t border-line bg-surface px-4 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        {/* Rezumat sticky — pe mobil stă deasupra bottom nav-ului global (`bottom-16`, înălțimea lui `BottomNav`); pe desktop, unde nu există bottom nav, rămâne lipit de fundul ecranului. */}
+        <div className="fixed bottom-16 left-0 z-40 flex w-full items-center justify-between border-t border-line bg-surface px-4 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:bottom-0">
           <div className="flex flex-col">
             <span className="text-[11px] font-bold uppercase text-muted">
               Total General Estimat
@@ -524,13 +556,14 @@ export default function CentralizatorPage() {
             <span className="font-mono text-[20px] text-primary">{money(estimated)}</span>
           </div>
           <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 rounded bg-primary px-4 py-2 font-bold text-white active:opacity-80"
+            onClick={handleExportPdf}
+            disabled={exportingPdf || items.length === 0}
+            className="flex items-center gap-2 rounded bg-primary px-4 py-2 font-bold text-white active:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[18px]">
-              {DOCUMENT_ICONS.download}
+              {exportingPdf ? TECHNICAL_ICONS.calculatedResults : DOCUMENT_ICONS.download}
             </span>
-            PDF
+            {exportingPdf ? "Se generează..." : "PDF"}
           </button>
         </div>
       </div>

@@ -497,7 +497,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
           </span>
           <div className="flex min-w-0 flex-col">
             <span className="flex items-center gap-1.5">
-              <h3 className="truncate font-heading text-xl font-bold">{room.name}</h3>
+              <h3 className="truncate font-heading text-base font-bold md:text-xl">{room.name}</h3>
               {isConfigured ? (
                 <span
                   className="material-symbols-outlined icon-btn shrink-0 text-emerald-500/70"
@@ -546,7 +546,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
 
         <div className="flex shrink-0 items-center gap-4">
           <span
-            className={`material-symbols-outlined transition-transform ${open ? "rotate-180" : ""}`}
+            className={`material-symbols-outlined icon-btn transition-transform ${open ? "rotate-180" : ""}`}
           >
             {ACTION_ICONS.expandMore}
           </span>
@@ -557,7 +557,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               e.stopPropagation();
               setConfirmDelete(true);
             }}
-            className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
             aria-label="Șterge camera"
           >
             <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>

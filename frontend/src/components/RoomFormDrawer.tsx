@@ -50,9 +50,29 @@ export default function RoomFormDrawer({
     onClose();
   }
 
+  const formId = "room-form";
+
   return (
-    <Drawer open={open} onClose={onClose} title="Adaugă Cameră Nouă">
-      <form onSubmit={submit} className="space-y-4">
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="Adaugă Cameră Nouă"
+      footer={
+        <div className="space-y-3">
+          <PrimaryButton type="submit" form={formId}>
+            Salvează Camera
+          </PrimaryButton>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2 text-sm text-muted hover:text-foreground"
+          >
+            Anulează
+          </button>
+        </div>
+      }
+    >
+      <form id={formId} onSubmit={submit} className="space-y-4">
         <Field label="Tip cameră">
           <div className="grid grid-cols-3 gap-2">
             {roomTypes.map((rt) => (
@@ -96,17 +116,6 @@ export default function RoomFormDrawer({
             onChange={(e) => setBudget(e.target.value)}
           />
         </Field>
-
-        <div className="pt-2 space-y-3">
-          <PrimaryButton type="submit">Salvează Camera</PrimaryButton>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-2 text-sm text-muted hover:text-foreground"
-          >
-            Anulează
-          </button>
-        </div>
       </form>
     </Drawer>
   );
