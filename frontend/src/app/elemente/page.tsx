@@ -8,6 +8,7 @@ import ItemFormDrawer from "@/components/ItemFormDrawer";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import PageHeader from "@/components/PageHeader";
+import SortableTh from "@/components/SortableTh";
 import { useStore } from "@/shared/store";
 import {
   boughtCount,
@@ -16,10 +17,42 @@ import {
   itemsForRoom,
   roomSpent,
 } from "@/shared/functions";
-import { ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
+import { useSortableTable } from "@/shared/useSortableTable";
+import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { DeleteTarget } from "./DeleteTarget";
 import { ItemDrawerState } from "./ItemDrawerState";
+
+type ItemSortKey = "name" | "source" | "quantity" | "unitPrice" | "total" | "status";
+
+function getItemSortValue(item: Item, key: ItemSortKey): string | number {
+  switch (key) {
+    case "name":
+      return item.name;
+    case "source":
+      return item.source;
+    case "quantity":
+      return item.quantity;
+    case "unitPrice":
+      return item.unitPrice;
+    case "total":
+      return itemTotal(item);
+    case "status":
+      return item.status;
+  }
+}
+
+/** Filtrare text simplă (nume + sursă), diacritice-insensibilă, case-insensitive. */
+function matchesSearch(item: Item, query: string): boolean {
+  if (!query.trim()) return true;
+  const normalize = (s: string) =>
+    s
+      .toLocaleLowerCase("ro")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "");
+  const q = normalize(query);
+  return normalize(item.name).includes(q) || normalize(item.source).includes(q);
+}
 
 export default function ElementePage() {
   const { project, rooms, items, summary, addItem, deleteItem, deleteRoom } = useStore();
@@ -28,6 +61,15 @@ export default function ElementePage() {
   const [itemDrawer, setItemDrawer] = useState<ItemDrawerState>({ open: false });
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  // Căutare (bara din PageHeader) + sortare de coloană — un singur state de sortare, aplicat identic
+  // pe fiecare tabel de cameră (fiecare cameră are propriul <table>, dar headerele sunt identice).
+  const [search, setSearch] = useState("");
+  const { sorted: sortedItems, sortKey, direction, toggleSort } = useSortableTable<Item, ItemSortKey>(
+    items,
+    getItemSortValue
+  );
+  const visibleItems = sortedItems.filter((item) => matchesSearch(item, search));
 
   // Quick add
   const [qaName, setQaName] = useState("");
@@ -84,7 +126,12 @@ export default function ElementePage() {
 
   return (
     <div>
-      <PageHeader title="Elemente de Cumpărat" searchPlaceholder="Caută elemente..." />
+      <PageHeader
+        title="Elemente de Cumpărat"
+        searchPlaceholder="Caută elemente..."
+        searchValue={search}
+        onSearchChange={setSearch}
+      />
 
       {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop. */}
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
@@ -227,7 +274,8 @@ export default function ElementePage() {
         {/* Camere */}
         <div className="space-y-6">
           {rooms.map((room) => {
-            const roomItems = itemsForRoom(items, room.id);
+            const allRoomItems = itemsForRoom(items, room.id);
+            const roomItems = itemsForRoom(visibleItems, room.id);
             const spentInRoom = roomSpent(items, room.id);
             return (
               <section
@@ -272,37 +320,65 @@ export default function ElementePage() {
                   </div>
                 </div>
 
-                {roomItems.length === 0 ? (
+                {allRoomItems.length === 0 ? (
                   <p className="px-6 py-6 text-sm text-muted">
                     Niciun element încă. Adaugă primul element pentru această cameră.
+                  </p>
+                ) : roomItems.length === 0 ? (
+                  <p className="px-6 py-6 text-sm text-muted">
+                    {`Niciun element nu corespunde căutării „${search}" în această cameră.`}
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                       <thead className="border-b border-line bg-surface-low/30">
                         <tr className="text-[10px] font-bold uppercase tracking-wider text-muted">
-                          <th className="whitespace-nowrap px-6 py-3">
-                            <span className="inline-flex items-center gap-1">
-                              Element
-                              <span className="material-symbols-outlined text-[14px] opacity-50">
-                                {ACTION_ICONS.sortIndicator}
-                              </span>
-                            </span>
-                          </th>
-                          <th className="whitespace-nowrap px-3 py-3">
-                            <span className="inline-flex items-center gap-1">
-                              Sursă
-                              <span className="material-symbols-outlined text-[14px] opacity-50">
-                                {ACTION_ICONS.sortIndicator}
-                              </span>
-                            </span>
-                          </th>
-                          <th className="whitespace-nowrap px-3 py-3 text-right">Buc</th>
-                          <th className="whitespace-nowrap px-3 py-3 text-right">
-                            Preț unit
-                          </th>
-                          <th className="whitespace-nowrap px-3 py-3 text-right">Total</th>
-                          <th className="whitespace-nowrap px-3 py-3">Status</th>
+                          <SortableTh
+                            label="Element"
+                            sortKey="name"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                            className="px-6"
+                          />
+                          <SortableTh
+                            label="Sursă"
+                            sortKey="source"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                          />
+                          <SortableTh
+                            label="Buc"
+                            sortKey="quantity"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                            align="right"
+                          />
+                          <SortableTh
+                            label="Preț unit"
+                            sortKey="unitPrice"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                            align="right"
+                          />
+                          <SortableTh
+                            label="Total"
+                            sortKey="total"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                            align="right"
+                          />
+                          <SortableTh
+                            label="Status"
+                            sortKey="status"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                          />
                           <th className="px-3 py-3" />
                         </tr>
                       </thead>

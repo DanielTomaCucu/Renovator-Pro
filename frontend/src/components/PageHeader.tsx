@@ -6,12 +6,17 @@ export default function PageHeader({
   title,
   searchPlaceholder = "Caută...",
   showSearch = true,
+  searchValue,
+  onSearchChange,
   actions,
 }: {
   title: string;
   searchPlaceholder?: string;
   /** Ascunde bara de căutare pe pagini unde nu are relevanță (ex: Setări). */
   showSearch?: boolean;
+  /** Dacă e dat (împreună cu `onSearchChange`), inputul devine controlat — folosit pentru filtrare reală. */
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
   /** Sloturi opționale de butoane afișate lângă căutare (ex: Export PDF). */
   actions?: React.ReactNode;
 }) {
@@ -29,6 +34,8 @@ export default function PageHeader({
               <input
                 type="text"
                 placeholder={searchPlaceholder}
+                value={searchValue ?? undefined}
+                onChange={onSearchChange ? (e) => onSearchChange(e.target.value) : undefined}
                 className="w-72 rounded-lg border border-line bg-surface-low py-2 pl-10 pr-4 text-sm outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>

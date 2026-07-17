@@ -50,6 +50,8 @@ export const ACTION_ICONS = {
   link: "link",
   image: "image",
   sortIndicator: "unfold_more",
+  sortAscending: "arrow_upward",
+  sortDescending: "arrow_downward",
   photoCamera: "photo_camera",
   checkCircle: "check_circle",
 } as const;

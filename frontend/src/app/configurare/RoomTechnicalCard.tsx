@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useEffect, useRef, useState, type ReactNode, type SelectHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import {
   FlooringType,
@@ -98,6 +98,9 @@ function SelectField({
  * butonului — altfel un ancestor cu `overflow-hidden` (cardul camerei, secțiunea colapsabilă) ar tăia
  * dropdown-ul quando depășește înălțimea vizibilă a cardului. Înălțimea proprie e limitată + scroll
  * intern, ca lista să rămână complet accesibilă chiar dacă are mai multe opțiuni decât încap pe ecran.
+ * Cât timp e deschis, poziția se recalculează la fiecare scroll/resize (capture:true, ca să prindă și
+ * scroll-ul din containere interne, nu doar window) — altfel un scroll cu dropdown-ul deschis îl lăsa
+ * „înghețat" la coordonatele inițiale, deconectat vizual de buton.
  */
 export function IconSelectField<T extends string>({
   label,
@@ -119,13 +122,26 @@ export function IconSelectField<T extends string>({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const current = options.find((o) => o.value === value);
 
+  const updateRect = () => {
+    if (!buttonRef.current) return;
+    const r = buttonRef.current.getBoundingClientRect();
+    setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
   const toggleOpen = () => {
-    if (!open && buttonRef.current) {
-      const r = buttonRef.current.getBoundingClientRect();
-      setRect({ top: r.bottom + 4, left: r.left, width: r.width });
-    }
+    if (!open) updateRect();
     setOpen((v) => !v);
   };
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", updateRect, { capture: true, passive: true });
+    window.addEventListener("resize", updateRect);
+    return () => {
+      window.removeEventListener("scroll", updateRect, { capture: true });
+      window.removeEventListener("resize", updateRect);
+    };
+  }, [open]);
 
   return (
     <div className={`space-y-1 ${wrapperClassName ?? ""}`}>

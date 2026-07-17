@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import SortableTh from "@/components/SortableTh";
 import { useStore } from "@/shared/store";
 import {
   budgetEfficiency,
@@ -10,10 +11,11 @@ import {
   itemsForRoom,
   roomSubtotal,
 } from "@/shared/functions";
-import { ItemStatus, MaterialType } from "@/shared/types";
+import { useSortableTable } from "@/shared/useSortableTable";
+import { Item, ItemStatus, MaterialType } from "@/shared/types";
 import {
-  ACTION_ICONS,
   CENTRALIZATOR_ICONS,
+  ACTION_ICONS,
   DOCUMENT_ICONS,
   ROOM_TYPE_ICONS,
   STATUS_ICONS,
@@ -22,6 +24,49 @@ import DashboardSummaryCard, {
   SummaryAccentFooter,
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
+
+type CentralizatorSortKey =
+  | "name"
+  | "materialType"
+  | "source"
+  | "quantity"
+  | "unitPrice"
+  | "total"
+  | "status";
+
+function getCentralizatorSortValue(item: Item, key: CentralizatorSortKey): string | number {
+  switch (key) {
+    case "name":
+      return item.name;
+    case "materialType":
+      return item.materialType;
+    case "source":
+      return item.source;
+    case "quantity":
+      return item.quantity;
+    case "unitPrice":
+      return item.unitPrice;
+    case "total":
+      return itemTotal(item);
+    case "status":
+      return item.status;
+  }
+}
+
+function matchesSearch(item: Item, query: string): boolean {
+  if (!query.trim()) return true;
+  const normalize = (s: string) =>
+    s
+      .toLocaleLowerCase("ro")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "");
+  const q = normalize(query);
+  return (
+    normalize(item.name).includes(q) ||
+    normalize(item.source).includes(q) ||
+    normalize(item.materialType).includes(q)
+  );
+}
 
 /** Culoare de fundal/text a badge-ului „Tip” per categorie de material — vezi design Stitch. */
 const MATERIAL_BADGE_STYLES: Record<MaterialType, string> = {
@@ -56,6 +101,14 @@ export default function CentralizatorPage() {
   const money = (value: number) => formatMoney(value, project.currency);
   const [showSubtotals, setShowSubtotals] = useState(true);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const {
+    sorted: sortedItems,
+    sortKey,
+    direction,
+    toggleSort,
+  } = useSortableTable<Item, CentralizatorSortKey>(items, getCentralizatorSortValue);
+  const visibleItems = sortedItems.filter((item) => matchesSearch(item, search));
 
   // Totalurile de proiect vin din agregarea server-side (Problema 2 din audit); subtotalul/itemii
   // per cameră rămân calculați client-side (randare de detaliu, nu agregat de dashboard).
@@ -73,7 +126,12 @@ export default function CentralizatorPage() {
 
   return (
     <div>
-      <PageHeader title="Centralizator Costuri" searchPlaceholder="Caută element sau lucrare..." />
+      <PageHeader
+        title="Centralizator Costuri"
+        searchPlaceholder="Caută element sau lucrare..."
+        searchValue={search}
+        onSearchChange={setSearch}
+      />
 
       {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop. */}
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
@@ -132,69 +190,68 @@ export default function CentralizatorPage() {
             <table className="w-full border-collapse text-left">
               <thead className="border-b border-line bg-surface-low/30">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Element / Tip Lucrare
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Tip
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Sursă
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Cant.
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Preț Unitar
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Total
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="w-24 whitespace-nowrap px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Status
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
+                  <SortableTh
+                    label="Element / Tip Lucrare"
+                    sortKey="name"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  />
+                  <SortableTh
+                    label="Tip"
+                    sortKey="materialType"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  />
+                  <SortableTh
+                    label="Sursă"
+                    sortKey="source"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  />
+                  <SortableTh
+                    label="Cant."
+                    sortKey="quantity"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Preț Unitar"
+                    sortKey="unitPrice"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Total"
+                    sortKey="total"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Status"
+                    sortKey="status"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                    align="center"
+                    className="w-24"
+                  />
                 </tr>
               </thead>
 
               {rooms.map((room) => {
-                const roomItems = itemsForRoom(items, room.id);
+                const allRoomItems = itemsForRoom(items, room.id);
+                const roomItems = itemsForRoom(visibleItems, room.id);
                 const subtotal = roomSubtotal(items, room.id);
-                if (roomItems.length === 0) return null;
+                if (allRoomItems.length === 0) return null;
                 const isCollapsed = collapsed.has(room.id);
 
                 return (
@@ -219,6 +276,14 @@ export default function CentralizatorPage() {
                         </div>
                       </td>
                     </tr>
+
+                    {!isCollapsed && roomItems.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-3 text-[13px] text-muted" colSpan={7}>
+                          {`Niciun element nu corespunde căutării „${search}" în această cameră.`}
+                        </td>
+                      </tr>
+                    )}
 
                     {!isCollapsed &&
                       roomItems.map((item) => {
