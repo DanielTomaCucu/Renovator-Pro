@@ -287,6 +287,23 @@ din acest fișier — nu scrie string-uri de iconiță direct în JSX.
 - Margini: 16px mobile, 40px desktop. Spacing pe unitate de 8px.
 - Headline-uri se reduc pe mobile (32px → 24px).
 
+### Loading states — obligatoriu pe orice acțiune cu request HTTP
+Backend-ul (Render free tier) are cold-start de zeci de secunde — orice buton care declanșează o mutație
+trebuie să arate că requestul e în curs, altfel aplicația pare blocată.
+- **Orice buton care apelează o mutație de store** (`addItem`, `updateRoom`, `deleteItem`, etc.) folosește
+  `useAsyncAction` (`src/shared/useAsyncAction.ts`) pentru `{ run, pending }` — nu inventa `useState` local
+  de pending. `disabled={pending}` + `aria-busy={pending}` pe buton; dacă butonul are iconiță la stânga,
+  `<Spinner />` (`src/components/Spinner.tsx`) o înlocuiește; dacă nu are iconiță, spinner-ul apare la stânga
+  textului. Textul butonului NU se schimbă în timpul acțiunii (rămâne „Salvează", nu „Se salvează…").
+- **Un drawer/dialog/card care se închide la finalul unei acțiuni face `await` pe mutație înainte de a se
+  închide** — nu se închide instant la click, înainte de răspunsul serverului.
+- **Butoanele care NU declanșează un request** (deschid drawere, comută filtre/secțiuni, `window.print()`)
+  NU primesc spinner — zgomot vizual pentru o acțiune instant.
+- **Încărcarea inițială a datelor** (`StoreProvider`) arată `PageSkeleton` (`src/components/PageSkeleton.tsx`)
+  în zona de conținut, cu sidebar-ul rămas vizibil și navigabil (`Sidebar` stă în afara `StoreProvider` în
+  `app/layout.tsx`) — niciodată ecran alb/gol.
+- Detalii complete, inventar de butoane și decizii de design: `docs/cerinte-loading-states.md`.
+
 ## Modelul de date
 
 Entitățile din `src/shared/types/` (vezi și regula „un fișier per interfață/enum" mai sus):

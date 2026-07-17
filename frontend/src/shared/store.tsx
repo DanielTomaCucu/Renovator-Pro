@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Currency, Item, Project, ProjectSummary, RenovationStore, Room, SpendingTimelinePoint } from "./types";
 import { api, DEFAULT_PROJECT_ID } from "./api-client";
+import PageSkeleton from "@/components/PageSkeleton";
 
 const StoreContext = createContext<RenovationStore | null>(null);
 
@@ -243,7 +244,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   if (initialLoadError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+      <div className="flex min-h-full flex-col items-center justify-center gap-4 bg-background px-6 py-16 text-center">
         <span className="material-symbols-outlined text-4xl text-tertiary">error_outline</span>
         <p className="max-w-sm text-sm text-muted">
           Nu am putut încărca datele proiectului: {initialLoadError}
@@ -260,15 +261,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   if (!value) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div
-          className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary"
-          role="status"
-          aria-label="Se încarcă"
-        />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (

@@ -6,10 +6,8 @@ import { usePathname } from "next/navigation";
 import { ACTION_ICONS, NAV_ICONS } from "@/shared/icons";
 import { useLockBodyScroll } from "@/shared/useLockBodyScroll";
 import { mainNav as nav, secondaryNav } from "@/shared/nav";
-import { useStore } from "@/shared/store";
 
 export default function Sidebar() {
-  const { project } = useStore();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -70,7 +68,6 @@ export default function Sidebar() {
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted opacity-60">
               Management Buget
             </p>
-            <p className="mt-0.5 truncate text-[10px] text-muted/70">{project.title}</p>
           </div>
         </div>
         <div className="space-y-0.5 p-3">
@@ -126,7 +123,6 @@ export default function Sidebar() {
             <p className="text-[11px] font-bold uppercase tracking-widest text-muted opacity-60">
               Management Buget
             </p>
-            <p className="mt-0.5 truncate text-[10px] text-muted/70">{project.title}</p>
           </div>
         )}
       </div>

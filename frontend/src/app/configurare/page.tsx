@@ -7,6 +7,7 @@ import DashboardSummaryCard, {
   SummaryAccentFooter,
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
+import Spinner from "@/components/Spinner";
 import { useStore } from "@/shared/store";
 import { formatMoney } from "@/shared/functions";
 import { TECHNICAL_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
@@ -113,9 +114,11 @@ export default function ConfigurarePage() {
             disabled={exportingPdf || rooms.length === 0}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-primary hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
-            <span className="material-symbols-outlined text-lg">
-              {exportingPdf ? TECHNICAL_ICONS.calculatedResults : DOCUMENT_ICONS.exportPdf}
-            </span>
+            {exportingPdf ? (
+              <Spinner />
+            ) : (
+              <span className="material-symbols-outlined text-lg">{DOCUMENT_ICONS.exportPdf}</span>
+            )}
             {exportingPdf ? "Se generează..." : "Export PDF"}
           </button>
           <button

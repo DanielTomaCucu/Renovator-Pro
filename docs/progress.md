@@ -36,6 +36,7 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `computeRoomDimensions(room)` | `shared/functions/dimensions.ts` | breakdown complet de necesar material (oglinda `RoomDimensionsCalculator.java`) — PREVIEW client la editare + fallback; sursa de adevăr e `room.dimensions` de la server | `configurare` (RoomTechnicalCard preview), `ApartmentPdfDocument` (fallback), `roomCalcRows.ts` |
 | `buildRoomCalcRows(room, dims)` | `app/configurare/roomCalcRows.ts` (local) | rândurile din „Calcule Detaliate" (label/valoare/formulă/math) din `dims` (server sau preview) | `RoomTechnicalCard`, `ApartmentPdfDocument` |
 | `timelinePoints(data)` | `shared/functions/charts.ts` | normalizează `SpendingTimelinePoint[]` (din `spending-timeline`) în puncte {x,y}∈[0,1] pt. graficul de evoluție — geometrie de prezentare | `analiza` |
+| `useAsyncAction(action)` | `shared/useAsyncAction.ts` | hook — rulează o acțiune (mutație de store), expune `{ run, pending }` pt. spinner-ul din butoane; ignoră apeluri re-entrante, guard de unmount | `ItemFormDrawer`, `RoomFormDrawer`, `ConfirmDialog`, `elemente/page.tsx` (Adăugare Rapidă), `RoomTechnicalCard` (Salvează), `setari/page.tsx` (ambele butoane) |
 | `formatMonthLabel(month)` | `app/analiza/dates.ts` (local) | formatează "yyyy-MM" într-o etichetă scurtă RO ("Ian", "Ian 2025" dacă anul diferă de cel curent) | `analiza` (axa graficului de evoluție) |
 
 ### Funcții locale de pagină
@@ -978,3 +979,31 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** merge `024`→`026` (vezi fișierele listate în intrarea „Audit Problemele 3+4” de mai sus); plus, direct în această sesiune: `CLAUDE.md`, `frontend/package.json`/`package-lock.json` (dependință nouă `material-symbols`), `frontend/src/app/layout.tsx`, `frontend/src/app/setari/page.tsx`, `frontend/src/shared/functions/money.ts`, `frontend/src/shared/store.tsx` (rescris), `frontend/src/shared/types/RenovationStore.ts`.
 
 **Branch:** `026-fix-buguri-confirmate` (din `origin/main`, include merge-ul `024-timestamp-si-grafic-evolutie`).
+
+### 2026-07-16 — Loading states: skeleton la încărcare + spinner în butoane
+**De ce:** userul a semnalat că backend-ul (Render free tier) e lent — cold-start de zeci de secunde. Fără feedback vizual, aplicația pare blocată. Specificat complet în `docs/cerinte-loading-states.md` (inventar exact al butoanelor, decizii de design, pași de verificare) — implementat 1:1 după acel document.
+
+- **Task 1 — Infrastructură:**
+  - `RenovationStore.ts`: toate mutațiile (`updateProject`, `convertCurrency`, `addRoom`, `updateRoom`, `deleteRoom`, `addItem`, `updateItem`, `deleteItem`) tipate `=> Promise<void>` (erau `=> void`, deși implementarea era deja `async` — tipul mințea).
+  - `components/Spinner.tsx` (nou) — spinner mic reutilizabil, `border-current` (moștenește culoarea textului, merge pe fundal negru și alb fără prop de culoare).
+  - `shared/useAsyncAction.ts` (nou) — hook care rulează o acțiune și expune `{ run, pending }`; ignoră apeluri re-entrante (dublu-click), `finally` cu guard de unmount (`useRef`) ca să nu dea warning React dacă componenta se demontează exact la finalul acțiunii.
+- **Task 2 — Loading la nivel de pagină:**
+  - `app/layout.tsx`: `<Sidebar />` mutat ÎN AFARA `<StoreProvider>` (nu folosește `useStore()`) — rămâne vizibil și navigabil cât timp datele se încarcă, în loc să dispară tot ecranul.
+  - `components/PageSkeleton.tsx` (nou) — UN SINGUR skeleton comun tuturor paginilor (store-ul e global, datele se încarcă o singură dată la montare); imită structura comună (titlu + card sumar gradient + blocuri de conținut), titlul rămâne bloc pulse (sidebar-ul evidențiază deja ruta activă).
+  - `shared/store.tsx`: spinner-ul full-screen vechi înlocuit cu `<PageSkeleton />`; ecranul de eroare la încărcare (cu „Reîncearcă") rămâne, ajustat să se randeze corect lângă sidebar (nu mai `min-h-screen` centrat pe tot ecranul).
+- **Task 3 — Spinner pe butoane (8 locuri, conform inventarului din spec):**
+  - `components/forms.tsx` — `PrimaryButton` primește prop `pending?: boolean`, randează `<Spinner />` + `disabled` + `aria-busy`.
+  - `components/ItemFormDrawer.tsx`, `components/RoomFormDrawer.tsx` — `submit` împachetat în `useAsyncAction`, `await` mutația înainte de `onClose()` (înainte se închideau instant, înainte de răspunsul serverului); `PrimaryButton` primește `pending`; „Anulează” disabled cât timp e pending.
+  - `components/ConfirmDialog.tsx` — gestionează `pending` INTERN (`useAsyncAction` peste `onConfirm`), consumatorii doar dau mutația; buton „Șterge” cu spinner, „Anulează” disabled, click pe overlay ignorat cât timp e pending. Consumatorii (`elemente/page.tsx`, `RoomTechnicalCard.tsx`) actualizați să facă `await` pe `deleteRoom`/`deleteItem` înainte de a închide dialogul local.
+  - `app/elemente/page.tsx` — `quickAdd` (Adăugare Rapidă) împachetat în `useAsyncAction`, un singur `pending` pentru butoanele desktop ȘI mobil (nu pot fi apăsate simultan); formularul de pe mobil își aștepta închiderea panoului (`setMobileQuickAddOpen(false)`) DUPĂ `await`, nu înainte (bug similar cu drawerele).
+  - `app/configurare/RoomTechnicalCard.tsx` — `handleSave` împachetat în `useAsyncAction`, `await updateRoom(...)` înainte de `setOpen(false)`; fiecare card are propriul `useAsyncAction` (salvarea unei camere nu blochează altă cameră).
+  - `app/setari/page.tsx` — `handleSaveDetails`/`handleSave` împachetate în `useAsyncAction`, spinner înlocuiește iconița `ACTION_ICONS.save` pe ambele butoane.
+  - `app/configurare/page.tsx` — butonul „Export PDF” (avea deja `exportingPdf` propriu, stare locală de generare PDF, nereconvertită la `useAsyncAction`) aliniat vizual: `<Spinner />` în loc de iconița statică `TECHNICAL_ICONS.calculatedResults`.
+- **Verificat efectiv, cu delay artificial de 2s** (temporar în `api-client.ts`, șters înainte de commit — confirmat cu `grep -rn "setTimeout" src/shared/api-client.ts` → 0 rezultate): sidebar vizibil + skeleton la refresh; spinner corect pe toate cele 8 butoane (Adăugare Rapidă desktop confirmat vizual cu `zoom`); `ItemFormDrawer`/`RoomFormDrawer` rămân deschise cu spinner până la răspuns; `ConfirmDialog` — „Șterge”/„Anulează” disabled, dialogul se închide după răspuns; `/setari` — spinner înlocuiește iconița pe „Salvează Detaliile”. Zero erori/warning-uri în consolă (verificat explicit, inclusiv absența warning-urilor de „state update on unmounted component”). `npx tsc --noEmit`, `npm run lint`, `npm run build` — 0 erori (1 warning preexistent). Date de test șterse, proiect readus la starea seed.
+- **Netestat interactiv** (blocat de un dropdown custom cu portal, poziționare offset în unelte de automatizare browser, nelegat de schimbările din acest task): butonul „Salvează” din `RoomTechnicalCard` — verificat static (cod identic ca pattern cu celelalte 7 butoane, `tsc`/`lint`/`build` curate).
+
+**Nefăcut aici** (documentat explicit ca fiind neatins, în `docs/cerinte-loading-states.md`): debounce pe inputul „Suprafață Totală Apartament” din `/configurare` (trimite PATCH la fiecare tastă apăsată) și butonul „PDF” fără `onClick` din `/centralizator` — semnalate, nu rezolvate, task-uri separate.
+
+**Fișiere atinse:** `docs/cerinte-loading-states.md` (nou, specificația), `frontend/src/components/{Spinner,PageSkeleton}.tsx` (noi), `frontend/src/shared/useAsyncAction.ts` (nou); modificate: `frontend/src/shared/types/RenovationStore.ts`, `frontend/src/shared/store.tsx`, `frontend/src/app/layout.tsx`, `frontend/src/components/{forms,ItemFormDrawer,RoomFormDrawer,ConfirmDialog}.tsx`, `frontend/src/app/elemente/page.tsx`, `frontend/src/app/configurare/{page,RoomTechnicalCard}.tsx`, `frontend/src/app/setari/page.tsx`, `README.md`, `CLAUDE.md`.
+
+**Branch:** `027-loading-states`.

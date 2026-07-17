@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import Spinner from "@/components/Spinner";
 import { useStore } from "@/shared/store";
+import { useAsyncAction } from "@/shared/useAsyncAction";
 import { Currency } from "@/shared/types";
 import { ACTION_ICONS, SETTINGS_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
 
@@ -37,7 +39,7 @@ export default function SetariPage() {
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [detailsSaved, setDetailsSaved] = useState(false);
 
-  const handleSaveDetails = async () => {
+  const { run: handleSaveDetails, pending: detailsPending } = useAsyncAction(async () => {
     const trimmedTitle = title.trim();
     const budget = Number(totalBudget);
     if (!trimmedTitle) {
@@ -54,7 +56,7 @@ export default function SetariPage() {
     await updateProject({ title: trimmedTitle, totalBudget: budget });
     setDetailsSaved(true);
     setTimeout(() => setDetailsSaved(false), 2000);
-  };
+  });
 
   const [pendingCurrency, setPendingCurrency] = useState(project.currency);
   // `project.currency` poate fi actualizat asincron la montare (store-ul citește din localStorage
@@ -73,9 +75,9 @@ export default function SetariPage() {
   // Conversie necesară doar când moneda țintă diferă de cea curentă a proiectului.
   const conversionNeeded = pendingCurrency !== project.currency;
 
-  const handleSave = async () => {
+  const { run: handleSave, pending: currencyPending } = useAsyncAction(async () => {
     if (!conversionNeeded) {
-      // Nimic de convertit — moneda e deja cea selectată.
+      // Nimic de convertit — moneda e deja cea selectată. Fără request, deci fără spinner.
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       return;
@@ -92,7 +94,7 @@ export default function SetariPage() {
     await convertCurrency(pendingCurrency, rate);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
-  };
+  });
 
   return (
     <div>
@@ -151,9 +153,15 @@ export default function SetariPage() {
             <button
               type="button"
               onClick={handleSaveDetails}
-              className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform hover:opacity-90 active:scale-[0.98]"
+              disabled={detailsPending}
+              aria-busy={detailsPending}
+              className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.save}</span>
+              {detailsPending ? (
+                <Spinner />
+              ) : (
+                <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.save}</span>
+              )}
               Salvează Detaliile
             </button>
           </div>
@@ -239,9 +247,15 @@ export default function SetariPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform hover:opacity-90 active:scale-[0.98]"
+                disabled={currencyPending}
+                aria-busy={currencyPending}
+                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.save}</span>
+                {currencyPending ? (
+                  <Spinner />
+                ) : (
+                  <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.save}</span>
+                )}
                 {conversionNeeded ? "Convertește și Salvează" : "Salvează Setările"}
               </button>
             </div>

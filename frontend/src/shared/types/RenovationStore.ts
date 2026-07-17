@@ -29,23 +29,23 @@ export interface RenovationStore {
   error: string | null;
   /** Șterge mesajul de eroare curent (ex. la închiderea unui toast). */
   dismissError: () => void;
-  updateProject: (patch: Partial<Project>) => void;
+  updateProject: (patch: Partial<Project>) => Promise<void>;
   /**
    * Conversie REALĂ a monedei: recalculează toate sumele (buget proiect, buget alocat pe camere,
    * preț unitar pe elemente) la cursul dat (RON per 1 EUR) și setează moneda țintă. Distructivă —
    * vezi `POST /api/projects/{id}/currency` în api-contract.md.
    */
-  convertCurrency: (targetCurrency: Currency, exchangeRate: number) => void;
-  addRoom: (room: Omit<Room, "id">) => void;
+  convertCurrency: (targetCurrency: Currency, exchangeRate: number) => Promise<void>;
+  addRoom: (room: Omit<Room, "id">) => Promise<void>;
   /**
    * `null` explicit pe un câmp = ȘTERGE valoarea existentă (nu doar „nu se modifică", ca `undefined`/absent).
    * Necesar ca să poți dezactiva placarea/finisajul de pereți sau goli suprafața pardoselii prin PATCH
    * (Problema 6 din audit) — vezi `POST/PATCH /api/rooms/{id}` în api-contract.md.
    */
-  updateRoom: (id: string, patch: { [K in keyof Room]?: Room[K] | null }) => void;
-  deleteRoom: (id: string) => void;
+  updateRoom: (id: string, patch: { [K in keyof Room]?: Room[K] | null }) => Promise<void>;
+  deleteRoom: (id: string) => Promise<void>;
   /** `createdAt`/`purchasedAt` sunt gestionate exclusiv de server — niciodată furnizate de client la creare. */
-  addItem: (item: Omit<Item, "id" | "createdAt" | "purchasedAt">) => void;
-  updateItem: (id: string, patch: Partial<Item>) => void;
-  deleteItem: (id: string) => void;
+  addItem: (item: Omit<Item, "id" | "createdAt" | "purchasedAt">) => Promise<void>;
+  updateItem: (id: string, patch: Partial<Item>) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
 }
