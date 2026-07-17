@@ -1,6 +1,7 @@
 "use client";
 
 import { useLockBodyScroll } from "@/shared/useLockBodyScroll";
+import { useSwipeToClose } from "@/shared/useSwipeToClose";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import Spinner from "./Spinner";
 
@@ -21,6 +22,8 @@ export default function ConfirmDialog({
   // Pending-ul e gestionat aici, intern — consumatorii doar dau mutația în `onConfirm`, fără să-și
   // țină fiecare propriul `useState` de loading.
   const { run: handleConfirm, pending } = useAsyncAction(onConfirm);
+  // Tragere-jos dezactivată cât timp ștergerea e în curs — la fel ca backdrop-ul și butoanele.
+  const { dragY, dragging, dragHandlers } = useSwipeToClose(pending ? () => {} : onCancel);
 
   if (!open) return null;
 
@@ -31,10 +34,19 @@ export default function ConfirmDialog({
         onClick={pending ? undefined : onCancel}
         aria-hidden
       />
-      {/* Mobil: bottom sheet (colțuri sus rotunjite, handle bar, butoane full-width stivuite) —
-          Desktop (sm+): modal centrat, neschimbat. Vezi design Stitch „Confirmare Ștergere - Bottom Sheet Mobile". */}
-      <div className="relative w-full max-w-sm rounded-t-[24px] bg-surface p-6 shadow-2xl sm:rounded-lg sm:shadow-xl">
-        <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-line sm:hidden" />
+      {/* Mobil: bottom sheet tras cu degetul (colțuri sus rotunjite, handle bar, butoane full-width
+          stivuite) — Desktop (sm+): modal centrat, neschimbat. Vezi design Stitch „Confirmare Ștergere -
+          Bottom Sheet Mobile". */}
+      <div
+        style={{
+          transform: dragY ? `translateY(${dragY}px)` : undefined,
+          transition: dragging ? "none" : "transform 0.25s ease-out",
+        }}
+        className="relative w-full max-w-sm rounded-t-[24px] bg-surface p-6 shadow-2xl sm:rounded-lg sm:shadow-xl"
+      >
+        <div {...dragHandlers} className="-mx-6 -mt-6 touch-none px-6 pt-3 sm:hidden">
+          <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-line" />
+        </div>
         <h2 className="text-center font-heading text-lg font-semibold sm:text-left">{title}</h2>
         <p className="mt-2 text-center text-sm text-muted sm:text-left">{message}</p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse sm:gap-3">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import SortableTh from "@/components/SortableTh";
 import { useStore } from "@/shared/store";
 import {
   budgetEfficiency,
@@ -10,33 +11,80 @@ import {
   itemsForRoom,
   roomSubtotal,
 } from "@/shared/functions";
-import { ItemStatus, MaterialType } from "@/shared/types";
+import { useSortableTable } from "@/shared/useSortableTable";
+import { Item, ItemStatus, MaterialType } from "@/shared/types";
 import {
-  ACTION_ICONS,
   CENTRALIZATOR_ICONS,
+  ACTION_ICONS,
   DOCUMENT_ICONS,
   ROOM_TYPE_ICONS,
   STATUS_ICONS,
+  TECHNICAL_ICONS,
 } from "@/shared/icons";
 import DashboardSummaryCard, {
   SummaryAccentFooter,
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
 
+type CentralizatorSortKey =
+  | "name"
+  | "materialType"
+  | "source"
+  | "quantity"
+  | "unitPrice"
+  | "total"
+  | "status";
+
+function getCentralizatorSortValue(item: Item, key: CentralizatorSortKey): string | number {
+  switch (key) {
+    case "name":
+      return item.name;
+    case "materialType":
+      return item.materialType;
+    case "source":
+      return item.source;
+    case "quantity":
+      return item.quantity;
+    case "unitPrice":
+      return item.unitPrice;
+    case "total":
+      return itemTotal(item);
+    case "status":
+      return item.status;
+  }
+}
+
+function matchesSearch(item: Item, query: string): boolean {
+  if (!query.trim()) return true;
+  const normalize = (s: string) =>
+    s
+      .toLocaleLowerCase("ro")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "");
+  const q = normalize(query);
+  return (
+    normalize(item.name).includes(q) ||
+    normalize(item.source).includes(q) ||
+    normalize(item.materialType).includes(q)
+  );
+}
+
 /** Culoare de fundal/text a badge-ului „Tip” per categorie de material — vezi design Stitch. */
+/** O culoare distinctă per categorie — înainte erau doar 4 nuanțe reale pentru 12 tipuri (mult
+    albastru/gri repetat, greu de deosebit dintr-o privire); acum fiecare tip are propria culoare. */
 const MATERIAL_BADGE_STYLES: Record<MaterialType, string> = {
-  [MaterialType.Gresie]: "bg-emerald-50 text-emerald-700",
-  [MaterialType.Faianta]: "bg-emerald-50 text-emerald-700",
-  [MaterialType.Plinta]: "bg-emerald-50 text-emerald-700",
-  [MaterialType.Parchet]: "bg-tertiary/10 text-tertiary",
-  [MaterialType.Vopsea]: "bg-surface-low text-muted",
-  [MaterialType.Tapet]: "bg-surface-low text-muted",
-  [MaterialType.GlafFereastra]: "bg-surface-low text-muted",
-  [MaterialType.Sanitare]: "bg-secondary/10 text-secondary",
-  [MaterialType.Mobila]: "bg-secondary/10 text-secondary",
-  [MaterialType.Electrocasnice]: "bg-secondary/10 text-secondary",
-  [MaterialType.CorpuriIluminat]: "bg-secondary/10 text-secondary",
-  [MaterialType.Altele]: "bg-surface-low text-muted",
+  [MaterialType.Gresie]: "bg-stone-100 text-stone-700",
+  [MaterialType.Faianta]: "bg-cyan-50 text-cyan-700",
+  [MaterialType.Plinta]: "bg-lime-50 text-lime-700",
+  [MaterialType.Parchet]: "bg-amber-50 text-amber-700",
+  [MaterialType.Vopsea]: "bg-rose-50 text-rose-700",
+  [MaterialType.Tapet]: "bg-fuchsia-50 text-fuchsia-700",
+  [MaterialType.GlafFereastra]: "bg-teal-50 text-teal-700",
+  [MaterialType.Sanitare]: "bg-indigo-50 text-indigo-700",
+  [MaterialType.Mobila]: "bg-violet-50 text-violet-700",
+  [MaterialType.Electrocasnice]: "bg-red-50 text-red-700",
+  [MaterialType.CorpuriIluminat]: "bg-yellow-50 text-yellow-700",
+  [MaterialType.Altele]: "bg-slate-100 text-slate-600",
 };
 
 const STATUS_DOT: Record<ItemStatus, { icon: string; className: string }> = {
@@ -56,11 +104,50 @@ export default function CentralizatorPage() {
   const money = (value: number) => formatMoney(value, project.currency);
   const [showSubtotals, setShowSubtotals] = useState(true);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const {
+    sorted: sortedItems,
+    sortKey,
+    direction,
+    toggleSort,
+  } = useSortableTable<Item, CentralizatorSortKey>(items, getCentralizatorSortValue);
+  const visibleItems = sortedItems.filter((item) => matchesSearch(item, search));
 
   // Totalurile de proiect vin din agregarea server-side (Problema 2 din audit); subtotalul/itemii
   // per cameră rămân calculați client-side (randare de detaliu, nu agregat de dashboard).
   const { totalEstimated: estimated, totalSpent: spent } = summary;
   const efficiency = budgetEfficiency(estimated, spent);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  // Import dinamic — @react-pdf/renderer e destul de greu, nu are rost în bundle-ul inițial al
+  // paginii, doar la apăsarea efectivă a butonului de export (aceeași abordare ca în Configurare).
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const [{ pdf }, { default: CentralizatorPdfDocument }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("./CentralizatorPdfDocument"),
+      ]);
+      const blob = await pdf(
+        <CentralizatorPdfDocument
+          project={project}
+          rooms={rooms}
+          items={items}
+          estimated={estimated}
+          spent={spent}
+          efficiency={efficiency}
+        />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${project.title.replace(/[^\p{L}\p{N}]+/gu, "-")}-tabel-centralizator.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   function toggleRoom(roomId: string) {
     setCollapsed((prev) => {
@@ -73,7 +160,12 @@ export default function CentralizatorPage() {
 
   return (
     <div>
-      <PageHeader title="Centralizator Costuri" searchPlaceholder="Caută element sau lucrare..." />
+      <PageHeader
+        title="Centralizator Costuri"
+        searchPlaceholder="Caută element sau lucrare..."
+        searchValue={search}
+        onSearchChange={setSearch}
+      />
 
       {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop. */}
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
@@ -106,7 +198,7 @@ export default function CentralizatorPage() {
       <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
         {/* Tabel */}
         <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-          <div className="flex items-center justify-between border-b border-line bg-surface-low px-6 py-4 sm:px-8">
+          <div className="flex items-center justify-between border-b border-line bg-surface px-6 py-4 sm:px-8">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-[20px] text-primary/80">
                 {CENTRALIZATOR_ICONS.tabelDetaliat}
@@ -130,71 +222,70 @@ export default function CentralizatorPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
-              <thead className="border-b border-line bg-surface-low/30">
+              <thead className="border-b border-line bg-surface">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Element / Tip Lucrare
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Tip
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Sursă
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Cant.
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Preț Unitar
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Total
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
-                  <th className="w-24 whitespace-nowrap px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      Status
-                      <span className="material-symbols-outlined text-[14px] opacity-40">
-                        {ACTION_ICONS.sortIndicator}
-                      </span>
-                    </span>
-                  </th>
+                  <SortableTh
+                    label="Element / Tip Lucrare"
+                    sortKey="name"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  />
+                  <SortableTh
+                    label="Tip"
+                    sortKey="materialType"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  />
+                  <SortableTh
+                    label="Sursă"
+                    sortKey="source"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                  />
+                  <SortableTh
+                    label="Cant."
+                    sortKey="quantity"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Preț Unitar"
+                    sortKey="unitPrice"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Total"
+                    sortKey="total"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Status"
+                    sortKey="status"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={toggleSort}
+                    align="center"
+                    className="w-24"
+                  />
                 </tr>
               </thead>
 
               {rooms.map((room) => {
-                const roomItems = itemsForRoom(items, room.id);
+                const allRoomItems = itemsForRoom(items, room.id);
+                const roomItems = itemsForRoom(visibleItems, room.id);
                 const subtotal = roomSubtotal(items, room.id);
-                if (roomItems.length === 0) return null;
+                if (allRoomItems.length === 0) return null;
                 const isCollapsed = collapsed.has(room.id);
 
                 return (
@@ -220,6 +311,14 @@ export default function CentralizatorPage() {
                       </td>
                     </tr>
 
+                    {!isCollapsed && roomItems.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-3 text-[13px] text-muted" colSpan={7}>
+                          {`Niciun element nu corespunde căutării „${search}" în această cameră.`}
+                        </td>
+                      </tr>
+                    )}
+
                     {!isCollapsed &&
                       roomItems.map((item) => {
                         const status = STATUS_DOT[item.status];
@@ -228,16 +327,25 @@ export default function CentralizatorPage() {
                             key={item.id}
                             className="border-b border-line/50 transition-colors hover:bg-background"
                           >
-                            <td className="px-4 py-3 text-[13px] text-foreground">{item.name}</td>
+                            <td className="max-w-[260px] px-4 py-3 text-[13px] text-foreground">
+                              <span className="block truncate" title={item.name}>
+                                {item.name}
+                              </span>
+                            </td>
                             <td className="px-4 py-3 text-[13px]">
                               <span
-                                className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-wider ${MATERIAL_BADGE_STYLES[item.materialType]}`}
+                                title={item.materialType}
+                                className={`inline-block max-w-[140px] truncate whitespace-nowrap rounded-full px-3 py-1 text-[11px] uppercase tracking-wider ${MATERIAL_BADGE_STYLES[item.materialType]}`}
                               >
                                 {item.materialType}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-[13px] text-muted">{item.source}</td>
-                            <td className="px-4 py-3 text-right font-mono text-[13px] text-muted">
+                            <td className="max-w-[160px] px-4 py-3 text-[13px] text-muted">
+                              <span className="block truncate" title={item.source}>
+                                {item.source}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px] text-muted">
                               {item.quantity}
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px]">
@@ -323,7 +431,7 @@ export default function CentralizatorPage() {
       </div>
 
       {/* Mobil — vezi „Centralizator Costuri - Mobile Table View" (fără bottom nav, se face în Flutter) */}
-      <div className="pb-24 md:hidden">
+      <div className="pb-40 md:hidden">
         <div className="px-4 py-4">
           {/* Secțiuni per cameră — acordeon cu tabel scrollabil orizontal */}
           <div className="mt-4 flex flex-col gap-6">
@@ -379,7 +487,7 @@ export default function CentralizatorPage() {
                             return (
                               <tr
                                 key={item.id}
-                                className="border-b border-line/50 transition-colors hover:bg-background"
+                                className="border-b border-line/50 bg-surface transition-colors hover:bg-background"
                               >
                                 <td className="px-3 py-3">
                                   <div className="flex items-center gap-2">
@@ -439,8 +547,8 @@ export default function CentralizatorPage() {
           </div>
         </div>
 
-        {/* Rezumat sticky */}
-        <div className="fixed bottom-0 left-0 z-40 flex w-full items-center justify-between border-t border-line bg-surface px-4 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        {/* Rezumat sticky — pe mobil stă deasupra bottom nav-ului global (`bottom-16`, înălțimea lui `BottomNav`); pe desktop, unde nu există bottom nav, rămâne lipit de fundul ecranului. */}
+        <div className="fixed bottom-16 left-0 z-40 flex w-full items-center justify-between border-t border-line bg-surface px-4 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:bottom-0">
           <div className="flex flex-col">
             <span className="text-[11px] font-bold uppercase text-muted">
               Total General Estimat
@@ -448,13 +556,14 @@ export default function CentralizatorPage() {
             <span className="font-mono text-[20px] text-primary">{money(estimated)}</span>
           </div>
           <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 rounded bg-primary px-4 py-2 font-bold text-white active:opacity-80"
+            onClick={handleExportPdf}
+            disabled={exportingPdf || items.length === 0}
+            className="flex items-center gap-2 rounded bg-primary px-4 py-2 font-bold text-white active:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[18px]">
-              {DOCUMENT_ICONS.download}
+              {exportingPdf ? TECHNICAL_ICONS.calculatedResults : DOCUMENT_ICONS.download}
             </span>
-            PDF
+            {exportingPdf ? "Se generează..." : "PDF"}
           </button>
         </div>
       </div>

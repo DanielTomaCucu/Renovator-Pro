@@ -50,8 +50,12 @@ export const ACTION_ICONS = {
   link: "link",
   image: "image",
   sortIndicator: "unfold_more",
+  sortAscending: "arrow_upward",
+  sortDescending: "arrow_downward",
   photoCamera: "photo_camera",
   checkCircle: "check_circle",
+  notConfigured: "radio_button_unchecked",
+  moreVert: "more_vert",
 } as const;
 
 export const STATUS_ICONS: Record<ItemStatus, string> = {

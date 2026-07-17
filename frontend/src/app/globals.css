@@ -44,8 +44,13 @@ h4 {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
 }
 
-/* iconițe de buton (edit/delete/adaugă/salvează) — mărime aliniată la textul din jur, vezi CLAUDE.md */
+/* iconițe de buton (edit/delete/adaugă/salvează) — mărime aliniată la textul din jur, vezi CLAUDE.md.
+   18px (nu 13px) — sub 14-15px, iconițele de acțiune (ștergere/editare mai ales, fără padding în jur
+   pe multe butoane) deveneau greu de țintit la click/tap. `opsz` urmărește `font-size`-ul real, ca
+   traseul glifei să nu rămână desenat pentru 24px (prea gros/„bold") la o dimensiune mai mică.
+   TOATE iconițele din butoane folosesc STRICT această clasă — niciodată `text-[Npx]` inline pe o
+   iconiță de buton, ca să rămână identice ca mărime peste tot în aplicație. */
 .icon-btn {
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 14;
-  font-size: 13px;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+  font-size: 18px;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useEffect, useRef, useState, type ReactNode, type SelectHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import {
   FlooringType,
@@ -100,6 +100,9 @@ function SelectField({
  * butonului — altfel un ancestor cu `overflow-hidden` (cardul camerei, secțiunea colapsabilă) ar tăia
  * dropdown-ul quando depășește înălțimea vizibilă a cardului. Înălțimea proprie e limitată + scroll
  * intern, ca lista să rămână complet accesibilă chiar dacă are mai multe opțiuni decât încap pe ecran.
+ * Cât timp e deschis, poziția se recalculează la fiecare scroll/resize (capture:true, ca să prindă și
+ * scroll-ul din containere interne, nu doar window) — altfel un scroll cu dropdown-ul deschis îl lăsa
+ * „înghețat" la coordonatele inițiale, deconectat vizual de buton.
  */
 export function IconSelectField<T extends string>({
   label,
@@ -121,13 +124,26 @@ export function IconSelectField<T extends string>({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const current = options.find((o) => o.value === value);
 
+  const updateRect = () => {
+    if (!buttonRef.current) return;
+    const r = buttonRef.current.getBoundingClientRect();
+    setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
   const toggleOpen = () => {
-    if (!open && buttonRef.current) {
-      const r = buttonRef.current.getBoundingClientRect();
-      setRect({ top: r.bottom + 4, left: r.left, width: r.width });
-    }
+    if (!open) updateRect();
     setOpen((v) => !v);
   };
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", updateRect, { capture: true, passive: true });
+    window.addEventListener("resize", updateRect);
+    return () => {
+      window.removeEventListener("scroll", updateRect, { capture: true });
+      window.removeEventListener("resize", updateRect);
+    };
+  }, [open]);
 
   return (
     <div className={`space-y-1 ${wrapperClassName ?? ""}`}>
@@ -268,23 +284,35 @@ function ResultRow({
 
 export default function RoomTechnicalCard({ room }: { room: Room }) {
   const { updateRoom, deleteRoom } = useStore();
-  const [open, setOpen] = useState(true);
+  // Cardul pornește ÎNTOTDEAUNA închis (la montare/revenire pe pagină) — cu toate cardurile deschise
+  // odată, pagina devine ilizibilă/greu de navigat cu mai multe camere. Userul deschide explicit doar
+  // camera la care lucrează.
+  const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Draft local — toate editările din card scriu aici, NU direct în store. Nimic nu se propagă către
   // celelalte pagini/calcule globale până la apăsarea explicită a „Salvează" (buton la finalul cardului).
   const [draft, setDraft] = useState<Room>(room);
+  // Secțiunile interne (Pardoseală/Pereți/Ferestre/Uși) pornesc și ele închise — aceeași motivație ca
+  // mai sus: la deschiderea cardului, vrem o listă compactă de secțiuni, nu totul expandat deodată.
   const [sectionsOpen, setSectionsOpen] = useState({
-    floor: true,
-    walls: true,
-    windows: Object.keys(room.windows ?? {}).length > 0,
-    doors: Object.keys(room.doors ?? {}).length > 0,
+    floor: false,
+    walls: false,
+    windows: false,
+    doors: false,
   });
   const toggleSection = (key: keyof typeof sectionsOpen) =>
     setSectionsOpen((s) => ({ ...s, [key]: !s[key] }));
 
-  // Indicator subtil în header: bifă verde dacă ultima editare a fost salvată, ascunsă imediat ce
-  // draftul diverge din nou de ce e în store — ca userul să vadă rapid la care camere a lucrat deja.
+  // Flag din header: DERIVAT direct din `room` (datele reale de pe server), nu dintr-un state efemeră
+  // de sesiune — așa se menține corect și după ce userul navighează la altă pagină și se întoarce
+  // (componenta se remontează, dar `room` vine proaspăt din store): cameră deja configurată → bifă
+  // verde; cameră fără configurare tehnică încă → indicator neutru (gri), ca userul să vadă dintr-o
+  // privire, cu cardul închis, care cameră mai are de lucru.
+  const isConfigured = hasFloorConfig(room);
+
+  // Indicator subtil în header: bifă verde imediat după „Salvează", ascunsă imediat ce draftul
+  // diverge din nou de ce e în store — ca userul să vadă rapid la care camere a lucrat deja.
   const [saved, setSaved] = useState(false);
 
   const patch = (p: Partial<Room>) => {
@@ -477,14 +505,22 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
           </span>
           <div className="flex min-w-0 flex-col">
             <span className="flex items-center gap-1.5">
-              <h3 className="truncate font-heading text-xl font-bold">{room.name}</h3>
-              {saved && (
+              <h3 className="truncate font-heading text-base font-bold md:text-xl">{room.name}</h3>
+              {isConfigured || saved ? (
                 <span
                   className="material-symbols-outlined icon-btn shrink-0 text-emerald-500/70"
-                  title="Salvat"
-                  aria-label="Salvat"
+                  title={saved ? "Salvat" : "Configurare salvată"}
+                  aria-label={saved ? "Salvat" : "Configurare salvată"}
                 >
                   {ACTION_ICONS.checkCircle}
+                </span>
+              ) : (
+                <span
+                  className="material-symbols-outlined icon-btn shrink-0 text-muted/50"
+                  title="Neconfigurat încă"
+                  aria-label="Neconfigurat încă"
+                >
+                  {ACTION_ICONS.notConfigured}
                 </span>
               )}
             </span>
@@ -518,7 +554,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
 
         <div className="flex shrink-0 items-center gap-4">
           <span
-            className={`material-symbols-outlined transition-transform ${open ? "rotate-180" : ""}`}
+            className={`material-symbols-outlined icon-btn transition-transform ${open ? "rotate-180" : ""}`}
           >
             {ACTION_ICONS.expandMore}
           </span>
@@ -529,7 +565,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               e.stopPropagation();
               setConfirmDelete(true);
             }}
-            className="text-muted hover:text-tertiary"
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
             aria-label="Șterge camera"
           >
             <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
@@ -868,7 +904,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       <button
                         type="button"
                         onClick={() => removeWindow(w)}
-                        className="rounded-lg p-3 text-muted hover:text-tertiary sm:self-end"
+                        className="rounded-lg p-3 text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
                         aria-label={`Elimină fereastra de pe peretele ${w}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
@@ -964,7 +1000,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       <button
                         type="button"
                         onClick={() => removeDoor(w)}
-                        className="rounded-lg p-3 text-muted hover:text-tertiary sm:self-end"
+                        className="rounded-lg p-3 text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
                         aria-label={`Elimină ușa de pe peretele ${w}`}
                       >
                         <span className="material-symbols-outlined icon-btn">

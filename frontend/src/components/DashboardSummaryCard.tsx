@@ -18,7 +18,7 @@ export type SummaryMetric = {
 function MetricContent({ metric, compact }: { metric: SummaryMetric; compact?: boolean }) {
   return (
     <div className="min-w-0 flex-1 space-y-1.5">
-      <p className="text-[10px] font-bold uppercase leading-tight tracking-widest opacity-70">
+      <p className="truncate text-[10px] font-bold uppercase leading-tight tracking-widest opacity-70">
         {metric.label}
       </p>
       <span
@@ -129,7 +129,7 @@ export function SummaryAccentFooter({
     <div className="flex items-start gap-2">
       <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${dotClassName}`} />
       <span
-        className={`text-[11px] font-medium uppercase leading-tight tracking-wider ${textClassName}`}
+        className={`min-w-0 flex-1 truncate text-[11px] font-medium uppercase leading-tight tracking-wider ${textClassName}`}
       >
         {children}
       </span>

@@ -5,9 +5,12 @@ import StatusChip from "@/components/StatusChip";
 import OriginBadge from "@/components/OriginBadge";
 import DashboardSummaryCard, { SummaryProgressFooter } from "@/components/DashboardSummaryCard";
 import ItemFormDrawer from "@/components/ItemFormDrawer";
+import ItemDetailsDrawer from "@/components/ItemDetailsDrawer";
+import ItemRowMenu from "@/components/ItemRowMenu";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import PageHeader from "@/components/PageHeader";
+import SortableTh from "@/components/SortableTh";
 import Spinner from "@/components/Spinner";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
@@ -18,18 +21,68 @@ import {
   itemsForRoom,
   roomSpent,
 } from "@/shared/functions";
-import { ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
+import { useSortableTable } from "@/shared/useSortableTable";
+import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { DeleteTarget } from "./DeleteTarget";
 import { ItemDrawerState } from "./ItemDrawerState";
+import { ItemDetailsState } from "./ItemDetailsState";
+
+type ItemSortKey = "name" | "source" | "quantity" | "unitPrice" | "total" | "status";
+
+function getItemSortValue(item: Item, key: ItemSortKey): string | number {
+  switch (key) {
+    case "name":
+      return item.name;
+    case "source":
+      return item.source;
+    case "quantity":
+      return item.quantity;
+    case "unitPrice":
+      return item.unitPrice;
+    case "total":
+      return itemTotal(item);
+    case "status":
+      return item.status;
+  }
+}
+
+/** Filtrare text simplă (nume + sursă), diacritice-insensibilă, case-insensitive. */
+function matchesSearch(item: Item, query: string): boolean {
+  if (!query.trim()) return true;
+  const normalize = (s: string) =>
+    s
+      .toLocaleLowerCase("ro")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "");
+  const q = normalize(query);
+  return normalize(item.name).includes(q) || normalize(item.source).includes(q);
+}
 
 export default function ElementePage() {
   const { project, rooms, items, summary, addItem, deleteItem, deleteRoom } = useStore();
   const money = (value: number) => formatMoney(value, project.currency);
 
   const [itemDrawer, setItemDrawer] = useState<ItemDrawerState>({ open: false });
+  const [itemDetails, setItemDetails] = useState<ItemDetailsState>({ open: false });
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  /** Închide voletul de detalii și deschide formularul de editare pentru același element. */
+  function editFromDetails() {
+    const item = itemDetails.item;
+    setItemDetails({ open: false });
+    if (item) setItemDrawer({ open: true, item });
+  }
+
+  // Căutare (bara din PageHeader) + sortare de coloană — un singur state de sortare, aplicat identic
+  // pe fiecare tabel de cameră (fiecare cameră are propriul <table>, dar headerele sunt identice).
+  const [search, setSearch] = useState("");
+  const { sorted: sortedItems, sortKey, direction, toggleSort } = useSortableTable<Item, ItemSortKey>(
+    items,
+    getItemSortValue
+  );
+  const visibleItems = sortedItems.filter((item) => matchesSearch(item, search));
 
   // Quick add
   const [qaName, setQaName] = useState("");
@@ -88,7 +141,12 @@ export default function ElementePage() {
 
   return (
     <div>
-      <PageHeader title="Elemente de Cumpărat" searchPlaceholder="Caută elemente..." />
+      <PageHeader
+        title="Elemente de Cumpărat"
+        searchPlaceholder="Caută elemente..."
+        searchValue={search}
+        onSearchChange={setSearch}
+      />
 
       {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop. */}
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
@@ -125,10 +183,11 @@ export default function ElementePage() {
           </button>
         </div>
 
-        {/* Adăugare rapidă */}
+        {/* Adăugare rapidă — degrade soft (identic cu DashboardSummaryCard), nu negru plat. */}
         <form
           onSubmit={quickAdd}
-          className="rounded-xl bg-primary p-4 text-white shadow-md"
+          className="rounded-xl p-4 text-white shadow-md"
+          style={{ background: "linear-gradient(135deg, #1e293b 0%, #000000 100%)" }}
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
             <div className="flex shrink-0 items-center gap-3">
@@ -182,17 +241,17 @@ export default function ElementePage() {
             </div>
           </div>
 
-          {/* Poză element + Salvează — pe același rând de la sm în sus, ca să nu ocupe fiecare
-              câte un rând întreg pe tabletă/desktop. */}
-          <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 items-center gap-3">
-              <label className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-white/70">
+          {/* Poză element + Salvează — un singur rând compact, fiecare element cu lățimea lui
+              naturală (nu întins pe tot spațiul disponibil ca înainte). */}
+          <div className="mt-4 flex items-center justify-between gap-4 border-t border-white/10 pt-4">
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-white/70">
                 Poză element
-              </label>
+              </span>
               {qaImage ? (
                 <div className="flex items-center gap-3 rounded-lg border border-white/20 bg-white/10 p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qaImage} alt="Poză element" className="h-12 w-12 rounded object-cover" />
+                  <img src={qaImage} alt="Poză element" className="h-10 w-10 rounded object-cover" />
                   <button
                     type="button"
                     onClick={() => setQaImage(undefined)}
@@ -203,8 +262,10 @@ export default function ElementePage() {
                   </button>
                 </div>
               ) : (
-                <label className="flex w-full max-w-xs cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-white/30 bg-white/10 p-2.5 text-[12px] font-bold uppercase text-white/70 transition-colors hover:bg-white/20">
-                  <span className="material-symbols-outlined">{ACTION_ICONS.photoCamera}</span>
+                <label className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 text-[12px] font-bold uppercase text-white transition-colors hover:border-white/40 hover:bg-white/20">
+                  <span className="material-symbols-outlined icon-btn">
+                    {ACTION_ICONS.photoCamera}
+                  </span>
                   Fă o poză
                   <input
                     type="file"
@@ -217,7 +278,7 @@ export default function ElementePage() {
               )}
             </div>
 
-            {/* Salvează — mereu ultimul buton din formular, aliniat cu rândul poza pe sm+. */}
+            {/* Salvează — mereu ultimul buton din formular. */}
             <button
               type="submit"
               disabled={quickAddPending}
@@ -237,7 +298,8 @@ export default function ElementePage() {
         {/* Camere */}
         <div className="space-y-6">
           {rooms.map((room) => {
-            const roomItems = itemsForRoom(items, room.id);
+            const allRoomItems = itemsForRoom(items, room.id);
+            const roomItems = itemsForRoom(visibleItems, room.id);
             const spentInRoom = roomSpent(items, room.id);
             return (
               <section
@@ -265,7 +327,7 @@ export default function ElementePage() {
                         onClick={() =>
                           setDeleteTarget({ kind: "room", id: room.id, name: room.name })
                         }
-                        className="rounded p-1 text-muted hover:text-tertiary"
+                        className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
                         aria-label={`Șterge camera ${room.name}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
@@ -282,37 +344,65 @@ export default function ElementePage() {
                   </div>
                 </div>
 
-                {roomItems.length === 0 ? (
+                {allRoomItems.length === 0 ? (
                   <p className="px-6 py-6 text-sm text-muted">
                     Niciun element încă. Adaugă primul element pentru această cameră.
+                  </p>
+                ) : roomItems.length === 0 ? (
+                  <p className="px-6 py-6 text-sm text-muted">
+                    {`Niciun element nu corespunde căutării „${search}" în această cameră.`}
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                       <thead className="border-b border-line bg-surface-low/30">
                         <tr className="text-[10px] font-bold uppercase tracking-wider text-muted">
-                          <th className="whitespace-nowrap px-6 py-3">
-                            <span className="inline-flex items-center gap-1">
-                              Element
-                              <span className="material-symbols-outlined text-[14px] opacity-50">
-                                {ACTION_ICONS.sortIndicator}
-                              </span>
-                            </span>
-                          </th>
-                          <th className="whitespace-nowrap px-3 py-3">
-                            <span className="inline-flex items-center gap-1">
-                              Sursă
-                              <span className="material-symbols-outlined text-[14px] opacity-50">
-                                {ACTION_ICONS.sortIndicator}
-                              </span>
-                            </span>
-                          </th>
-                          <th className="whitespace-nowrap px-3 py-3 text-right">Buc</th>
-                          <th className="whitespace-nowrap px-3 py-3 text-right">
-                            Preț unit
-                          </th>
-                          <th className="whitespace-nowrap px-3 py-3 text-right">Total</th>
-                          <th className="whitespace-nowrap px-3 py-3">Status</th>
+                          <SortableTh
+                            label="Element"
+                            sortKey="name"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                            className="px-6"
+                          />
+                          <SortableTh
+                            label="Sursă"
+                            sortKey="source"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                          />
+                          <SortableTh
+                            label="Buc"
+                            sortKey="quantity"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                            align="right"
+                          />
+                          <SortableTh
+                            label="Preț unit"
+                            sortKey="unitPrice"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                            align="right"
+                          />
+                          <SortableTh
+                            label="Total"
+                            sortKey="total"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                            align="right"
+                          />
+                          <SortableTh
+                            label="Status"
+                            sortKey="status"
+                            activeKey={sortKey}
+                            direction={direction}
+                            onSort={toggleSort}
+                          />
                           <th className="px-3 py-3" />
                         </tr>
                       </thead>
@@ -356,10 +446,19 @@ export default function ElementePage() {
                               <StatusChip status={item.status} size="sm" />
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right">
-                              <div className="flex items-center justify-end gap-3">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => setItemDetails({ open: true, item })}
+                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-secondary"
+                                  aria-label={`Vezi detalii ${item.name}`}
+                                >
+                                  <span className="material-symbols-outlined icon-btn">
+                                    {ACTION_ICONS.viewDetails}
+                                  </span>
+                                </button>
                                 <button
                                   onClick={() => setItemDrawer({ open: true, item })}
-                                  className="text-muted transition-colors hover:text-primary"
+                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
                                   aria-label={`Editează ${item.name}`}
                                 >
                                   <span className="material-symbols-outlined icon-btn">
@@ -374,7 +473,7 @@ export default function ElementePage() {
                                       name: item.name,
                                     })
                                   }
-                                  className="text-muted transition-colors hover:text-tertiary"
+                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
                                   aria-label={`Șterge ${item.name}`}
                                 >
                                   <span className="material-symbols-outlined icon-btn">
@@ -545,6 +644,14 @@ export default function ElementePage() {
           )}
         </section>
 
+        <button
+          type="button"
+          onClick={() => setRoomDrawerOpen(true)}
+          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+        >
+          + Adaugă Cameră
+        </button>
+
         {/* Camere — acordeon */}
         <div className="space-y-3">
           {rooms
@@ -590,10 +697,10 @@ export default function ElementePage() {
                             e.stopPropagation();
                             setItemDrawer({ open: true, roomId: room.id });
                           }}
-                          className="p-1 text-muted hover:text-primary"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted hover:bg-surface-low hover:text-primary"
                           aria-label={`Adaugă element în ${room.name}`}
                         >
-                          <span className="material-symbols-outlined text-[20px]">
+                          <span className="material-symbols-outlined icon-btn">
                             {ACTION_ICONS.add}
                           </span>
                         </span>
@@ -604,16 +711,16 @@ export default function ElementePage() {
                             e.stopPropagation();
                             setDeleteTarget({ kind: "room", id: room.id, name: room.name });
                           }}
-                          className="p-1 text-tertiary/70 hover:text-tertiary"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-tertiary/70 hover:bg-surface-low hover:text-tertiary"
                           aria-label={`Șterge camera ${room.name}`}
                         >
-                          <span className="material-symbols-outlined text-[20px]">
+                          <span className="material-symbols-outlined icon-btn">
                             {ACTION_ICONS.delete}
                           </span>
                         </span>
                       </div>
                       <span
-                        className={`material-symbols-outlined text-foreground transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+                        className={`material-symbols-outlined icon-btn text-foreground transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
                       >
                         {ACTION_ICONS.expandMore}
                       </span>
@@ -657,28 +764,14 @@ export default function ElementePage() {
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => setItemDrawer({ open: true, item })}
-                                className="p-1 text-muted transition-colors hover:text-primary active:scale-90"
-                                aria-label={`Editează ${item.name}`}
-                              >
-                                <span className="material-symbols-outlined text-[20px]">
-                                  {ACTION_ICONS.editInline}
-                                </span>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  setDeleteTarget({ kind: "item", id: item.id, name: item.name })
-                                }
-                                className="p-1 text-tertiary/70 transition-colors hover:text-tertiary active:scale-90"
-                                aria-label={`Șterge ${item.name}`}
-                              >
-                                <span className="material-symbols-outlined text-[20px]">
-                                  {ACTION_ICONS.delete}
-                                </span>
-                              </button>
-                            </div>
+                            <ItemRowMenu
+                              itemName={item.name}
+                              onView={() => setItemDetails({ open: true, item })}
+                              onEdit={() => setItemDrawer({ open: true, item })}
+                              onDelete={() =>
+                                setDeleteTarget({ kind: "item", id: item.id, name: item.name })
+                              }
+                            />
                           </div>
                         ))
                       )}
@@ -690,23 +783,17 @@ export default function ElementePage() {
         </div>
       </div>
 
-      {/* FAB „Adaugă Cameră" — doar pe mobil, vezi design Stitch (buton flotant jos-dreapta) */}
-      <button
-        type="button"
-        onClick={() => setRoomDrawerOpen(true)}
-        aria-label="Adaugă Cameră"
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-2xl transition-transform active:scale-95 hover:scale-105 md:hidden"
-      >
-        <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>
-          {ACTION_ICONS.addRoom}
-        </span>
-      </button>
-
       <ItemFormDrawer
         open={itemDrawer.open}
         onClose={() => setItemDrawer({ open: false })}
         roomId={itemDrawer.roomId}
         item={itemDrawer.item}
+      />
+      <ItemDetailsDrawer
+        open={itemDetails.open}
+        item={itemDetails.item}
+        onClose={() => setItemDetails({ open: false })}
+        onEdit={editFromDetails}
       />
       <RoomFormDrawer open={roomDrawerOpen} onClose={() => setRoomDrawerOpen(false)} />
       <ConfirmDialog

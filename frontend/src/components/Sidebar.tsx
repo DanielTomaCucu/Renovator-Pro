@@ -5,16 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ACTION_ICONS, NAV_ICONS } from "@/shared/icons";
 import { useLockBodyScroll } from "@/shared/useLockBodyScroll";
-
-const nav = [
-  { href: "/configurare", label: "Configurare Apartament", icon: NAV_ICONS.configurare },
-  { href: "/elemente", label: "Elemente de Cumpărat", icon: NAV_ICONS.elemente },
-  { href: "/centralizator", label: "Tabel Centralizator", icon: NAV_ICONS.centralizator },
-  { href: "/analiza", label: "Grafice Buget", icon: NAV_ICONS.analiza },
-];
-
-/** Link secundar (nu apare pe bara mobilă/dropdown, doar în footer-ul sidebar-ului desktop). */
-const secondaryNav = { href: "/setari", label: "Setări", icon: NAV_ICONS.setari };
+import { mainNav as nav, secondaryNav } from "@/shared/nav";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -70,7 +61,7 @@ export default function Sidebar() {
               {NAV_ICONS.logo}
             </span>
           </div>
-          <div className="whitespace-nowrap">
+          <div className="min-w-0 whitespace-nowrap">
             <p className="font-heading text-[15px] font-extrabold leading-tight text-primary">
               Renovator Pro
             </p>
@@ -125,7 +116,7 @@ export default function Sidebar() {
           </span>
         </div>
         {!collapsed && (
-          <div className="whitespace-nowrap">
+          <div className="min-w-0 whitespace-nowrap">
             <h1 className="font-heading text-[20px] font-extrabold leading-tight text-primary">
               Renovator Pro
             </h1>

@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/shared/store";
 import { donutSegments, formatMoney, timelinePoints, totalEstimated } from "@/shared/functions";
 import { ItemStatus } from "@/shared/types";
-import { ACTION_ICONS, ANALYTICS_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
+import { ACTION_ICONS, ANALYTICS_ICONS } from "@/shared/icons";
 import DashboardSummaryCard, {
   SummaryAccentFooter,
   SummaryProgressFooter,
@@ -27,6 +27,13 @@ const MOBILE_PIE_COLORS = ["#000000", "#45464d", "#76777d", "#c6c6cd", "#e2e8f0"
 export default function AnalizaPage() {
   const { project, rooms, items, summary, spendingTimeline } = useStore();
   const money = (value: number) => formatMoney(value, project.currency);
+
+  // Tooltip pe hover (desktop)/tap (mobil) pt. graficul „Evoluția Cheltuielilor" — index-ul punctului
+  // curent din `timeline`, null = niciun tooltip afișat.
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  // Camera selectată prin click pe donut-ul „Cost per Cameră" (nume, nu index — segmentele nu au index
+  // stabil între desktop/mobil). null = nicio selecție, centrul arată camera cu cel mai mare cost.
+  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
 
   // Totalurile vin din agregarea server-side (summary), nu recalculate client-side (Problema 2 din audit).
   const { totalEstimated: estimated, totalSpent: spent, budgetRemaining: remaining, boughtCount: bought, purchaseProgress: progress } = summary;
@@ -55,6 +62,11 @@ export default function AnalizaPage() {
     [perRoom]
   );
   const topRoom = segments[0];
+  // Camera activă în centrul donut-ului: cea selectată prin click, altfel camera cu cel mai mare cost
+  // (comportamentul implicit de dinainte). `segments`/`mobileSegments` au aceleași `name`/`start`/`end`
+  // (doar culorile diferă), deci selecția (după nume) e validă pe ambele.
+  const activeSegment = segments.find((s) => s.name === selectedRoom) ?? null;
+  const centerSegment = activeSegment ?? topRoom;
 
   const mobileSegments = useMemo(
     () =>
@@ -65,11 +77,6 @@ export default function AnalizaPage() {
       })),
     [perRoom]
   );
-  const mobileConicGradient = mobileSegments.length
-    ? `conic-gradient(${mobileSegments
-        .map((s) => `${s.color} ${s.start * 100}% ${s.end * 100}%`)
-        .join(", ")})`
-    : "conic-gradient(var(--color-surface-low, #eff4ff) 0% 100%)";
 
   const overBudget = spent > project.totalBudget;
   const pendingTotal = totalEstimated(
@@ -95,21 +102,7 @@ export default function AnalizaPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Analiză Bugetară"
-        searchPlaceholder="Caută date..."
-        actions={
-          <button
-            onClick={() => window.print()}
-            className="hidden items-center justify-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-bold text-primary transition-all hover:bg-surface-low sm:flex"
-          >
-            <span className="material-symbols-outlined text-[20px]">
-              {DOCUMENT_ICONS.exportPdf}
-            </span>
-            Export PDF
-          </button>
-        }
-      />
+      <PageHeader title="Analiză Bugetară" searchPlaceholder="Caută date..." />
 
       {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop (design „Dashboard Premium Consolidat"). */}
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">
@@ -179,7 +172,7 @@ export default function AnalizaPage() {
               </div>
             ) : (
               <>
-                <div className="relative h-64 w-full overflow-hidden">
+                <div className="relative h-64 w-full">
                   <svg
                     className="h-full w-full"
                     preserveAspectRatio="none"
@@ -202,7 +195,49 @@ export default function AnalizaPage() {
                         <path d={timelineAreaPath} fill="url(#expense-gradient)" />
                       </>
                     )}
+                    {/* Punct evidențiat + zonă de hover mărită (invizibilă) per lună — un grafic
+                        „adevărat" arată data + suma la hover, nu doar o linie mută. */}
+                    {timeline.map((p, i) => (
+                      <g key={p.month}>
+                        {hoverIndex === i && (
+                          <circle
+                            cx={toScreenX(p.x)}
+                            cy={toScreenY(p.y)}
+                            r="6"
+                            fill="#000000"
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                          />
+                        )}
+                        <circle
+                          cx={toScreenX(p.x)}
+                          cy={toScreenY(p.y)}
+                          r="18"
+                          fill="transparent"
+                          className="cursor-pointer"
+                          onMouseEnter={() => setHoverIndex(i)}
+                          onMouseLeave={() => setHoverIndex(null)}
+                          onClick={() => setHoverIndex((cur) => (cur === i ? null : i))}
+                        />
+                      </g>
+                    ))}
                   </svg>
+                  {hoverIndex !== null && timeline[hoverIndex] && (
+                    <div
+                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-lg bg-primary px-3 py-1.5 text-center text-white shadow-lg"
+                      style={{
+                        left: `${timeline[hoverIndex].x * 100}%`,
+                        top: `${(toScreenY(timeline[hoverIndex].y) / 200) * 100}%`,
+                      }}
+                    >
+                      <div className="text-[10px] uppercase tracking-wider opacity-70">
+                        {formatMonthLabel(timeline[hoverIndex].month)}
+                      </div>
+                      <div className="font-mono text-[13px] font-bold">
+                        {money(timeline[hoverIndex].cumulativeSpent)}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4 flex justify-between px-2 text-[11px] uppercase tracking-wider text-muted">
                   {timeline.map((p) => (
@@ -234,48 +269,74 @@ export default function AnalizaPage() {
                     strokeWidth="3.5"
                     className="stroke-surface-low"
                   />
-                  {segments.map((s) => (
-                    <circle
-                      key={s.name}
-                      cx="18"
-                      cy="18"
-                      fill="transparent"
-                      r="15.915"
-                      stroke={s.color}
-                      strokeDasharray={`${s.pct} ${100 - s.pct}`}
-                      strokeDashoffset={-s.start * 100}
-                      strokeWidth="3.5"
-                    />
-                  ))}
+                  {segments.map((s) => {
+                    const isActive = activeSegment?.name === s.name;
+                    const dimmed = activeSegment !== null && !isActive;
+                    return (
+                      <circle
+                        key={s.name}
+                        cx="18"
+                        cy="18"
+                        fill="transparent"
+                        r="15.915"
+                        stroke={s.color}
+                        strokeDasharray={`${s.pct} ${100 - s.pct}`}
+                        strokeDashoffset={-s.start * 100}
+                        strokeWidth={isActive ? "5" : "3.5"}
+                        opacity={dimmed ? 0.35 : 1}
+                        className="cursor-pointer transition-all"
+                        onClick={() => setSelectedRoom((cur) => (cur === s.name ? null : s.name))}
+                      />
+                    );
+                  })}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="mb-0.5 text-[10px] uppercase tracking-[0.2em] text-muted">
-                    Top Room
+                    {activeSegment ? "Selectat" : "Top Room"}
                   </span>
                   <span className="text-[18px] font-bold leading-tight text-primary">
-                    {topRoom?.name ?? "—"}
+                    {centerSegment?.name ?? "—"}
                   </span>
                   <span className="text-[13px] font-medium text-muted">
-                    {money(topRoom?.total ?? 0)}
+                    {money(centerSegment?.total ?? 0)}
                   </span>
+                  {activeSegment && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRoom(null)}
+                      className="mt-1.5 flex items-center gap-0.5 text-[10px] font-bold uppercase text-secondary hover:underline"
+                    >
+                      <span className="material-symbols-outlined text-[12px]">
+                        {ACTION_ICONS.close}
+                      </span>
+                      Reset
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="grid w-full grid-cols-2 gap-x-4 gap-y-3">
-                {segments.map((s) => (
-                  <div
-                    key={s.name}
-                    className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-surface-low"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: s.color }}
-                      />
-                      <span className="text-[12px] font-medium text-muted">{s.name}</span>
-                    </div>
-                    <span className="text-[12px] font-bold text-primary">{s.pct}%</span>
-                  </div>
-                ))}
+                {segments.map((s) => {
+                  const isActive = activeSegment?.name === s.name;
+                  return (
+                    <button
+                      type="button"
+                      key={s.name}
+                      onClick={() => setSelectedRoom((cur) => (cur === s.name ? null : s.name))}
+                      className={`flex items-center justify-between rounded-lg p-2 text-left transition-colors hover:bg-surface-low ${
+                        isActive ? "bg-secondary/10 ring-1 ring-secondary/40" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: s.color }}
+                        />
+                        <span className="text-[12px] font-medium text-muted">{s.name}</span>
+                      </div>
+                      <span className="text-[12px] font-bold text-primary">{s.pct}%</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -401,10 +462,28 @@ export default function AnalizaPage() {
             ) : (
               <>
                 <div className="flex h-48 w-full items-end justify-between gap-2 px-2">
-                  {timeline.map((p) => (
-                    <div key={p.month} className="flex h-full flex-1 items-end justify-center">
-                      <div
-                        className="w-full max-w-8 rounded-t bg-primary"
+                  {timeline.map((p, i) => (
+                    <div
+                      key={p.month}
+                      className="relative flex h-full flex-1 items-end justify-center"
+                    >
+                      {hoverIndex === i && (
+                        <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[calc(100%+8px)] whitespace-nowrap rounded-lg bg-primary px-2.5 py-1.5 text-center text-white shadow-lg">
+                          <div className="text-[9px] uppercase tracking-wider opacity-70">
+                            {formatMonthLabel(p.month)}
+                          </div>
+                          <div className="font-mono text-[12px] font-bold">
+                            {money(p.cumulativeSpent)}
+                          </div>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setHoverIndex((cur) => (cur === i ? null : i))}
+                        aria-label={`${formatMonthLabel(p.month)}: ${money(p.cumulativeSpent)}`}
+                        className={`w-full max-w-8 rounded-t transition-colors ${
+                          hoverIndex === i ? "bg-secondary" : "bg-primary"
+                        }`}
                         style={{ height: `${Math.max(p.y * 100, 4)}%` }}
                       />
                     </div>
@@ -420,31 +499,84 @@ export default function AnalizaPage() {
           </div>
 
           <div className="rounded-xl border border-line bg-surface p-5">
-            <h3 className="mb-4 text-[12px] font-bold uppercase tracking-wider text-muted">
-              Cost per Cameră
-            </h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[12px] font-bold uppercase tracking-wider text-muted">
+                Cost per Cameră
+              </h3>
+              {activeSegment && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedRoom(null)}
+                  className="flex items-center gap-0.5 text-[10px] font-bold uppercase text-secondary"
+                >
+                  <span className="material-symbols-outlined text-[12px]">
+                    {ACTION_ICONS.close}
+                  </span>
+                  Reset
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-6">
               <div className="relative h-32 w-32 shrink-0">
-                <div
-                  className="h-full w-full rounded-full"
-                  style={{ background: mobileConicGradient }}
-                />
-                <div className="absolute inset-4 flex items-center justify-center rounded-full bg-surface p-1 text-center">
+                <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                  <circle
+                    cx="18"
+                    cy="18"
+                    fill="transparent"
+                    r="15.915"
+                    strokeWidth="3.5"
+                    className="stroke-surface-low"
+                  />
+                  {mobileSegments.map((s) => {
+                    const isActive = activeSegment?.name === s.name;
+                    const dimmed = activeSegment !== null && !isActive;
+                    return (
+                      <circle
+                        key={s.name}
+                        cx="18"
+                        cy="18"
+                        fill="transparent"
+                        r="15.915"
+                        stroke={s.color}
+                        strokeDasharray={`${s.pct} ${100 - s.pct}`}
+                        strokeDashoffset={-s.start * 100}
+                        strokeWidth={isActive ? "5" : "3.5"}
+                        opacity={dimmed ? 0.35 : 1}
+                        className="cursor-pointer transition-all"
+                        onClick={() => setSelectedRoom((cur) => (cur === s.name ? null : s.name))}
+                      />
+                    );
+                  })}
+                </svg>
+                <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-surface p-1 text-center">
+                  <span className="truncate text-[9px] font-bold leading-tight text-primary">
+                    {centerSegment?.name ?? "—"}
+                  </span>
                   <span className="font-mono text-[10px] leading-tight text-primary">
-                    {money(estimated)}
+                    {money(centerSegment?.total ?? 0)}
                   </span>
                 </div>
               </div>
               <div className="flex-grow space-y-2">
-                {mobileSegments.map((s) => (
-                  <div key={s.name} className="flex items-center gap-2">
-                    <span
-                      className="h-3 w-3 shrink-0 rounded-full"
-                      style={{ backgroundColor: s.color }}
-                    />
-                    <span className="text-[14px] text-foreground">{s.name}</span>
-                  </div>
-                ))}
+                {mobileSegments.map((s) => {
+                  const isActive = activeSegment?.name === s.name;
+                  return (
+                    <button
+                      type="button"
+                      key={s.name}
+                      onClick={() => setSelectedRoom((cur) => (cur === s.name ? null : s.name))}
+                      className={`flex w-full items-center gap-2 rounded-lg p-1 text-left transition-colors ${
+                        isActive ? "bg-secondary/10" : ""
+                      }`}
+                    >
+                      <span
+                        className="h-3 w-3 shrink-0 rounded-full"
+                        style={{ backgroundColor: s.color }}
+                      />
+                      <span className="text-[14px] text-foreground">{s.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

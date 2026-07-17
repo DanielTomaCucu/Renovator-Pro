@@ -71,13 +71,30 @@ export default function ItemFormDrawer({
     onClose();
   });
 
+  const formId = "item-form";
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title={editing ? "Editează Element" : "Adaugă Element Nou"}
+      footer={
+        <div className="space-y-3">
+          <PrimaryButton type="submit" form={formId} pending={pending}>
+            {editing ? "Salvează Modificările" : "Adaugă Element"}
+          </PrimaryButton>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={pending}
+            className="w-full py-2 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Anulează
+          </button>
+        </div>
+      }
     >
-      <form onSubmit={submit} className="space-y-4">
+      <form id={formId} onSubmit={submit} className="space-y-4">
         <Field label="Nume element">
           <input
             className={inputCls}
@@ -178,20 +195,6 @@ export default function ItemFormDrawer({
             placeholder="URL-ul imaginii produsului"
           />
         </Field>
-
-        <div className="pt-2 space-y-3">
-          <PrimaryButton type="submit" pending={pending}>
-            {editing ? "Salvează Modificările" : "Adaugă Element"}
-          </PrimaryButton>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={pending}
-            className="w-full py-2 text-sm text-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Anulează
-          </button>
-        </div>
       </form>
     </Drawer>
   );
