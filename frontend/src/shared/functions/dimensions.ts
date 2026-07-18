@@ -64,10 +64,22 @@ export function hasFloorConfig(room: Room): boolean {
   return !!room.floorMaterial && !!room.floorArea && room.floorArea > 0;
 }
 
+/**
+ * Perimetrul camerei — explicit dacă a fost completat, altfel derivat din suprafață presupunând
+ * camera pătrată (4×√mp). Așa plinta se calculează direct din suprafața introdusă la Pardoseală,
+ * fără să ceară userului un câmp separat de perimetru.
+ */
+export function roomPerimeter(room: Room): number {
+  if (room.perimeter) return room.perimeter;
+  if (!room.floorArea || room.floorArea <= 0) return 0;
+  return 4 * Math.sqrt(room.floorArea);
+}
+
 /** Lungimea de plintă necesară — perimetrul camerei minus golurile tuturor ușilor, cu pierdere de tăiere. */
 export function baseboardLength(room: Room): number {
-  if (!room.perimeter) return 0;
-  return Math.max(0, room.perimeter - totalDoorWidth(room)) * (1 + WASTE_RATIO_BASEBOARD);
+  const perimeter = roomPerimeter(room);
+  if (!perimeter) return 0;
+  return Math.max(0, perimeter - totalDoorWidth(room)) * (1 + WASTE_RATIO_BASEBOARD);
 }
 
 /**

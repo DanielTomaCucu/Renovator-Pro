@@ -27,7 +27,7 @@ import Spinner from "@/components/Spinner";
 import RoomSketch from "./RoomSketch";
 import { RoomShapeSelect, RoomShapeLengthInputs } from "./RoomShapeWallsEditor";
 import { buildRoomCalcRows } from "./roomCalcRows";
-import { computeRoomDimensions, estimatedSquareWallSide, hasFloorConfig } from "@/shared/functions";
+import { computeRoomDimensions, estimatedSquareWallSide, hasFloorConfig, roomPerimeter } from "@/shared/functions";
 
 const floorMaterials = Object.values(FlooringType);
 const tileSizes = Object.values(TileSize);
@@ -1048,7 +1048,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                     <ResultRow key={row.label} {...row} />
                   ))}
 
-                  {isGresie && !!draft.perimeter && !draft.baseboardHeight && (
+                  {isGresie && roomPerimeter(draft) > 0 && !draft.baseboardHeight && (
                     <p className="text-[10px] italic text-tertiary">
                       Completează câmpul Înălțime plintă pentru a include plinta în necesarul de gresie.
                     </p>
@@ -1066,7 +1066,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                     </p>
                   )}
 
-                  {!hasFloorConfig(draft) && !draft.perimeter && (
+                  {!hasFloorConfig(draft) && roomPerimeter(draft) === 0 && (
                     <p className="text-sm text-muted">
                       Completează pardoseala pentru a vedea calculele.
                     </p>

@@ -16,6 +16,8 @@ import ro.renovatorpro.domain.model.Project;
 import ro.renovatorpro.domain.model.user.ProjectMember;
 import ro.renovatorpro.domain.model.user.User;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class LoginService implements LoginUseCase {
@@ -29,7 +31,9 @@ public class LoginService implements LoginUseCase {
     @Override
     @Transactional
     public AuthResult execute(Command command) {
-        User user = userRepository.findByUsername(command.username().trim())
+        // Username-ul e normalizat la lowercase la register (RegisterUserService) — normalizarea
+        // trebuie să fie identică aici, altfel un username cu majuscule nu se mai poate loga.
+        User user = userRepository.findByUsername(command.username().trim().toLowerCase(Locale.ROOT))
                 .orElseThrow(InvalidCredentialsException::new);
         if (!passwordHasher.matches(command.password(), user.passwordHash())) {
             throw new InvalidCredentialsException();

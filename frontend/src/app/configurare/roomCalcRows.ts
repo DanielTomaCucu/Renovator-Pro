@@ -1,4 +1,5 @@
 import { FlooringType, Room, RoomDimensions } from "@/shared/types";
+import { roomPerimeter } from "@/shared/functions/dimensions";
 
 export type RoomCalcRow = { label: string; value: string; formula: string; math: string };
 
@@ -39,12 +40,13 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
     });
   }
 
-  if (!isGresie && !!room.perimeter) {
+  const perimeter = roomPerimeter(room);
+  if (!isGresie && perimeter > 0) {
     rows.push({
       label: "Plintă",
       value: `${baseboard.toFixed(2)} ml`,
       formula: "(Perimetru − Σ lățime uși) + 5% pierdere",
-      math: `(${room.perimeter.toFixed(2)} − ${dims.totalDoorWidth.toFixed(2)}) × 1.05 = ${baseboard.toFixed(2)} ml`,
+      math: `(${perimeter.toFixed(2)} − ${dims.totalDoorWidth.toFixed(2)}) × 1.05 = ${baseboard.toFixed(2)} ml`,
     });
   }
 

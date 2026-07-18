@@ -85,10 +85,22 @@ public final class RoomDimensionsCalculator {
         return room.floorMaterial() != null && room.floorArea() != null && room.floorArea() > 0;
     }
 
+    /**
+     * Perimetrul camerei — explicit dacă a fost completat, altfel derivat din suprafață presupunând
+     * camera pătrată (4×√mp). Așa plinta se calculează direct din suprafața introdusă la Pardoseală,
+     * fără să ceară userului un câmp separat de perimetru — port 1:1 din dimensions.ts.
+     */
+    public static double roomPerimeter(Room room) {
+        if (room.perimeter() != null) return room.perimeter();
+        if (room.floorArea() == null || room.floorArea() <= 0) return 0;
+        return 4 * Math.sqrt(room.floorArea());
+    }
+
     /** Lungimea de plintă necesară — perimetrul camerei minus golurile tuturor ușilor, cu pierdere de tăiere. */
     public static double baseboardLength(Room room) {
-        if (room.perimeter() == null) return 0;
-        return Math.max(0, room.perimeter() - totalDoorWidth(room)) * (1 + WASTE_RATIO_BASEBOARD);
+        double perimeter = roomPerimeter(room);
+        if (perimeter <= 0) return 0;
+        return Math.max(0, perimeter - totalDoorWidth(room)) * (1 + WASTE_RATIO_BASEBOARD);
     }
 
     /**
