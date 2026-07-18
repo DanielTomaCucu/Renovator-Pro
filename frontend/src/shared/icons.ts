@@ -56,6 +56,7 @@ export const ACTION_ICONS = {
   checkCircle: "check_circle",
   notConfigured: "radio_button_unchecked",
   moreVert: "more_vert",
+  logout: "logout",
 } as const;
 
 export const STATUS_ICONS: Record<ItemStatus, string> = {

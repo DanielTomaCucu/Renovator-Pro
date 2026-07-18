@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import { Hanken_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "material-symbols/outlined.css";
 import "./globals.css";
-import { StoreProvider } from "@/shared/store";
-import Sidebar from "@/components/Sidebar";
-import BottomNav from "@/components/BottomNav";
+import { AuthProvider } from "@/shared/AuthProvider";
+import AppShell from "@/components/AppShell";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -37,16 +36,11 @@ export default function RootLayout({
       className={`${inter.variable} ${hanken.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        {/* Sidebar-ul și BottomNav-ul NU folosesc useStore() — rămân în afara StoreProvider ca să fie
-            vizibile și navigabile cât timp datele se încarcă (backend-ul poate avea cold-start de zeci
-            de secunde). */}
-        <div className="flex min-h-screen flex-col md:flex-row">
-          <Sidebar />
-          <main className="min-w-0 flex-1 pb-16 md:pb-0">
-            <StoreProvider>{children}</StoreProvider>
-          </main>
-        </div>
-        <BottomNav />
+        {/* AuthProvider deasupra a tot (Faza 5) — AppShell decide, pe baza sesiunii, dacă randează
+            /login-/register „goale" sau Sidebar+StoreProvider (vezi components/AppShell.tsx). */}
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );

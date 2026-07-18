@@ -6,12 +6,17 @@ import { usePathname } from "next/navigation";
 import { ACTION_ICONS, NAV_ICONS } from "@/shared/icons";
 import { useLockBodyScroll } from "@/shared/useLockBodyScroll";
 import { mainNav as nav, secondaryNav } from "@/shared/nav";
+import { useAuth } from "@/shared/AuthProvider";
+import { useAsyncAction } from "@/shared/useAsyncAction";
+import Spinner from "./Spinner";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   useLockBodyScroll(mobileOpen);
+  const { session, logout } = useAuth();
+  const { run: handleLogout, pending: loggingOut } = useAsyncAction(logout);
 
   const currentPageTitle =
     [...nav, secondaryNav].find((item) => pathname.startsWith(item.href))?.label ??
@@ -95,6 +100,27 @@ export default function Sidebar() {
             );
           })}
         </div>
+        {session && (
+          <div className="flex items-center justify-between gap-3 border-t border-line p-3">
+            <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-primary">
+              <span className="material-symbols-outlined shrink-0 text-[20px] text-muted">
+                {NAV_ICONS.profil}
+              </span>
+              <span className="truncate">{session.user.username}</span>
+            </span>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              aria-label="Ieși din cont"
+              className="shrink-0 rounded-lg p-2 text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
+            >
+              {loggingOut ? <Spinner /> : (
+                <span className="material-symbols-outlined text-[20px]">{ACTION_ICONS.logout}</span>
+              )}
+            </button>
+          </div>
+        )}
       </nav>
 
       <aside
@@ -169,6 +195,33 @@ export default function Sidebar() {
       </nav>
 
       <div className="space-y-2 border-t border-line pt-3">
+        {session && (
+          <div
+            className={`flex items-center rounded-lg ${collapsed ? "flex-col gap-1 p-1" : "justify-between gap-2 px-1 py-1"}`}
+          >
+            <span
+              title={collapsed ? session.user.username : undefined}
+              className={`flex min-w-0 items-center text-primary ${collapsed ? "justify-center" : "gap-2"}`}
+            >
+              <span className="material-symbols-outlined shrink-0 text-[20px] text-muted">
+                {NAV_ICONS.profil}
+              </span>
+              {!collapsed && <span className="truncate text-sm font-medium">{session.user.username}</span>}
+            </span>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              title="Ieși din cont"
+              aria-label="Ieși din cont"
+              className="shrink-0 rounded-lg p-1.5 text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
+            >
+              {loggingOut ? <Spinner /> : (
+                <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.logout}</span>
+              )}
+            </button>
+          </div>
+        )}
         <div className="space-y-0.5">
           <Link
             href={secondaryNav.href}

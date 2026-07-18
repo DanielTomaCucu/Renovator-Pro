@@ -1017,3 +1017,31 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** `docs/cerinte-autentificare.md` (nou), `docs/cerinte-keepalive-render.md` (nou), `README.md` (linkuri în secțiunea Documentație), `docs/progress.md`.
 
 **Addendum (2026-07-18, aceeași sesiune):** userul a cerut și partajarea unui proiect între 2+ persoane. `docs/cerinte-autentificare.md` extins: deciziile D6 (cod de invitație introdus la înregistrare — „Creez proiect nou" vs „Mă alătur unui proiect"; cine se alătură devine EDITOR) și D7 (rol fix EDITOR în v1), coloană `projects.invite_code` în migrarea V5 (AUTH-2), calea „register cu inviteCode" în contract + backend (AUTH-1/3/4), toggle pe pagina `/register` (AUTH-5) și ticket nou **AUTH-7** (endpoint-uri invite-code/members + secțiunea „Partajare proiect" în `/setari`, cu DoD end-to-end pe două conturi). Alăturarea unui cont deja existent la alt proiect = explicit în afara scope-ului v1.
+
+### 2026-07-18 — Faza 5 implementată: autentificare JWT + partajare proiect prin cod de invitație
+**De ce:** execuția completă a ticketelor AUTH-1…AUTH-7 din `docs/cerinte-autentificare.md` (specificația scrisă mai devreme aceeași zi) — userul a cerut implementarea integrală, nu doar planul.
+
+**Backend** (branch `036-autentificare-faza5`):
+- `V5__auth.sql` — `users.username` (unic, case-insensitive, `email` devine opțional), `refresh_tokens`, `projects.invite_code`.
+- Spring Security stateless + JJWT 0.13.0 (HS256, access token 15 min), refresh token opac (256 biți) rotit la fiecare folosire + hash SHA-256 în DB, cookie httpOnly/Secure/SameSite (`None` pe prod, `Lax` pe dev). Rate limiting in-memory pe `/api/auth/**` (10 req/min/IP, configurabil, relaxat în teste).
+- `MembershipGuard` — toate use case-urile Room/Item/Project existente (13 servicii) verifică acum rolul (`OWNER`/`EDITOR`/`VIEWER`) userului curent pe proiectul resursei; refuz = 404 uniform, niciodată 403 (decizie D8 — nu distinge „nemembru" de „membru fără rol", ambele ar scurge existența resursei). `WebConstants.STUB_USER_ID` șters — `CurrentUser.id()` citește din `SecurityContext`, populat de `JwtAuthenticationFilter`.
+- `RegisterUserService`: două căi — `projectName` (creează proiect nou SAU adoptă automat proiectul seed `...-010` dacă e primul cont real din sistem, D3) sau `inviteCode` (devine EDITOR pe proiectul existent, D6).
+- AUTH-7: `ProjectMembersController` — cod de invitație (get/regenerate, generat leneș, doar OWNER) + membri (listă vizibilă tuturor, ștergere doar OWNER, revocă refresh tokens la eliminare).
+- `CorsConfig` rescris ca `CorsConfigurationSource` explicit (`allowCredentials(true)`), partajat cu `SecurityConfig` — necesar pentru cookie-ul de refresh cross-site (Vercel ↔ Render).
+- Teste: 98/98 verzi (`mvn verify`, cu Testcontainers/Postgres real) — `AuthFlowIntegrationTest` (register→login→acces→refresh→logout→refresh eșuează, username duplicat→409, parolă greșită→401, cod invitație inexistent→404) și `IdorAuthorizationIntegrationTest` (user A nu accesează resursele lui B pe niciun endpoint; EDITOR invitat scrie dar nu administrează proiectul; regenerarea codului invalidează codul vechi; ștergerea unui membru îi revocă refresh-ul; OWNER nu se poate autoșterge).
+
+**Frontend:**
+- `shared/api-client.ts` — access token JWT în memorie (nu localStorage), header `Authorization` pe toate cererile, retry-o-singură-dată pe 401 cu refresh silențios; `DEFAULT_PROJECT_ID` hardcodat ELIMINAT — `store.tsx` ia acum `projectId` din sesiune (`useAuth().session.project.id`).
+- `shared/AuthProvider.tsx` (nou) — sesiune globală, refresh silențios la boot (cookie httpOnly), `login`/`registerNewProject`/`registerWithInviteCode`/`logout`.
+- `components/AppShell.tsx` (nou) — gardă de rute client-side: fără sesiune → redirect `/login`; `/login`+`/register` randate FĂRĂ Sidebar/StoreProvider.
+- `app/login/page.tsx`, `app/register/page.tsx` (noi) — register cu toggle „Creez proiect nou" / „Mă alătur unui proiect" (cod de invitație).
+- `Sidebar.tsx` — username + buton logout (desktop și dropdown mobil).
+- `components/ProjectSharingCard.tsx` (nou, în `/setari`) — cod de invitație (doar OWNER, copiază, regenerează cu confirmare) + listă membri (ștergere doar OWNER, cu confirmare).
+- Tipuri noi: `User`, `ProjectRole`, `ProjectMember`, `AuthSession`.
+- Verificat manual în browser (nu doar `tsc`/`lint`/`build`, toate curate): register cu proiect nou → adoptă automat datele seed existente; logout; register cu cod de invitație → al doilea cont vede aceleași date ca EDITOR, nu vede codul de invitație (doar OWNER); lista de membri corectă pentru ambele conturi; redirect automat `/login` fără sesiune, inclusiv pe mobil (375px).
+
+**Nefăcut aici** (documentat explicit în `docs/cerinte-autentificare.md` ca fiind în afara scope-ului v1): resetare parolă, roluri configurabile la invitație (mereu EDITOR), alăturarea unui cont deja existent la alt proiect, multi-proiect per user. **AUTH-6 parțial**: codul e gata (CORS credentials, cookie `SameSite=None` pe prod), dar `JWT_SECRET` pe Render și verificarea pe Safari/iOS rămân pași manuali (vezi README.md → „Deploy (Render) — Faza 5").
+
+**Fișiere atinse:** ~70 fișiere noi/modificate în `backend/src/main/java/ro/renovatorpro/**` (domain/application/adapter/config), `backend/src/main/resources/{application.yml,application-dev.yml,db/migration/V5__auth.sql}`, `backend/src/test/**`, `backend/pom.xml`, `backend/.env.example`; frontend: `shared/{api-client.ts,AuthProvider.tsx,store.tsx,icons.ts,types/*}`, `components/{AppShell,Sidebar,ProjectSharingCard}.tsx`, `app/{layout.tsx,login/page.tsx,register/page.tsx,setari/page.tsx}`; `README.md`, `CLAUDE.md`, `docs/api-contract.md`.
+
+**Branch:** `036-autentificare-faza5`.
