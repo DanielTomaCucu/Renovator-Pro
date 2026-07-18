@@ -83,6 +83,9 @@ export default function AnalizaPage() {
   const pendingTotal = totalEstimated(
     items.filter((i) => i.status === ItemStatus.InAsteptare)
   );
+  // BIZ-3 (docs/tickete-audit-calcule-securitate.md): elementele auto-generate din configurare au
+  // preț 0 până userul îl completează — fără hint, graficele par „că nu reacționează" la configurare.
+  const noPriceCount = items.filter((i) => i.unitPrice === 0).length;
 
   // Evoluția Cheltuielilor: date REALE (Problema 3 din audit) — serie cumulativă pe luna cumpărării,
   // nu mai o curbă hardcodată. Listă goală → empty-state (randat mai jos), nu o curbă falsă.
@@ -456,6 +459,26 @@ export default function AnalizaPage() {
                 </p>
               </div>
             </div>
+
+            {noPriceCount > 0 && (
+              <div className="flex items-start gap-4 rounded-xl border border-tertiary/10 bg-tertiary/5 p-6 transition-all hover:shadow-sm">
+                <div className="rounded-lg border border-tertiary/10 bg-surface p-2">
+                  <span className="material-symbols-outlined text-[20px] text-tertiary">
+                    {ANALYTICS_ICONS.alertaBuget}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest text-tertiary">
+                    Elemente Fără Preț
+                  </h4>
+                  <p className="text-[13px] leading-relaxed text-muted">
+                    {noPriceCount} {noPriceCount === 1 ? "element nu are" : "elemente nu au"} preț
+                    completat (generate automat din Configurare) — nu contribuie la totaluri până le
+                    completezi în „Elemente de Cumpărat”.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -692,6 +715,23 @@ export default function AnalizaPage() {
               </p>
             </div>
           </div>
+
+          {noPriceCount > 0 && (
+            <div className="flex gap-4 rounded-xl border border-tertiary/20 bg-tertiary/10 p-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tertiary/20">
+                <span className="material-symbols-outlined text-tertiary">
+                  {ANALYTICS_ICONS.alertaBuget}
+                </span>
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-[12px] font-bold uppercase text-tertiary">Elemente Fără Preț</h4>
+                <p className="text-[14px] text-muted">
+                  {noPriceCount} {noPriceCount === 1 ? "element nu are" : "elemente nu au"} preț completat
+                  — nu contribuie la totaluri până le completezi în „Elemente de Cumpărat”.
+                </p>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </div>

@@ -5,7 +5,7 @@ import Drawer from "./Drawer";
 import StatusChip from "./StatusChip";
 import OriginBadge from "./OriginBadge";
 import { useStore } from "@/shared/store";
-import { formatMoney, itemTotal } from "@/shared/functions";
+import { formatMoney, itemTotal, safeHttpUrl } from "@/shared/functions";
 import { Item } from "@/shared/types";
 import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 
@@ -48,6 +48,9 @@ export default function ItemDetailsDrawer({
   if (!open || !item) return null;
 
   const room = rooms.find((r) => r.id === item.roomId);
+  // Apărare în adâncime (SEC-2): backend-ul validează deja doar http(s) la salvare, dar nu punem
+  // niciodată un URL nesigur direct într-un href navigabil.
+  const productLink = safeHttpUrl(item.productUrl);
 
   return (
     <Drawer
@@ -113,12 +116,12 @@ export default function ItemDetailsDrawer({
             </span>
           }
         />
-        {item.productUrl && (
+        {productLink && (
           <DetailRow
             label="Link produs"
             value={
               <a
-                href={item.productUrl}
+                href={productLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-secondary hover:underline"

@@ -1,11 +1,14 @@
 package ro.renovatorpro.adapter.in.web;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ro.renovatorpro.domain.exception.AccountLockedException;
 import ro.renovatorpro.domain.exception.DomainException;
 import ro.renovatorpro.domain.exception.DuplicateUsernameException;
 import ro.renovatorpro.domain.exception.InvalidCredentialsException;
@@ -26,6 +29,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler({ProjectNotFoundException.class, RoomNotFoundException.class, ItemNotFoundException.class,
             InvalidInviteCodeException.class})
     public ProblemDetail handleNotFound(DomainException ex) {
@@ -42,6 +47,12 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
+    /** SEC-7: prea multe eșecuri de login pe același username — 429, consecvent cu rate limiter-ul per-IP. */
+    @ExceptionHandler(AccountLockedException.class)
+    public ProblemDetail handleAccountLocked(AccountLockedException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+    }
+
     @ExceptionHandler(InvalidRegistrationException.class)
     public ProblemDetail handleInvalidRegistration(InvalidRegistrationException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -53,10 +64,16 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
     }
 
-    /** Enum necunoscut la deserializare (ex. status="Cumparat" fără diacritice) — payload invalid, nu regulă de business. */
+    /**
+     * Enum necunoscut la deserializare (ex. status="Cumparat" fără diacritice) — payload invalid, nu regulă
+     * de business. SEC-5 (docs/tickete-audit-calcule-securitate.md): mesajul original al excepției (poate
+     * conține nume de clase/detalii interne din Jackson/librării) NU pleacă spre client — doar loghem-ul
+     * server-side, ca să nu scurgem detalii de implementare printr-un 400 „prietenos" în aparență.
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        log.info("IllegalArgumentException tradusă în 400: {}", ex.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Valoare invalidă în cerere");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

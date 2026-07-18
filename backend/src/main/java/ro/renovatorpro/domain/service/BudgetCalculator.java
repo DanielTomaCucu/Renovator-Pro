@@ -7,6 +7,7 @@ import ro.renovatorpro.domain.model.Money;
 import ro.renovatorpro.domain.model.Room;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,10 +77,18 @@ public final class BudgetCalculator {
         return totalBudget.amount().subtract(totalSpent(items).amount());
     }
 
-    /** Eficiență bugetară: cât din totalul estimat s-a cheltuit efectiv, în procente (0 dacă nu există estimat). */
+    /**
+     * Eficiență bugetară: cât din totalul estimat s-a cheltuit efectiv, în procente (0 dacă nu există
+     * estimat). BIZ-4 (docs/tickete-audit-calcule-securitate.md): împărțire {@code BigDecimal}, nu
+     * {@code float} — convenția proiectului e ca toate sumele să rămână {@code BigDecimal} de la un
+     * capăt la altul, fără conversii cu pierdere de precizie prin tipuri primitive.
+     */
     public static int budgetEfficiency(Money estimated, Money spent) {
         if (estimated.amount().signum() == 0) return 0;
-        return Math.round(100f * spent.amount().floatValue() / estimated.amount().floatValue());
+        BigDecimal ratio = spent.amount()
+                .multiply(BigDecimal.valueOf(100))
+                .divide(estimated.amount(), 0, RoundingMode.HALF_UP);
+        return ratio.intValue();
     }
 
     /** O intrare din distribuția cost-per-cameră ({@link #costPerRoom}). */

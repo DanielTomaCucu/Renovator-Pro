@@ -1087,3 +1087,81 @@ folosit de restul paginilor), ceea ce producea un gutter stânga/dreapta inconsi
 `frontend/src/app/{configurare,elemente,centralizator,analiza}/page.tsx`.
 
 **Branch:** `039-fix-plinta-login-payload`.
+
+### 2026-07-18 — Rezolvat toate ticketele din auditul de calcule/securitate/business logic
+**De ce:** execuția completă a ticketelor CALC-1…8, SEC-1…7, BIZ-1…5 din
+`docs/tickete-audit-calcule-securitate.md` (audit cerut explicit de user, cu cercetare de norme reale
+de șantier). Toate implementate în aceeași sesiune, cu teste + verificare manuală în browser.
+
+**CALC (calcule de șantier, `RoomDimensionsCalculator.java` ↔ `dimensions.ts`, port 1:1):**
+- **CALC-1/CALC-2:** `floorWasteRatio(room)` (nou) — pierderea de pardoseală nu mai e 10% flat, ci
+  calibrată pe `installationType` (10% drept / 15% diagonal / 18% herringbone) + supliment 2% la
+  `tileSize` Mare/Foarte Mare. `floorMaterialNeeded` o folosește acum.
+- **CALC-3:** `roomPerimeter(room)` preferă suma celor 4 lungimi de perete deja introduse la
+  faianță/finisaj (dacă toate 4 sunt completate) în locul presupunerii de cameră pătrată (4×√mp) —
+  plintă mai precisă la camere dreptunghiulare/neregulate.
+- **CALC-7:** `wallTilingArea`/`faiantaWasteRatio` urcă pierderea faianței la 12% (din 10%) când sunt
+  >1 goluri (uși+ferestre) pe pereții placați.
+- **CALC-4/CALC-8:** câmpuri noi derivate în `RoomDimensions`/`RoomDimensionsDto`: `paintLiters`
+  (litri de vopsea, 2 straturi × 11 mp/l), `baseboardBars`/`windowTrimBars` (bare de 2 ml), afișate în
+  panoul „Calcule Detaliate" (`roomCalcRows.ts`, câmp nou `note` pe `RoomCalcRow`, randat în
+  `RoomTechnicalCard.tsx`).
+- **CALC-5/CALC-6:** note explicative în „Calcule Detaliate" — tapet (15% e medie, model cu raport mare
+  cere 20-25%) și mochetă (verifică lățimea rolei, poate depăși 10%). Fără schimbare de calcul (decizie
+  „a" din tichet — documentare, nu recalibrare).
+- Teste noi: 14 teste în `RoomDimensionsCalculatorTest` (montaj/mărime plăci/perimetru/goluri
+  multiple/litri/bare) — toate cele 20 treceau înainte de commit, toate 20 (acum) trec după.
+
+**SEC (securitate):**
+- **SEC-1:** `AuthRateLimitFilter` folosea PRIMUL element din `X-Forwarded-For` (falsificabil de client
+  → bypass rate limit + creștere nelimitată de memorie). Fix: ULTIMUL element (adăugat de proxy-ul de
+  încredere Render) + curățare periodică a hărții (fiecare 500 cereri).
+- **SEC-2:** `productUrl`/`imageUrl` fără nicio validare → stored XSS prin `javascript:` în `href` +
+  imagini base64 nelimitate. Fix: `@Pattern`/`@Size` pe `ItemCreateRequest`/`ItemUpdateRequest` (doar
+  http(s) sau `data:image/...`, plafon 700KB), + `safeHttpUrl()` (nou, `shared/functions/url.ts`) ca
+  apărare în adâncime pe frontend înainte de a pune un URL în `href` (`ItemDetailsDrawer.tsx`).
+- **SEC-3:** Swagger `permitAll` era necondiționat în `SecurityConfig` (depindea doar de flag-ul
+  springdoc din yml). Fix: matcher-ele de swagger se adaugă doar pe profilul `dev`.
+- **SEC-4:** parolă până la 200 caractere, dar BCrypt procesează doar 72 bytes. Fix: `@Size(max = 72)`
+  pe `RegisterRequest`/`LoginRequest` + `maxLength={72}` pe inputul din `/register`.
+- **SEC-5:** `IllegalArgumentException` scurgea mesajul original (nume de clase, detalii Jackson) către
+  client. Fix: mesaj generic „Valoare invalidă în cerere", originalul doar loghează server-side.
+- **SEC-6:** cookie-ul de refresh `SameSite=None` pe prod permite POST-uri cross-site „oarbe" către
+  `/refresh`/`/logout`. Fix: header custom `X-Requested-With` obligatoriu pe ambele (verificat în
+  `AuthController`, trimis din `api-client.ts`) — un formular/link cross-site nu-l poate seta fără
+  preflight CORS, blocat de allowlist-ul nostru.
+- **SEC-7:** rate limiter-ul era doar per-IP — un atac distribuit pe același username nu era oprit.
+  Fix: `LoginLockoutGuard` (nou, `application.security`) — lockout per-username (in-memory, 5 eșecuri
+  → 15 min), integrat în `LoginService`. `AccountLockedException` → 429.
+- Toate suitele de test (inclusiv `AuthFlowIntegrationTest`/`IdorAuthorizationIntegrationTest` cu
+  Testcontainers reale) trec după modificări — actualizat header-ul `X-Requested-With` în cele 2 teste
+  de integrare care apelau `/refresh`/`/logout`.
+
+**BIZ (business logic):**
+- **BIZ-1:** conversia de monedă accepta orice curs pozitiv (o typo distrugea ireversibil toate sumele).
+  Fix: `ImplausibleExchangeRateException` — backend respinge curs RON/EUR în afara intervalului 3.0-8.0
+  (configurabil); frontend adaugă `ConfirmDialog` cu exemplu concret („100 EUR → X RON") înainte de
+  conversie; eliminat istoricul de curs FICTIV din `/setari` (`EXCHANGE_RATE_HISTORY`), înlocuit cu
+  panoul de exemplu real.
+- **BIZ-2:** eticheta „Progres achiziții" (bazată pe NUMĂR de elemente) putea fi confundată cu eficiența
+  bugetară (valorică). Redenumit „Progres achiziții (buc.)" în `/elemente`.
+- **BIZ-3:** elementele auto-generate din configurare au preț 0 și nu se distingeau vizual. Badge „Fără
+  preț" pe rândurile cu `unitPrice === 0` în `/elemente` (desktop + mobil) + hint în `/analiza` (desktop
+  + mobil) cu numărul de elemente fără preț.
+- **BIZ-4:** `budgetEfficiency` folosea `float` (pierdere de precizie), contrar convenției „toate sumele
+  BigDecimal". Fix: împărțire `BigDecimal` cu `RoundingMode.HALF_UP`.
+- **BIZ-5:** nicio verificare dacă suma suprafețelor camerelor depășește suprafața totală declarată a
+  apartamentului. Avertisment non-blocant în `/configurare` (nu eroare — pot exista motive legitime).
+
+**Fișiere atinse:** backend — `RoomDimensionsCalculator.java`, `RoomDimensionsDto.java`,
+`RoomDtoMapper.java`, `AuthRateLimitFilter.java`, `SecurityConfig.java`, `GlobalExceptionHandler.java`,
+`AuthController.java`, `LoginService.java`, `BudgetCalculator.java`, `ConvertProjectCurrencyService.java`,
+`ItemCreateRequest.java`, `ItemUpdateRequest.java`, `ItemUrlValidation.java` (nou), `RegisterRequest.java`,
+`LoginRequest.java`, `LoginLockoutGuard.java` (nou), `AccountLockedException.java` (nou),
+`ImplausibleExchangeRateException.java` (nou), + teste (`RoomDimensionsCalculatorTest`,
+`AuthFlowIntegrationTest`, `IdorAuthorizationIntegrationTest`); frontend —
+`shared/functions/{dimensions.ts,url.ts (nou)}`, `shared/api-client.ts`, `shared/types/RoomDimensions.ts`,
+`app/configurare/{roomCalcRows.ts,RoomTechnicalCard.tsx,page.tsx}`, `app/{elemente,analiza,setari}/page.tsx`,
+`app/register/page.tsx`, `components/ItemDetailsDrawer.tsx`; `docs/api-contract.md`.
+
+**Branch:** `040-audit-calcule-securitate`.

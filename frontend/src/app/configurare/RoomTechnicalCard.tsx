@@ -256,16 +256,31 @@ function TechnicalSection({
   );
 }
 
+/** Evidențiază procentele de pierdere (ex. „18%") din textul formulei — vizual, userul vede imediat cât e rebutul. */
+function highlightWastePercent(text: string): ReactNode[] {
+  return text.split(/(\d+%)/g).map((part, i) =>
+    /^\d+%$/.test(part) ? (
+      <span key={i} className="font-bold text-tertiary">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
 function ResultRow({
   label,
   value,
   formula,
   math,
+  note,
 }: {
   label: string;
   value: string;
   formula: string;
   math: string;
+  note?: string;
 }) {
   return (
     <div>
@@ -274,10 +289,21 @@ function ResultRow({
         <span className="font-mono font-bold">{value}</span>
       </div>
       <div className="rounded border border-line bg-surface-low p-1.5 font-mono text-[10px] text-muted">
-        Formulă: {formula}
+        Formulă: {highlightWastePercent(formula)}
         <br />
         Calcul: {math}
       </div>
+      {note && (
+        <p className="mt-1 flex items-center gap-1 text-[10px] italic text-tertiary">
+          <span
+            className="material-symbols-outlined shrink-0 text-[12px]"
+            style={{ fontVariationSettings: '"FILL" 0, "wght" 400, "GRAD" 0, "opsz" 12' }}
+          >
+            info
+          </span>
+          {note}
+        </p>
+      )}
     </div>
   );
 }
@@ -1076,16 +1102,18 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={savePending}
-            aria-busy={savePending}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {savePending && <Spinner />}
-            Salvează
-          </button>
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={savePending}
+              aria-busy={savePending}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {savePending && <Spinner />}
+              Salvează
+            </button>
+          </div>
         </div>
       )}
 

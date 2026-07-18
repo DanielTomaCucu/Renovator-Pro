@@ -15,6 +15,14 @@ public record RoomDimensionsDto(
         double paintArea,
         double wallpaperArea,
         double windowTrimLength,
-        double totalDoorWidth
+        double totalDoorWidth,
+        /** Pierderea reală aplicată pardoselii (0.10/0.15/0.18 +0.02 la plăci mari) — CALC-1/CALC-2. */
+        double floorWasteRatio,
+        /** Cantitate de vopsea recomandată, în litri (2 straturi, 11 mp/l) — CALC-4. */
+        double paintLiters,
+        /** Câte bare de plintă (2 ml/bară) trebuie cumpărate — CALC-8. */
+        int baseboardBars,
+        /** Câte bare de glaf fereastră (2 ml/bară) trebuie cumpărate — CALC-8. */
+        int windowTrimBars
 ) {
 }

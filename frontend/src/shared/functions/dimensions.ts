@@ -1,15 +1,35 @@
-import { FlooringType, Room, RoomDimensions, Wall, WallFinishType } from "@/shared/types";
+import { FlooringType, InstallationType, Room, RoomDimensions, TileSize, Wall, WallFinishType } from "@/shared/types";
 
-/** Pierdere estimată la tăiere/așezare — aplicată la pardoseală și la faianță. */
-const WASTE_RATIO_MATERIAL = 0.1;
+/**
+ * Procentele de pierdere sunt calibrate pe norme reale de șantier (surse în
+ * `docs/tickete-audit-calcule-securitate.md` — CALC-1…CALC-8), nu valori arbitrare.
+ */
+/** Pierdere de bază la montaj drept (pardoseală/faianță) — norma industrială pt. montaj simplu. */
+const WASTE_RATIO_DREPT = 0.1;
+/** Pierdere la montaj diagonal — tăieturi în unghi la fiecare margine, mai mult rebut. */
+const WASTE_RATIO_DIAGONAL = 0.15;
+/** Pierdere la montaj herringbone/chevron — fiecare bucată tăiată la ambele capete, rând de start sacrificat. */
+const WASTE_RATIO_HERRINGBONE = 0.18;
+/** Supliment de pierdere pt. plăci mari/foarte mari (600mm+) — mai puține tăieturi, dar fiecare irosește mai mult. */
+const WASTE_SUPPLEMENT_TILE_MARE = 0.02;
 /** Pierdere estimată la plintă (tăieri la colțuri). */
 const WASTE_RATIO_BASEBOARD = 0.05;
-/** Pierdere estimată la vopsea (al 2-lea strat, scurgeri). */
+/** Pierdere estimată la vopsea (al 2-lea strat, scurgeri, retușuri). */
 const WASTE_RATIO_PAINT = 0.1;
-/** Pierdere estimată la tapet (potrivire model/motiv la îmbinări) — mai mare decât la vopsea. */
+/** Pierdere estimată la tapet — medie industrială; modelele cu raport mare de potrivire (half-drop, >26cm) cer 20-25%. */
 const WASTE_RATIO_WALLPAPER = 0.15;
 /** Pierdere estimată la glaful de bordură al ferestrelor (tăieri la colțuri) — la fel ca la plintă. */
 const WASTE_RATIO_WINDOW_TRIM = 0.05;
+/** Pierdere de bază la faianță (montaj drept, ≤1 gol pe pereții placați). */
+const WASTE_RATIO_FAIANTA_BAZA = 0.1;
+/** Pierdere la faianță când sunt >1 goluri (uși+ferestre) pe pereții placați — mai multe tăieturi în jurul golurilor. */
+const WASTE_RATIO_FAIANTA_GOLURI_MULTIPLE = 0.12;
+/** Straturi standard de vopsea pt. pereți interiori — a doua mână e norma, nu excepția. */
+const PAINT_COATS = 2;
+/** Randament mediu de acoperire a vopselei per litru per strat (norma industrială: 10-12 mp/l). */
+const PAINT_COVERAGE_SQM_PER_LITER = 11;
+/** Lungimea standard a unei bare de plintă/glaf pe piața RO — pt. cantitatea „câte bare trebuie cumpărate". */
+const BASEBOARD_BAR_LENGTH_M = 2;
 
 const wallOrder: Wall[] = [Wall.Nord, Wall.Est, Wall.Sud, Wall.Vest];
 
@@ -64,13 +84,30 @@ export function hasFloorConfig(room: Room): boolean {
   return !!room.floorMaterial && !!room.floorArea && room.floorArea > 0;
 }
 
+/** Suma celor 4 lungimi de perete introduse la faianță/finisaj, dacă TOATE sunt completate (>0); altfel 0. */
+function perimeterFromWallLengths(room: Room): number {
+  const lengths = room.wallTiling?.wallLengths ?? room.wallFinish?.wallLengths;
+  if (!lengths) return 0;
+  let sum = 0;
+  for (const wall of wallOrder) {
+    const length = lengths[wall];
+    if (!length || length <= 0) return 0;
+    sum += length;
+  }
+  return sum;
+}
+
 /**
- * Perimetrul camerei — explicit dacă a fost completat, altfel derivat din suprafață presupunând
- * camera pătrată (4×√mp). Așa plinta se calculează direct din suprafața introdusă la Pardoseală,
- * fără să ceară userului un câmp separat de perimetru.
+ * Perimetrul camerei — explicit dacă a fost completat; altfel suma celor 4 lungimi de perete deja
+ * introduse la faianță/finisaj (dacă toate 4 sunt completate — cameră dreptunghiulară/neregulată
+ * reală, mai precisă decât presupunerea de cameră pătrată); altfel derivat din suprafață presupunând
+ * camera pătrată (4×√mp). Așa plinta se calculează direct din datele introduse, fără câmp separat
+ * de perimetru (CALC-3, docs/tickete-audit-calcule-securitate.md).
  */
 export function roomPerimeter(room: Room): number {
   if (room.perimeter) return room.perimeter;
+  const fromWalls = perimeterFromWallLengths(room);
+  if (fromWalls > 0) return fromWalls;
   if (!room.floorArea || room.floorArea <= 0) return 0;
   return 4 * Math.sqrt(room.floorArea);
 }
@@ -93,19 +130,78 @@ export function baseboardTileArea(room: Room): number {
 }
 
 /**
- * Necesar de material pentru pardoseală, cu pierdere de tăiere inclusă. La Gresie include și
- * suprafața de plintă tăiată din plăci (`baseboardTileArea`) — vezi comentariul funcției de mai sus.
+ * Pierderea de material aplicată pardoselii (și faianței la montaj — vezi `wallTilingArea`), calibrată
+ * pe tipul de montaj + mărimea plăcilor (CALC-1/CALC-2): montaj drept 10%, diagonal 15%, herringbone/
+ * chevron 18% (fiecare bucată tăiată la ambele capete, rând de start sacrificat); +2% supliment pt.
+ * plăci mari/foarte mari (mai puține tăieturi, dar fiecare irosește mai multă suprafață). Fără
+ * `installationType` completat → 10% (alegerea sigură, echivalentă cu comportamentul vechi).
+ */
+export function floorWasteRatio(room: Room): number {
+  const base =
+    room.installationType === InstallationType.Diagonal
+      ? WASTE_RATIO_DIAGONAL
+      : room.installationType === InstallationType.Herringbone
+        ? WASTE_RATIO_HERRINGBONE
+        : WASTE_RATIO_DREPT;
+  const placiMari = room.tileSize === TileSize.Mare || room.tileSize === TileSize.FoarteMare;
+  return placiMari ? base + WASTE_SUPPLEMENT_TILE_MARE : base;
+}
+
+/**
+ * Necesar de material pentru pardoseală, cu pierdere de tăiere inclusă (calibrată pe montaj + mărime
+ * plăci — `floorWasteRatio`). La Gresie include și suprafața de plintă tăiată din plăci
+ * (`baseboardTileArea`) — vezi comentariul funcției de mai sus.
  */
 export function floorMaterialNeeded(room: Room): number {
   if (!hasFloorConfig(room)) return 0;
-  const floor = room.floorArea! * (1 + WASTE_RATIO_MATERIAL);
+  const floor = room.floorArea! * (1 + floorWasteRatio(room));
   return floor + baseboardTileArea(room);
+}
+
+/** Numărul de bare de plintă/glaf (lungime standard `BASEBOARD_BAR_LENGTH_M`) necesare pt. o lungime dată, în ml. */
+export function barsNeeded(lengthMeters: number): number {
+  if (lengthMeters <= 0) return 0;
+  return Math.ceil(lengthMeters / BASEBOARD_BAR_LENGTH_M);
+}
+
+/**
+ * Cantitatea de vopsea recomandată, în litri, pt. `wallFinishArea` de tip Vopsea — `PAINT_COATS`
+ * straturi (norma pt. interior), randament `PAINT_COVERAGE_SQM_PER_LITER` mp/litru/strat. Rotunjit în
+ * sus la 0.5 litri (CALC-4) — aria în mp, singură, nu e direct utilizabilă la cumpărare.
+ */
+export function paintLiters(paintAreaSqm: number): number {
+  if (paintAreaSqm <= 0) return 0;
+  const liters = (paintAreaSqm * PAINT_COATS) / PAINT_COVERAGE_SQM_PER_LITER;
+  return Math.ceil(liters * 2) / 2;
 }
 
 /** Pereții efectiv placați cu faianță, în ordinea N, E, S, V, limitați la `tiledWallsCount`. */
 function tiledWalls(room: Room): Wall[] {
   if (!room.wallTiling) return [];
   return wallOrder.slice(0, room.wallTiling.tiledWallsCount);
+}
+
+/** Câte goluri (uși+ferestre, fiecare contând separat) sunt pe pereții placați cu faianță — pt. pierderea CALC-7. */
+function openingsCount(room: Room, walls: Wall[]): number {
+  let count = 0;
+  for (const wall of walls) {
+    if (room.doors?.[wall]) count++;
+    if (room.windows?.[wall]) count++;
+  }
+  return count;
+}
+
+/**
+ * Pierderea aplicată faianței — 10% la montaj simplu (≤1 gol pe pereții placați), 12% când sunt >1
+ * goluri (fiecare gol suplimentar adaugă tăieturi în jurul lui care nu se refolosesc — CALC-7).
+ */
+function faiantaWasteRatio(room: Room, walls: Wall[]): number {
+  return openingsCount(room, walls) > 1 ? WASTE_RATIO_FAIANTA_GOLURI_MULTIPLE : WASTE_RATIO_FAIANTA_BAZA;
+}
+
+/** Pierderea aplicată faianței camerei — 10% sau 12% (CALC-7) — expusă pt. afișare în panoul „Calcule Detaliate". */
+export function wallTilingWasteRatio(room: Room): number {
+  return faiantaWasteRatio(room, tiledWalls(room));
 }
 
 /** Suprafață de faianță necesară — suma pereților placați × înălțime, minus golurile ușilor și ferestrelor, cu pierdere. Doar la Gresie. */
@@ -116,7 +212,7 @@ export function wallTilingArea(room: Room): number {
   const totalLength = walls.reduce((sum, wall) => sum + (tiling.wallLengths[wall] ?? 0), 0);
   const grossArea = totalLength * tiling.tileHeight;
   const openings = walls.reduce((sum, wall) => sum + openingsArea(room, wall), 0);
-  return Math.max(0, grossArea - openings) * (1 + WASTE_RATIO_MATERIAL);
+  return Math.max(0, grossArea - openings) * (1 + faiantaWasteRatio(room, walls));
 }
 
 /** Pereții cu finisajul cerut (`Vopsea` sau `Tapet`), din configurarea `wallFinish` — doar la Parchet/Mochetă. */
@@ -144,15 +240,22 @@ export function wallFinishArea(room: Room, type: WallFinishType): number {
  * ca fallback când `room.dimensions` de la server lipsește. Aceleași formule ca funcțiile de mai sus.
  */
 export function computeRoomDimensions(room: Room): RoomDimensions {
+  const baseboard = baseboardLength(room);
+  const windowTrim = windowTrimLength(room);
+  const paintArea = wallFinishArea(room, WallFinishType.Vopsea);
   return {
     hasFloorConfig: hasFloorConfig(room),
     floorMaterialNeeded: floorMaterialNeeded(room),
-    baseboardLength: baseboardLength(room),
+    baseboardLength: baseboard,
     baseboardTileArea: baseboardTileArea(room),
     wallTilingArea: wallTilingArea(room),
-    paintArea: wallFinishArea(room, WallFinishType.Vopsea),
+    paintArea,
     wallpaperArea: wallFinishArea(room, WallFinishType.Tapet),
-    windowTrimLength: windowTrimLength(room),
+    windowTrimLength: windowTrim,
     totalDoorWidth: totalDoorWidth(room),
+    floorWasteRatio: floorWasteRatio(room),
+    paintLiters: paintLiters(paintArea),
+    baseboardBars: barsNeeded(baseboard),
+    windowTrimBars: barsNeeded(windowTrim),
   };
 }

@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseCookie;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -73,6 +75,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public RefreshResponse refresh(HttpServletRequest request, HttpServletResponse response) {
+        requireCustomHeader(request);
         AuthResult result = refreshTokenUseCase.execute(readRefreshCookie(request));
         setRefreshCookie(response, result.refreshToken());
         return new RefreshResponse(result.accessToken());
@@ -81,6 +84,7 @@ public class AuthController {
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(HttpServletRequest request, HttpServletResponse response) {
+        requireCustomHeader(request);
         logoutUseCase.execute(readRefreshCookie(request));
         clearRefreshCookie(response);
     }
@@ -135,5 +139,28 @@ public class AuthController {
                 .path("/api/auth")
                 .maxAge(maxAge)
                 .build();
+    }
+
+    /**
+     * SEC-6 (docs/tickete-audit-calcule-securitate.md): cu cookie-ul de refresh {@code SameSite=None} pe
+     * prod (necesar cross-site Vercel↔Render), un site terț ar putea declanșa POST-uri „oarbe" către
+     * {@code /refresh}/{@code /logout} (nu poate citi răspunsul din cauza CORS, dar poate forța rotirea
+     * tokenului sau delogarea). Cerem un header custom — un formular/link cross-site simplu nu poate seta
+     * headere custom fără un preflight CORS, iar CORS-ul nostru (vezi {@code CorsConfig}) nu permite
+     * origini terțe. Nu e o soluție cu cost mare, dar închide ieftin o clasă de nuisance attacks.
+     */
+    private void requireCustomHeader(HttpServletRequest request) {
+        if (request.getHeader("X-Requested-With") == null) {
+            throw new MissingRequestedWithHeaderException();
+        }
+    }
+
+    /** Excepție de adapter (nu de domeniu) — pur HTTP, nu are ce căuta în {@code domain.exception}. */
+    private static final class MissingRequestedWithHeaderException extends RuntimeException {
+    }
+
+    @ExceptionHandler(MissingRequestedWithHeaderException.class)
+    public ProblemDetail handleMissingRequestedWithHeader() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Cerere respinsă — antet lipsă");
     }
 }

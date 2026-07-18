@@ -4,6 +4,7 @@ import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Spinner from "@/components/Spinner";
 import ProjectSharingCard from "@/components/ProjectSharingCard";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import { Currency } from "@/shared/types";
@@ -13,12 +14,6 @@ const CURRENCY_LABEL: Record<Currency, string> = {
   [Currency.RON]: "Lei (RON)",
   [Currency.EUR]: "Euro (EUR)",
 };
-
-/** Istoric exemplu — decorativ, nu există încă o sursă reală de curs valutar (backlog item 6, CLAUDE.md). */
-const EXCHANGE_RATE_HISTORY = [
-  { date: "01.10.2025", rate: "4.9752 RON" },
-  { date: "15.09.2025", rate: "4.9680 RON" },
-];
 
 export default function SetariPage() {
   const { project, updateProject, convertCurrency } = useStore();
@@ -72,11 +67,16 @@ export default function SetariPage() {
   const [exchangeRate, setExchangeRate] = useState("4.97");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Confirmare explicită înainte de conversie (BIZ-1, docs/tickete-audit-calcule-securitate.md) —
+  // conversia e destructivă și persistată; o typo la curs (0.497 în loc de 4.97) ar distruge ireversibil
+  // toate sumele proiectului. Dialogul arată un exemplu concret cu cursul introdus, ca userul să observe
+  // greșeala înainte de a apăsa Confirmă, nu după.
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Conversie necesară doar când moneda țintă diferă de cea curentă a proiectului.
   const conversionNeeded = pendingCurrency !== project.currency;
 
-  const { run: handleSave, pending: currencyPending } = useAsyncAction(async () => {
+  const { run: handleSave, pending: savePending } = useAsyncAction(async () => {
     if (!conversionNeeded) {
       // Nimic de convertit — moneda e deja cea selectată. Fără request, deci fără spinner.
       setSaved(true);
@@ -89,13 +89,27 @@ export default function SetariPage() {
       return;
     }
     setError(null);
+    setConfirmOpen(true);
+  });
+
+  const currencyPending = savePending;
+
+  const applyConversion = async () => {
+    const rate = Number(exchangeRate);
     // Conversie REALĂ: recalculează toate sumele (buget, camere, elemente) pe backend, apoi
     // reîncarcă snapshot-ul — vezi convertCurrency din store.tsx. Așteptăm requestul înainte de
     // a arăta „Conversie aplicată ✓" (altfel apărea și dacă requestul eșua).
     await convertCurrency(pendingCurrency, rate);
+    setConfirmOpen(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
-  });
+  };
+
+  const rateNumber = Number(exchangeRate);
+  const exampleConverted =
+    pendingCurrency === Currency.RON ? (100 * rateNumber).toFixed(2) : (100 / rateNumber).toFixed(2);
+  const exampleFrom = pendingCurrency === Currency.RON ? "EUR" : "RON";
+  const exampleTo = pendingCurrency === Currency.RON ? "RON" : "EUR";
 
   return (
     <div>
@@ -279,35 +293,40 @@ export default function SetariPage() {
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-line bg-surface">
-              <div className="flex h-24 items-center justify-center bg-surface-low">
-                <span className="material-symbols-outlined text-4xl text-muted">
-                  {TECHNICAL_ICONS.projectEfficiency}
-                </span>
+            {conversionNeeded && Number.isFinite(rateNumber) && rateNumber > 0 && (
+              <div className="overflow-hidden rounded-xl border border-line bg-surface">
+                <div className="flex h-24 items-center justify-center bg-surface-low">
+                  <span className="material-symbols-outlined text-4xl text-muted">
+                    {TECHNICAL_ICONS.projectEfficiency}
+                  </span>
+                </div>
+                <div className="p-4">
+                  <h5 className="mb-2 text-[10px] font-bold uppercase text-muted">
+                    Exemplu de conversie
+                  </h5>
+                  <p className="font-mono text-sm text-primary">
+                    100 {exampleFrom} → <span className="font-bold">{exampleConverted}</span> {exampleTo}
+                  </p>
+                  <p className="mt-2 text-[10px] italic text-muted">
+                    Verifică dacă rezultatul are sens înainte de a confirma — cursul RON/EUR de azi e
+                    aproximativ 4.9-5.0, nu 0.2-0.25 (curs invers, greșeală frecventă).
+                  </p>
+                </div>
               </div>
-              <div className="p-4">
-                <h5 className="mb-2 text-[10px] font-bold uppercase text-muted">Istoric Curs</h5>
-                <ul className="space-y-1.5 font-mono text-[11px] text-muted">
-                  {EXCHANGE_RATE_HISTORY.map((entry) => (
-                    <li
-                      key={entry.date}
-                      className="flex justify-between border-b border-line/50 pb-1.5"
-                    >
-                      <span>{entry.date}</span>
-                      <span className="font-bold text-primary">{entry.rate}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-2 text-[10px] italic text-muted">
-                  Exemplu — istoric real, neimplementat încă (necesită sursă de curs valutar).
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
         <ProjectSharingCard />
       </main>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Confirmă conversia de monedă"
+        message={`Toate sumele proiectului (buget total, buget pe camere, prețuri elemente) vor fi convertite din ${project.currency} în ${pendingCurrency} cu cursul ${exchangeRate}. Exemplu: 100 ${exampleFrom} → ${exampleConverted} ${exampleTo}. Conversia e ireversibilă (pierdere de precizie la dus-întors). Continui?`}
+        onConfirm={applyConversion}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
