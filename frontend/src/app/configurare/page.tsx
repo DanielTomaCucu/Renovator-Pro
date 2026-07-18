@@ -8,6 +8,7 @@ import DashboardSummaryCard, {
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
 import Spinner from "@/components/Spinner";
+import EmptyState from "@/components/EmptyState";
 import { useStore } from "@/shared/store";
 import { formatMoney } from "@/shared/functions";
 import { TECHNICAL_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
@@ -132,9 +133,17 @@ export default function ConfigurarePage() {
 
         {/* Listă camere cu configurare tehnică */}
         <section className="space-y-6">
-          {rooms.map((room) => (
-            <RoomTechnicalCard key={room.id} room={room} />
-          ))}
+          {rooms.length === 0 ? (
+            <EmptyState
+              icon={TECHNICAL_ICONS.addRoomEmpty}
+              title="Nicio cameră configurată încă"
+              description="Adaugă prima cameră ca să începi configurarea tehnică — pardoseală, pereți, uși și ferestre."
+              actionLabel="+ Adaugă Cameră"
+              onAction={() => setRoomDrawerOpen(true)}
+            />
+          ) : (
+            rooms.map((room) => <RoomTechnicalCard key={room.id} room={room} />)
+          )}
         </section>
       </main>
 

@@ -26,6 +26,18 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Construiește mesajul de eroare dintr-un `ProblemDetail` — dacă backend-ul a atașat `fieldErrors`
+ * (validare Bean Validation, ex. „Payload invalid"), afișăm mesajele per-câmp în loc de textul generic,
+ * altfel userul nu află ce anume e greșit în formular.
+ */
+function problemMessage(problem: { detail?: string; fieldErrors?: Record<string, string> } | null, status: number): string {
+  if (problem?.fieldErrors && Object.keys(problem.fieldErrors).length > 0) {
+    return Object.values(problem.fieldErrors).join(" ");
+  }
+  return problem?.detail ?? `Eroare API (${status})`;
+}
+
 async function rawFetch(path: string, init?: RequestInit): Promise<Response> {
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) };
   if (accessToken) {
@@ -64,7 +76,7 @@ async function apiFetch<T>(path: string, init?: RequestInit, isRetry = false): P
 
   if (!res.ok) {
     const problem = await res.json().catch(() => null);
-    throw new ApiError(problem?.detail ?? `Eroare API (${res.status})`, res.status);
+    throw new ApiError(problemMessage(problem, res.status), res.status);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -93,7 +105,7 @@ async function authFetch<T>(path: string, body?: unknown): Promise<T> {
   });
   if (!res.ok) {
     const problem = await res.json().catch(() => null);
-    throw new ApiError(problem?.detail ?? `Eroare API (${res.status})`, res.status);
+    throw new ApiError(problemMessage(problem, res.status), res.status);
   }
   if (res.status === 204) return undefined as T;
   return res.json();

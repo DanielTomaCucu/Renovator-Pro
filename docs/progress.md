@@ -1045,3 +1045,45 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 **Fișiere atinse:** ~70 fișiere noi/modificate în `backend/src/main/java/ro/renovatorpro/**` (domain/application/adapter/config), `backend/src/main/resources/{application.yml,application-dev.yml,db/migration/V5__auth.sql}`, `backend/src/test/**`, `backend/pom.xml`, `backend/.env.example`; frontend: `shared/{api-client.ts,AuthProvider.tsx,store.tsx,icons.ts,types/*}`, `components/{AppShell,Sidebar,ProjectSharingCard}.tsx`, `app/{layout.tsx,login/page.tsx,register/page.tsx,setari/page.tsx}`; `README.md`, `CLAUDE.md`, `docs/api-contract.md`.
 
 **Branch:** `036-autentificare-faza5`.
+
+### 2026-07-18 — Fix: plintă la Parchet/Mochetă, login case-insensitive, mesaje de eroare per-câmp
+**De ce:** verificare end-to-end cerută de user a scos 3 bug-uri confirmate (`docs/tickete-verificare.md`, TICKET-1/2/3).
+
+- **TICKET-1 — plintă lipsă la Parchet/Mochetă:** `baseboardLength` depindea de `room.perimeter`, care nu era
+  setat niciodată din UI (nu exista input pentru el). Fix: `roomPerimeter(room)` (nou, `shared/functions/dimensions.ts`
+  + port 1:1 în `RoomDimensionsCalculator.java`) — folosește `room.perimeter` dacă e explicit, altfel îl derivă
+  automat din suprafață presupunând camera pătrată (`4×√mp`), fără niciun câmp nou de completat. `baseboardLength`
+  (front + back) și `roomCalcRows.ts`/`RoomTechnicalCard.tsx` (hint-uri) folosesc acum `roomPerimeter`.
+- **TICKET-2 — login eșua pentru username-uri cu majuscule:** `RegisterUserService` normalizează username-ul
+  la `toLowerCase()` înainte de a-l salva, dar `LoginService` căuta cu username-ul brut (fără lowercase) →
+  mismatch → 401 fals. Fix: `LoginService` normalizează identic (`trim().toLowerCase(Locale.ROOT)`).
+- **TICKET-3 — „Payload invalid" opac:** `GlobalExceptionHandler` atașează `fieldErrors` la eroarea de
+  validare, dar `api-client.ts` citea doar `detail` (mesajul generic). Fix: `problemMessage()` (nou) compune
+  mesajul din `fieldErrors` când există, afișat acum în `/login`+`/register`.
+
+**Fișiere atinse:** `frontend/src/shared/functions/dimensions.ts`, `frontend/src/app/configurare/{roomCalcRows.ts,RoomTechnicalCard.tsx}`,
+`frontend/src/shared/api-client.ts`, `backend/.../domain/service/RoomDimensionsCalculator.java`,
+`backend/.../application/usecase/LoginService.java`.
+
+**Branch:** `039-fix-plinta-login-payload`.
+
+### 2026-07-18 — Fix: empty states pentru proiect fără camere + layout Analiză mobil
+**De ce:** cu proiectul gol (fără nicio cameră), toate paginile principale afișau blocuri goale fără
+niciun text — percepția era de aplicație stricată, nu de „nu ai date încă". În plus, pagina `/analiza`
+avea un container `max-w-md` propriu pe secțiunea mobilă (diferit de `max-w-7xl`/fără constrângere
+folosit de restul paginilor), ceea ce producea un gutter stânga/dreapta inconsistent cu restul aplicației.
+
+- **`components/EmptyState.tsx`** (nou) — icon + titlu + descriere + CTA opțional (link sau buton),
+  reutilizat de toate paginile de mai jos (regula „zero duplicare" din CLAUDE.md).
+- `app/configurare/page.tsx`, `app/elemente/page.tsx` (desktop + mobil) — `EmptyState` când
+  `rooms.length === 0`, cu CTA „+ Adaugă Cameră" care deschide drawer-ul existent.
+- `app/centralizator/page.tsx` (desktop + mobil) — `EmptyState` când `items.length === 0` (tabelul era
+  gol chiar cu camere existente, dacă nu au elemente), cu CTA spre `/elemente`.
+- `app/analiza/page.tsx` — `EmptyState` când `rooms.length === 0` (înlocuiește bento grid-ul desktop și
+  secțiunea mobilă, ambele ascunse în acest caz); **fix layout**: eliminat `mx-auto max-w-md` din
+  wrapper-ul mobil — acum `px-4 py-6 md:hidden`, consistent cu paddingul celorlalte pagini.
+
+**Fișiere atinse:** `frontend/src/components/EmptyState.tsx` (nou),
+`frontend/src/app/{configurare,elemente,centralizator,analiza}/page.tsx`.
+
+**Branch:** `039-fix-plinta-login-payload`.
