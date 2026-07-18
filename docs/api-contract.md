@@ -180,11 +180,24 @@ dimensions: {
   floorMaterialNeeded: number; baseboardLength: number; baseboardTileArea: number;
   wallTilingArea: number; paintArea: number; wallpaperArea: number;
   windowTrimLength: number; totalDoorWidth: number;
+  // Adăugate în auditul de calcule de șantier (docs/tickete-audit-calcule-securitate.md, CALC-1…8):
+  floorWasteRatio: number;   // pierderea reală aplicată pardoselii (0.10/0.15/0.18 + 0.02 la plăci mari)
+  paintLiters: number;       // vopsea recomandată, în litri (2 straturi, 11 mp/litru/strat)
+  baseboardBars: number;     // câte bare de plintă (2 ml/bară) trebuie cumpărate
+  windowTrimBars: number;    // câte bare de glaf (2 ml/bară) trebuie cumpărate
 }
 ```
 Frontend-ul păstrează un calcul client identic (`shared/functions/dimensions.ts` → `computeRoomDimensions`)
 DOAR ca preview instant la editarea unei camere (pe `draft`, înainte de salvare) și ca fallback; PDF-ul exportat
 folosește `room.dimensions` de la server. Formulele client oglindesc 1:1 backend-ul.
+
+**Pierderile de material NU mai sunt procente flat** (audit 2026-07-18, `docs/tickete-audit-calcule-securitate.md`):
+- Pardoseală/faianță: 10% montaj drept, 15% diagonal, 18% herringbone (`Room.installationType`), +2% la
+  plăci mari/foarte mari (`Room.tileSize`) — vezi `floorWasteRatio` (`dimensions.ts`/`RoomDimensionsCalculator`).
+- Faianță: 12% (nu 10%) când sunt >1 goluri (uși+ferestre) pe pereții placați.
+- Perimetrul (`roomPerimeter`) preferă suma celor 4 lungimi de perete introduse la faianță/finisaj (dacă
+  toate sunt completate) în locul presupunerii de cameră pătrată (4×√mp), pentru plintă mai precisă.
+- Toate calibrate pe norme reale de șantier — surse citate în tichetul de audit.
 
 ## PATCH `/api/rooms/{id}` — semantica „absent" vs. „null explicit" (Problema 6)
 

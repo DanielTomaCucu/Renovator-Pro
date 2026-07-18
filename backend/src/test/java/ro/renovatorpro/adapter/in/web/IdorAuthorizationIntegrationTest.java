@@ -186,6 +186,7 @@ class IdorAuthorizationIntegrationTest {
 
         HttpHeaders editorRefreshHeaders = new HttpHeaders();
         editorRefreshHeaders.add(HttpHeaders.COOKIE, editor.refreshCookie());
+        editorRefreshHeaders.add("X-Requested-With", "XMLHttpRequest"); // SEC-6
         ResponseEntity<Map> editorRefreshAfterRemoval = restTemplate.exchange(
                 "/api/auth/refresh", HttpMethod.POST, new HttpEntity<>(editorRefreshHeaders), Map.class);
         assertThat(editorRefreshAfterRemoval.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);

@@ -15,4 +15,12 @@ export interface RoomDimensions {
   wallpaperArea: number;
   windowTrimLength: number;
   totalDoorWidth: number;
+  /** Pierderea reală aplicată pardoselii (0.10/0.15/0.18 + 0.02 la plăci mari) — CALC-1/CALC-2. */
+  floorWasteRatio: number;
+  /** Cantitate de vopsea recomandată, în litri (2 straturi, 11 mp/l) — CALC-4. */
+  paintLiters: number;
+  /** Câte bare de plintă (2 ml/bară) trebuie cumpărate — CALC-8. */
+  baseboardBars: number;
+  /** Câte bare de glaf fereastră (2 ml/bară) trebuie cumpărate — CALC-8. */
+  windowTrimBars: number;
 }

@@ -46,10 +46,21 @@ async function rawFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(`${API_BASE_URL}${path}`, { ...init, headers });
 }
 
+/**
+ * SEC-6 (docs/tickete-audit-calcule-securitate.md): backend-ul cere acest header pe `/refresh`/`/logout`
+ * — un formular/link cross-site simplu nu poate seta headere custom fără preflight CORS (blocat de
+ * allowlist-ul nostru), deci apărare ieftină împotriva rotirii/delogării forțate de pe alt site.
+ */
+const REQUESTED_WITH_HEADER = { "X-Requested-With": "XMLHttpRequest" };
+
 /** Refresh silențios pe cookie-ul httpOnly — folosit atât la boot cât și la retry pe 401. */
 async function trySilentRefresh(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, { method: "POST", credentials: "include" });
+    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+      headers: REQUESTED_WITH_HEADER,
+    });
     if (!res.ok) return false;
     const data = (await res.json()) as { accessToken: string };
     accessToken = data.accessToken;
@@ -96,10 +107,10 @@ export const api = {
  * direct — cookie-ul de refresh trebuie să circule cross-site (Vercel ↔ Render), independent de
  * `api.*` (care e pentru date, cu retry pe 401).
  */
-async function authFetch<T>(path: string, body?: unknown): Promise<T> {
+async function authFetch<T>(path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...extraHeaders },
     credentials: "include",
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
@@ -143,7 +154,7 @@ export const authApi = {
     authFetch<AuthResponseBody>("/api/auth/login", { username, password }).then(handleAuthResponse),
   logout: async () => {
     try {
-      await authFetch<void>("/api/auth/logout");
+      await authFetch<void>("/api/auth/logout", undefined, REQUESTED_WITH_HEADER);
     } finally {
       accessToken = null;
     }

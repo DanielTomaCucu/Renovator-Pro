@@ -25,6 +25,11 @@ export default function ConfigurarePage() {
     progressPct === 0 ? "Neînceput" : progressPct === 100 ? "Finalizat" : "În Lucru";
   // Suprafață utilă afișată: valoarea manuală a proiectului dacă există, altfel suma camerelor configurate.
   const displayedArea = project.totalArea ?? technical.totalFloorArea;
+  // BIZ-5 (docs/tickete-audit-calcule-securitate.md): camerele pot fi configurate fără nicio verificare
+  // față de suprafața totală declarată — un avertisment non-blocant, nu o eroare (userul poate avea
+  // motive legitime, ex. balcoane necontorizate în actul apartamentului).
+  const roomsExceedTotalArea =
+    !!project.totalArea && technical.totalFloorArea > project.totalArea + 0.01;
 
   // Import dinamic — @react-pdf/renderer e destul de greu, nu are rost în bundle-ul inițial al paginii,
   // doar la apăsarea efectivă a butonului de export.
@@ -107,6 +112,21 @@ export default function ConfigurarePage() {
             />
           </div>
         </section>
+
+        {roomsExceedTotalArea && (
+          <div className="flex items-start gap-3 rounded-xl border border-tertiary/20 bg-tertiary/5 p-4">
+            <span className="material-symbols-outlined text-tertiary">{TECHNICAL_ICONS.info}</span>
+            <p className="text-sm text-muted">
+              Camerele configurate însumează{" "}
+              <span className="font-mono font-bold text-tertiary">
+                {technical.totalFloorArea.toFixed(1)} mp
+              </span>
+              , mai mult decât suprafața totală declarată a apartamentului (
+              <span className="font-mono font-bold">{project.totalArea!.toFixed(1)} mp</span>
+              ). Verifică suprafețele camerelor sau actualizează suprafața totală mai sus.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end">
           <button

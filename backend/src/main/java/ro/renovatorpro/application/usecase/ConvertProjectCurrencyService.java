@@ -1,6 +1,7 @@
 package ro.renovatorpro.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
@@ -8,6 +9,7 @@ import ro.renovatorpro.application.port.out.ItemRepository;
 import ro.renovatorpro.application.port.out.ProjectRepository;
 import ro.renovatorpro.application.port.out.RoomRepository;
 import ro.renovatorpro.application.security.MembershipGuard;
+import ro.renovatorpro.domain.exception.ImplausibleExchangeRateException;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.Item;
@@ -36,6 +38,18 @@ public class ConvertProjectCurrencyService implements ConvertProjectCurrencyUseC
     private final ItemRepository itemRepository;
     private final MembershipGuard membershipGuard;
 
+    /**
+     * Interval plauzibil pt. cursul RON/EUR de azi (BIZ-1) — configurabil dacă valuta reală se depărtează
+     * mult. Inițializate inline (nu doar în {@code @Value}) ca testele unitare care construiesc acest
+     * serviciu direct (fără context Spring, ex. {@code UseCasesTest}) să nu rămână cu 0.0/0.0 — Spring
+     * suprascrie valoarea după construcție dacă proprietatea există, altfel rămâne default-ul de aici.
+     */
+    @Value("${app.currency.exchange-rate.min:3.0}")
+    private double minPlausibleRate = 3.0;
+
+    @Value("${app.currency.exchange-rate.max:8.0}")
+    private double maxPlausibleRate = 8.0;
+
     @Override
     @Transactional
     public Project execute(String currentUserId, String projectId, Command command) {
@@ -48,6 +62,12 @@ public class ConvertProjectCurrencyService implements ConvertProjectCurrencyUseC
         Currency from = project.currency();
         Currency to = command.targetCurrency();
         BigDecimal rate = command.exchangeRate();
+
+        // BIZ-1: conversia e destructivă și persistată — o typo (0.497 în loc de 4.97) ar distruge
+        // ireversibil toate sumele proiectului. Doar când monedele chiar diferă (altfel rate e no-op).
+        if (from != to && (rate.doubleValue() < minPlausibleRate || rate.doubleValue() > maxPlausibleRate)) {
+            throw new ImplausibleExchangeRateException(minPlausibleRate, maxPlausibleRate);
+        }
 
         // 1. Bugetul total al proiectului + moneda țintă.
         Money convertedBudget = CurrencyConverter.convert(project.totalBudget(), from, to, rate);

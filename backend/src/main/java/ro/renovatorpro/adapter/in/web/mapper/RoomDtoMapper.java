@@ -37,16 +37,23 @@ public interface RoomDtoMapper {
 
     /** Necesarul de material calculat server-side din {@link RoomDimensionsCalculator} — sursa de adevăr (Problema 2). */
     default RoomDimensionsDto toDimensions(Room room) {
+        double baseboardLength = RoomDimensionsCalculator.baseboardLength(room);
+        double windowTrimLength = RoomDimensionsCalculator.windowTrimLength(room);
+        double paintArea = RoomDimensionsCalculator.wallFinishArea(room, WallFinishType.VOPSEA);
         return new RoomDimensionsDto(
                 RoomDimensionsCalculator.hasFloorConfig(room),
                 RoomDimensionsCalculator.floorMaterialNeeded(room),
-                RoomDimensionsCalculator.baseboardLength(room),
+                baseboardLength,
                 RoomDimensionsCalculator.baseboardTileArea(room),
                 RoomDimensionsCalculator.wallTilingArea(room),
-                RoomDimensionsCalculator.wallFinishArea(room, WallFinishType.VOPSEA),
+                paintArea,
                 RoomDimensionsCalculator.wallFinishArea(room, WallFinishType.TAPET),
-                RoomDimensionsCalculator.windowTrimLength(room),
-                RoomDimensionsCalculator.totalDoorWidth(room)
+                windowTrimLength,
+                RoomDimensionsCalculator.totalDoorWidth(room),
+                RoomDimensionsCalculator.floorWasteRatio(room),
+                RoomDimensionsCalculator.paintLiters(paintArea),
+                RoomDimensionsCalculator.barsNeeded(baseboardLength),
+                RoomDimensionsCalculator.barsNeeded(windowTrimLength)
         );
     }
 

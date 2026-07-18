@@ -261,11 +261,13 @@ function ResultRow({
   value,
   formula,
   math,
+  note,
 }: {
   label: string;
   value: string;
   formula: string;
   math: string;
+  note?: string;
 }) {
   return (
     <div>
@@ -278,6 +280,12 @@ function ResultRow({
         <br />
         Calcul: {math}
       </div>
+      {note && (
+        <p className="mt-1 flex items-start gap-1 text-[10px] italic text-tertiary">
+          <span className="material-symbols-outlined text-xs">info</span>
+          {note}
+        </p>
+      )}
     </div>
   );
 }

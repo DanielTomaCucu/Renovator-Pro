@@ -75,6 +75,7 @@ class AuthFlowIntegrationTest {
         // Refresh rotește tokenul — cookie-ul vechi (din register) devine invalid.
         HttpHeaders refreshHeaders = new HttpHeaders();
         refreshHeaders.add(HttpHeaders.COOKIE, refreshCookie);
+        refreshHeaders.add("X-Requested-With", "XMLHttpRequest"); // SEC-6
         ResponseEntity<Map> refreshResponse = restTemplate.exchange(
                 "/api/auth/refresh", HttpMethod.POST, new HttpEntity<>(refreshHeaders), Map.class);
         assertThat(refreshResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -90,6 +91,7 @@ class AuthFlowIntegrationTest {
         // Logout revocă și cookie-ul rotit.
         HttpHeaders logoutHeaders = new HttpHeaders();
         logoutHeaders.add(HttpHeaders.COOKIE, rotatedRefreshCookie);
+        logoutHeaders.add("X-Requested-With", "XMLHttpRequest"); // SEC-6
         ResponseEntity<Void> logoutResponse = restTemplate.exchange(
                 "/api/auth/logout", HttpMethod.POST, new HttpEntity<>(logoutHeaders), Void.class);
         assertThat(logoutResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);

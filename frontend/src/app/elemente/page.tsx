@@ -165,7 +165,10 @@ export default function ElementePage() {
             },
             { label: "Elemente achiziționate", value: `${bought} din ${items.length}` },
             {
-              label: "Progres achiziții",
+              // BIZ-2 (docs/tickete-audit-calcule-securitate.md): „buc." în etichetă disambiguează
+              // explicit de eficiența bugetară (valorică, din /centralizator) — un element scump
+              // necumpărat + o plintă ieftină cumpărată pot da 50% aici fără să însemne 50% din buget.
+              label: "Progres achiziții (buc.)",
               value: `${progress}%`,
               footer: <SummaryProgressFooter percent={progress} color="secondary" />,
             },
@@ -447,7 +450,16 @@ export default function ElementePage() {
                               {item.quantity}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
-                              {money(item.unitPrice)}
+                              {item.unitPrice === 0 ? (
+                                <span
+                                  className="rounded-full bg-tertiary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-tertiary"
+                                  title="Element generat automat din configurare — completează prețul ca să contribuie la totaluri"
+                                >
+                                  Fără preț
+                                </span>
+                              ) : (
+                                money(item.unitPrice)
+                              )}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right font-mono font-semibold text-primary">
                               {money(itemTotal(item))}
@@ -779,7 +791,13 @@ export default function ElementePage() {
                                   <OriginBadge origin={item.origin} />
                                 </div>
                                 <p className="font-mono text-sm text-muted">
-                                  {money(item.unitPrice)}
+                                  {item.unitPrice === 0 ? (
+                                    <span className="rounded-full bg-tertiary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-tertiary">
+                                      Fără preț
+                                    </span>
+                                  ) : (
+                                    money(item.unitPrice)
+                                  )}
                                 </p>
                               </div>
                             </div>
