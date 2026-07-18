@@ -1,11 +1,14 @@
 package ro.renovatorpro.adapter.in.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.openapitools.jackson.nullable.JsonNullableModule;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ro.renovatorpro.adapter.in.web.mapper.RoomDtoMapper;
@@ -56,6 +59,14 @@ class RoomControllerTest {
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
+        // standaloneSetup nu trece prin filter chain-ul de Spring Security (Faza 5) — CurrentUser.id()
+        // citește direct din SecurityContext, deci testele îl populează manual, ca într-o cerere reală autentificată.
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("test-user", null, List.of()));
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test

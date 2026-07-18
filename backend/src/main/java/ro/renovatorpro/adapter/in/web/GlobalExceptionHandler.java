@@ -7,6 +7,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ro.renovatorpro.domain.exception.DomainException;
+import ro.renovatorpro.domain.exception.DuplicateUsernameException;
+import ro.renovatorpro.domain.exception.InvalidCredentialsException;
+import ro.renovatorpro.domain.exception.InvalidInviteCodeException;
+import ro.renovatorpro.domain.exception.InvalidRefreshTokenException;
+import ro.renovatorpro.domain.exception.InvalidRegistrationException;
 import ro.renovatorpro.domain.exception.ItemNotFoundException;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.exception.RoomNotFoundException;
@@ -21,9 +26,25 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({ProjectNotFoundException.class, RoomNotFoundException.class, ItemNotFoundException.class})
+    @ExceptionHandler({ProjectNotFoundException.class, RoomNotFoundException.class, ItemNotFoundException.class,
+            InvalidInviteCodeException.class})
     public ProblemDetail handleNotFound(DomainException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(DuplicateUsernameException.class)
+    public ProblemDetail handleDuplicateUsername(DuplicateUsernameException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler({InvalidCredentialsException.class, InvalidRefreshTokenException.class})
+    public ProblemDetail handleAuthenticationFailure(DomainException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidRegistrationException.class)
+    public ProblemDetail handleInvalidRegistration(InvalidRegistrationException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     /** Orice altă {@link DomainException} necunoscută aici = regulă de business încălcată, nu 404. */

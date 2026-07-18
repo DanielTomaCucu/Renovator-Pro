@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Spinner from "@/components/Spinner";
+import ProjectSharingCard from "@/components/ProjectSharingCard";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import { Currency } from "@/shared/types";
@@ -304,6 +305,8 @@ export default function SetariPage() {
             </div>
           </div>
         </div>
+
+        <ProjectSharingCard />
       </main>
     </div>
   );

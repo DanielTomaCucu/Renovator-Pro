@@ -41,31 +41,31 @@ public class ProjectController {
 
     @GetMapping("/{id}")
     public ProjectResponse get(@PathVariable String id) {
-        return mapper.toResponse(getProjectUseCase.execute(WebConstants.STUB_USER_ID, id));
+        return mapper.toResponse(getProjectUseCase.execute(CurrentUser.id(), id));
     }
 
     /** Agregările proiectului calculate server-side (Problema 2 din audit): totaluri, cost/cameră, cost/categorie, sumar tehnic. */
     @GetMapping("/{id}/summary")
     public ProjectSummaryResponse summary(@PathVariable String id) {
-        return summaryMapper.toResponse(getProjectSummaryUseCase.execute(WebConstants.STUB_USER_ID, id));
+        return summaryMapper.toResponse(getProjectSummaryUseCase.execute(CurrentUser.id(), id));
     }
 
     /** Serie temporală de cheltuieli cumulate, pe luni (Problema 3 din audit) — bazată pe momentul cumpărării. */
     @GetMapping("/{id}/spending-timeline")
     public List<SpendingTimelinePointResponse> spendingTimeline(@PathVariable String id) {
-        return spendingTimelineMapper.toResponse(getSpendingTimelineUseCase.execute(WebConstants.STUB_USER_ID, id));
+        return spendingTimelineMapper.toResponse(getSpendingTimelineUseCase.execute(CurrentUser.id(), id));
     }
 
     @PatchMapping("/{id}")
     public ProjectResponse update(@PathVariable String id, @Valid @RequestBody ProjectUpdateRequest request) {
         UpdateProjectUseCase.Command command = mapper.toUpdateCommand(request);
-        return mapper.toResponse(updateProjectUseCase.execute(WebConstants.STUB_USER_ID, id, command));
+        return mapper.toResponse(updateProjectUseCase.execute(CurrentUser.id(), id, command));
     }
 
     /** Conversie reală a monedei: recalculează toate sumele proiectului la cursul dat (Problema 1 din audit). */
     @PostMapping("/{id}/currency")
     public ProjectResponse convertCurrency(@PathVariable String id, @Valid @RequestBody ConvertCurrencyRequest request) {
         ConvertProjectCurrencyUseCase.Command command = mapper.toConvertCommand(request);
-        return mapper.toResponse(convertProjectCurrencyUseCase.execute(WebConstants.STUB_USER_ID, id, command));
+        return mapper.toResponse(convertProjectCurrencyUseCase.execute(CurrentUser.id(), id, command));
     }
 }

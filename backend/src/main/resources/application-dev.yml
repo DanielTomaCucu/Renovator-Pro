@@ -14,6 +14,11 @@ spring:
 app:
   cors:
     allowed-origins: http://localhost:3001
+  jwt:
+    # Fallback DOAR pe dev — pe prod JWT_SECRET e obligatoriu din env (vezi application.yml). ≥32 caractere (256 biți).
+    secret: ${JWT_SECRET:dev-secret-nu-il-folosi-niciodata-in-productie-32chars}
+  auth:
+    refresh-cookie-same-site: Lax
 
 management:
   endpoints:

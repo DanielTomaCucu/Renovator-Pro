@@ -34,7 +34,7 @@ public class ItemController {
 
     @GetMapping("/api/projects/{projectId}/items")
     public List<ItemResponse> list(@PathVariable String projectId) {
-        return getItemsUseCase.execute(WebConstants.STUB_USER_ID, projectId).stream()
+        return getItemsUseCase.execute(CurrentUser.id(), projectId).stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -49,18 +49,18 @@ public class ItemController {
                 roomId, fromBody.name(), fromBody.materialType(), fromBody.source(), fromBody.status(),
                 fromBody.quantity(), fromBody.unitPrice(), fromBody.productUrl(), fromBody.imageUrl(), fromBody.origin()
         );
-        return mapper.toResponse(addItemUseCase.execute(WebConstants.STUB_USER_ID, command));
+        return mapper.toResponse(addItemUseCase.execute(CurrentUser.id(), command));
     }
 
     @PatchMapping("/api/items/{id}")
     public ItemResponse update(@PathVariable String id, @RequestBody ItemUpdateRequest request) {
         UpdateItemUseCase.Command command = mapper.toUpdateCommand(request);
-        return mapper.toResponse(updateItemUseCase.execute(WebConstants.STUB_USER_ID, id, command));
+        return mapper.toResponse(updateItemUseCase.execute(CurrentUser.id(), id, command));
     }
 
     @DeleteMapping("/api/items/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {
-        deleteItemUseCase.execute(WebConstants.STUB_USER_ID, id);
+        deleteItemUseCase.execute(CurrentUser.id(), id);
     }
 }

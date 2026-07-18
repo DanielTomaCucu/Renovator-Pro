@@ -11,7 +11,7 @@
 2. **Logica de business NU se duplică în backend prin reimplementare liberă.** Regulile din `docs/progress.md` → „Registru de funcții" (ex: doar `ItemStatus.Cumparat` contează la cheltuit) trebuie portate identic în Java. Dacă o regulă se schimbă, se schimbă întâi aici + în `src/shared/functions/`, apoi în backend.
 3. Toate sumele sunt `number` (double/BigDecimal în Java, serializat ca number în JSON, nu string).
 4. Toate ID-urile sunt `string` (UUID recomandat pe backend).
-5. Autentificare/autorizare: **neconcepute încă** — de definit înainte de prima implementare de endpoint protejat.
+5. Autentificare/autorizare: **implementate (Faza 5)** — vezi secțiunea „Autentificare" mai jos și `docs/cerinte-autentificare.md`.
 
 ## Resurse
 
@@ -94,6 +94,28 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 | `convertCurrency(target, rate)` | `/api/projects/{id}/currency` | `POST` | Conversie reală a TUTUROR sumelor proiectului — vezi secțiunea dedicată mai jos |
 | `summary` (store) | `/api/projects/{id}/summary` | `GET` | Agregările calculate server-side — vezi secțiunea „Agregări server-side" |
 | `spendingTimeline` (store) | `/api/projects/{id}/spending-timeline` | `GET` | Serie temporală de cheltuieli cumulate — vezi secțiunea dedicată mai jos |
+
+## Autentificare (Faza 5)
+
+Toate rutele de mai sus, EXCEPTÂND `/api/auth/**` și `/actuator/health`, cer un header
+`Authorization: Bearer <accessToken>` — fără el, `401`. Deciziile complete (login pe username, cod de
+invitație, 404 uniform la refuz de autorizare) sunt în `docs/cerinte-autentificare.md`; aici doar shape-urile.
+
+| Endpoint | Verb | Body / Auth | Response |
+|---|---|---|---|
+| `/api/auth/register` | `POST` | `{ username, password, projectName? }` SAU `{ username, password, inviteCode? }` — exact unul din `projectName`/`inviteCode` | `201 { accessToken, user: {id, username}, project: Project, role }` + cookie `rp_refresh` (httpOnly) |
+| `/api/auth/login` | `POST` | `{ username, password }` | `200`, același shape ca register |
+| `/api/auth/refresh` | `POST` | fără body, cookie `rp_refresh` | `200 { accessToken }` + cookie NOU (rotire — cel vechi devine invalid) |
+| `/api/auth/logout` | `POST` | cookie `rp_refresh` | `204`, revocă refresh token-ul |
+| `/api/auth/me` | `GET` | `Authorization: Bearer` | `200 { user, project, role }` |
+| `/api/projects/{id}/invite-code` | `GET` | `Authorization` — doar OWNER | `200 { inviteCode }` (generat leneș la prima cerere) |
+| `/api/projects/{id}/invite-code/regenerate` | `POST` | `Authorization` — doar OWNER | `200 { inviteCode }` nou; cel vechi devine invalid |
+| `/api/projects/{id}/members` | `GET` | `Authorization` — orice membru | `200 [{ userId, username, role }]` |
+| `/api/projects/{id}/members/{userId}` | `DELETE` | `Authorization` — doar OWNER | `204`; revocă și refresh token-urile membrului șters |
+
+Erori: `401` credențiale/token invalid, `409` username deja folosit, `404` (uniform, IDOR — nu confirmă
+existența resursei) pentru orice acces fără membership sau rol suficient, `400` payload invalid (ex. nici
+`projectName` nici `inviteCode`).
 
 ## Conversie monedă — `POST /api/projects/{id}/currency`
 

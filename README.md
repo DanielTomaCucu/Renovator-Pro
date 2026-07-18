@@ -32,16 +32,20 @@ npx tsc --noEmit
 
 ## Backend
 
-Spring Boot + PostgreSQL, arhitectură hexagonală. Fazele 0–4, 6, 7 finalizate (API REST complet, conectat la frontend,
-deployat pe Render + Supabase). **Faza 5 (autentificare) amânată intenționat** — se face ultima. Plan complet în
-**[docs/backend-blueprint.md](docs/backend-blueprint.md)**.
+Spring Boot + PostgreSQL, arhitectură hexagonală. Fazele 0–7 finalizate (API REST complet, autentificare
+JWT + partajare proiect prin cod de invitație, conectat la frontend, deployat pe Render + Supabase). Plan
+complet în **[docs/backend-blueprint.md](docs/backend-blueprint.md)**.
 
 Rulare locală: `cd backend && docker compose up -d && mvn spring-boot:run -Dspring-boot.run.profiles=dev`.
+Pentru login/register local ai nevoie de `JWT_SECRET` — vezi `backend/.env.example` (pe `dev` are deja un
+fallback, nu e obligatoriu de setat local).
 
 ## Documentație
 
 - **[docs/audit-remedieri.md](docs/audit-remedieri.md)** — 🔴 probleme cunoscute + plan detaliat de remediere (de citit înainte de a lucra la fixuri).
 - **[docs/cerinte-loading-states.md](docs/cerinte-loading-states.md)** — 🟡 specificație de implementat: skeleton la încărcarea paginii + spinner în butoane pe durata requesturilor.
+- **[docs/cerinte-autentificare.md](docs/cerinte-autentificare.md)** — ✅ Faza 5 implementată (register/login pe username + parolă, JWT, autorizare pe membership, partajare proiect prin cod de invitație). Rămâne manual doar setarea `JWT_SECRET` pe Render (vezi „Deploy” mai jos).
+- **[docs/cerinte-keepalive-render.md](docs/cerinte-keepalive-render.md)** — 🟡 keep-alive Render 08:00–21:00 (GitHub Actions cron; ~403 h/lună din cele 750 gratuite).
 - **[docs/backend-blueprint.md](docs/backend-blueprint.md)** — blueprint-ul oficial al backend-ului (arhitect-șef → executori).
 - **[docs/api-contract.md](docs/api-contract.md)** — contractul API REST (sursă unică de adevăr pentru shape-uri).
 - **[docs/progress.md](docs/progress.md)** — jurnal cronologic de schimbări + registru de funcții.
@@ -51,3 +55,13 @@ Rulare locală: `cd backend && docker compose up -d && mvn spring-boot:run -Dspr
 ⚠️ **Pas manual necesar după această restructurare:** în setările proiectului Vercel, schimbă
 **Root Directory → `frontend`** (Settings → General → Root Directory). Fără asta, build-ul Vercel nu mai găsește
 aplicația Next.js, fiindcă a fost mutată din rădăcină în `frontend/`.
+
+## Deploy (Render) — Faza 5
+
+⚠️ **Pas manual necesar:** în Render → serviciul backend → Environment, adaugă `JWT_SECRET` (generat, ex.
+`openssl rand -base64 48`) — fără el, backend-ul nu pornește pe prod (`application.yml` cere explicit
+`${JWT_SECRET}`, fără fallback, la fel ca `APP_CORS_ALLOWED_ORIGINS`). CORS-ul deja acceptă cookie-uri
+cross-site (`allowCredentials`); cookie-ul de refresh pleacă `Secure; SameSite=None` automat pe orice
+profil diferit de `dev`. **De verificat manual după deploy, pe Safari/iOS** — ITP poate bloca cookie-uri
+third-party chiar cu `SameSite=None`; dacă se confirmă, e nevoie de o decizie separată (nu se improvizează,
+vezi `docs/cerinte-autentificare.md` AUTH-6).

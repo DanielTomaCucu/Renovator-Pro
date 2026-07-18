@@ -41,4 +41,8 @@ public class ProjectEntity {
 
     @Column(name = "owner_id", nullable = false)
     private String ownerId;
+
+    /** Cod de invitație (D6) — {@code null} până la prima cerere a OWNER-ului (generat leneș). */
+    @Column(name = "invite_code")
+    private String inviteCode;
 }

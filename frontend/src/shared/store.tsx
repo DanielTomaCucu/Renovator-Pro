@@ -10,7 +10,8 @@ import {
   type ReactNode,
 } from "react";
 import { Currency, Item, Project, ProjectSummary, RenovationStore, Room, SpendingTimelinePoint } from "./types";
-import { api, DEFAULT_PROJECT_ID } from "./api-client";
+import { api } from "./api-client";
+import { useAuth } from "./AuthProvider";
 import PageSkeleton from "@/components/PageSkeleton";
 
 const StoreContext = createContext<RenovationStore | null>(null);
@@ -31,6 +32,14 @@ function toErrorMessage(err: unknown): string {
  * (UI-ul arăta „Salvat” chiar dacă nimic nu s-a persistat).
  */
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
+  if (!session) {
+    // AppShell randează StoreProvider DOAR când sesiunea există (vezi components/AppShell.tsx) —
+    // ajungerea aici ar însemna o eroare de wiring, nu o stare validă de tratat grațios.
+    throw new Error("StoreProvider randat fără sesiune activă");
+  }
+  const projectId = session.project.id;
+
   const [project, setProject] = useState<Project | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -44,21 +53,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const reloadAggregates = useCallback(async () => {
     const [s, t] = await Promise.all([
-      api.get<ProjectSummary>(`/api/projects/${DEFAULT_PROJECT_ID}/summary`),
-      api.get<SpendingTimelinePoint[]>(`/api/projects/${DEFAULT_PROJECT_ID}/spending-timeline`),
+      api.get<ProjectSummary>(`/api/projects/${projectId}/summary`),
+      api.get<SpendingTimelinePoint[]>(`/api/projects/${projectId}/spending-timeline`),
     ]);
     setSummary(s);
     setSpendingTimeline(t);
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      api.get<Project>(`/api/projects/${DEFAULT_PROJECT_ID}`),
-      api.get<Room[]>(`/api/projects/${DEFAULT_PROJECT_ID}/rooms`),
-      api.get<Item[]>(`/api/projects/${DEFAULT_PROJECT_ID}/items`),
-      api.get<ProjectSummary>(`/api/projects/${DEFAULT_PROJECT_ID}/summary`),
-      api.get<SpendingTimelinePoint[]>(`/api/projects/${DEFAULT_PROJECT_ID}/spending-timeline`),
+      api.get<Project>(`/api/projects/${projectId}`),
+      api.get<Room[]>(`/api/projects/${projectId}/rooms`),
+      api.get<Item[]>(`/api/projects/${projectId}/items`),
+      api.get<ProjectSummary>(`/api/projects/${projectId}/summary`),
+      api.get<SpendingTimelinePoint[]>(`/api/projects/${projectId}/spending-timeline`),
     ])
       .then(([p, r, i, s, t]) => {
         if (cancelled) return;
@@ -75,7 +84,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [loadAttempt]);
+  }, [loadAttempt, projectId]);
 
   const retryInitialLoad = useCallback(() => {
     setInitialLoadError(null);
@@ -85,14 +94,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const updateProject = useCallback(
     async (patch: Partial<Project>) => {
       try {
-        const updated = await api.patch<Project>(`/api/projects/${DEFAULT_PROJECT_ID}`, patch);
+        const updated = await api.patch<Project>(`/api/projects/${projectId}`, patch);
         setProject(updated);
         await reloadAggregates();
       } catch (err) {
         setError(toErrorMessage(err));
       }
     },
-    [reloadAggregates]
+    [projectId, reloadAggregates]
   );
 
   const convertCurrency = useCallback(
@@ -100,14 +109,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Conversia atinge project + toate camerele + toate elementele — reîncărcăm snapshot-ul complet
       // (inclusiv agregările) ca fiecare pagină/header să reflecte sumele convertite.
       try {
-        const updated = await api.post<Project>(`/api/projects/${DEFAULT_PROJECT_ID}/currency`, {
+        const updated = await api.post<Project>(`/api/projects/${projectId}/currency`, {
           targetCurrency,
           exchangeRate,
         });
         setProject(updated);
         const [r, i] = await Promise.all([
-          api.get<Room[]>(`/api/projects/${DEFAULT_PROJECT_ID}/rooms`),
-          api.get<Item[]>(`/api/projects/${DEFAULT_PROJECT_ID}/items`),
+          api.get<Room[]>(`/api/projects/${projectId}/rooms`),
+          api.get<Item[]>(`/api/projects/${projectId}/items`),
         ]);
         setRooms(r);
         setItems(i);
@@ -116,20 +125,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setError(toErrorMessage(err));
       }
     },
-    [reloadAggregates]
+    [projectId, reloadAggregates]
   );
 
   const addRoom = useCallback(
     async (room: Omit<Room, "id">) => {
       try {
-        const created = await api.post<Room>(`/api/projects/${DEFAULT_PROJECT_ID}/rooms`, room);
+        const created = await api.post<Room>(`/api/projects/${projectId}/rooms`, room);
         setRooms((prev) => [...prev, created]);
         await reloadAggregates();
       } catch (err) {
         setError(toErrorMessage(err));
       }
     },
-    [reloadAggregates]
+    [projectId, reloadAggregates]
   );
 
   const updateRoom = useCallback(
@@ -139,14 +148,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setRooms((prev) => prev.map((r) => (r.id === id ? updated : r)));
         // Câmpurile tehnice pot declanșa reconcilierea elementelor auto-generate pe server — reîncărcăm
         // lista de elemente ca să reflectăm exact ce a calculat backend-ul (adaugă/recalculează/șterge).
-        const freshItems = await api.get<Item[]>(`/api/projects/${DEFAULT_PROJECT_ID}/items`);
+        const freshItems = await api.get<Item[]>(`/api/projects/${projectId}/items`);
         setItems(freshItems);
         await reloadAggregates();
       } catch (err) {
         setError(toErrorMessage(err));
       }
     },
-    [reloadAggregates]
+    [projectId, reloadAggregates]
   );
 
   const deleteRoom = useCallback(
