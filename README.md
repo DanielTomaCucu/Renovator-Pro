@@ -42,6 +42,8 @@ Rulare locală: `cd backend && docker compose up -d && mvn spring-boot:run -Dspr
 
 - **[docs/audit-remedieri.md](docs/audit-remedieri.md)** — 🔴 probleme cunoscute + plan detaliat de remediere (de citit înainte de a lucra la fixuri).
 - **[docs/cerinte-loading-states.md](docs/cerinte-loading-states.md)** — 🟡 specificație de implementat: skeleton la încărcarea paginii + spinner în butoane pe durata requesturilor.
+- **[docs/cerinte-autentificare.md](docs/cerinte-autentificare.md)** — 🟡 ticketele Fazei 5 (register/login cu nume + parolă + numele proiectului, JWT, autorizare pe membership).
+- **[docs/cerinte-keepalive-render.md](docs/cerinte-keepalive-render.md)** — 🟡 keep-alive Render 08:00–21:00 (GitHub Actions cron; ~403 h/lună din cele 750 gratuite).
 - **[docs/backend-blueprint.md](docs/backend-blueprint.md)** — blueprint-ul oficial al backend-ului (arhitect-șef → executori).
 - **[docs/api-contract.md](docs/api-contract.md)** — contractul API REST (sursă unică de adevăr pentru shape-uri).
 - **[docs/progress.md](docs/progress.md)** — jurnal cronologic de schimbări + registru de funcții.
