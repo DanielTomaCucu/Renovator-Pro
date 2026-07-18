@@ -412,15 +412,6 @@ export default function CentralizatorPage() {
         <div className="flex flex-col items-center justify-between gap-6 rounded-xl border border-line bg-surface p-6 shadow-sm sm:p-8 md:flex-row">
           <div className="flex w-full gap-4 md:w-auto">
             <button
-              onClick={() => window.print()}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-line px-6 py-3 text-sm font-medium transition-all hover:bg-surface-low md:flex-none"
-            >
-              <span className="material-symbols-outlined text-[20px] opacity-60">
-                {DOCUMENT_ICONS.print}
-              </span>
-              Imprimă Raport
-            </button>
-            <button
               onClick={handleExportPdf}
               disabled={exportingPdf || items.length === 0}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-line px-6 py-3 text-sm font-medium transition-all hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50 md:flex-none"

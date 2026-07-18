@@ -185,9 +185,9 @@ export default function Sidebar() {
 
       <div className="space-y-2 border-t border-line pt-3">
         {session && (
-          <div className={`flex items-center rounded-lg ${collapsed ? "justify-center p-1" : "justify-between gap-2 px-1 py-1"}`}>
+          <div className={`flex items-center rounded-lg ${collapsed ? "justify-center p-2" : "justify-between gap-3 px-3 py-1.5"}`}>
             {!collapsed && (
-              <span className="flex min-w-0 items-center gap-2 text-primary">
+              <span className="flex min-w-0 items-center gap-3 text-primary">
                 <span className="material-symbols-outlined shrink-0 text-[20px] text-muted">
                   {NAV_ICONS.profil}
                 </span>
@@ -200,7 +200,7 @@ export default function Sidebar() {
               disabled={loggingOut}
               title={collapsed ? `${session.user.username} — Ieși din cont` : "Ieși din cont"}
               aria-label="Ieși din cont"
-              className="shrink-0 rounded-lg p-1.5 text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
+              className="shrink-0 rounded-lg p-1 text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
             >
               {loggingOut ? <Spinner /> : (
                 <span className="material-symbols-outlined text-[20px]">{ACTION_ICONS.logout}</span>
