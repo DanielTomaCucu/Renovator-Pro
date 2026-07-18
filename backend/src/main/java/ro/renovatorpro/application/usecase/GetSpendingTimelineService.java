@@ -6,10 +6,13 @@ import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.GetSpendingTimelineUseCase;
 import ro.renovatorpro.application.port.out.ItemRepository;
 import ro.renovatorpro.application.port.out.RoomRepository;
+import ro.renovatorpro.application.security.MembershipGuard;
+import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.model.Item;
 import ro.renovatorpro.domain.model.ItemStatus;
 import ro.renovatorpro.domain.model.Money;
 import ro.renovatorpro.domain.model.Room;
+import ro.renovatorpro.domain.model.user.ProjectRole;
 import ro.renovatorpro.domain.service.BudgetCalculator;
 
 import java.time.YearMonth;
@@ -31,10 +34,14 @@ public class GetSpendingTimelineService implements GetSpendingTimelineUseCase {
 
     private final RoomRepository roomRepository;
     private final ItemRepository itemRepository;
+    private final MembershipGuard membershipGuard;
 
     @Override
     @Transactional(readOnly = true)
     public List<TimelinePoint> execute(String currentUserId, String projectId) {
+        if (!membershipGuard.hasRole(currentUserId, projectId, ProjectRole.VIEWER)) {
+            throw new ProjectNotFoundException(projectId);
+        }
         List<String> roomIds = roomRepository.findByProjectId(projectId).stream().map(Room::id).toList();
         List<Item> items = roomIds.isEmpty() ? List.of() : itemRepository.findByRoomIds(roomIds);
 

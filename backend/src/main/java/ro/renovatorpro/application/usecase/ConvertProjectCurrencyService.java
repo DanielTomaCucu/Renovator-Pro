@@ -7,12 +7,14 @@ import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
 import ro.renovatorpro.application.port.out.ItemRepository;
 import ro.renovatorpro.application.port.out.ProjectRepository;
 import ro.renovatorpro.application.port.out.RoomRepository;
+import ro.renovatorpro.application.security.MembershipGuard;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.Item;
 import ro.renovatorpro.domain.model.Money;
 import ro.renovatorpro.domain.model.Project;
 import ro.renovatorpro.domain.model.Room;
+import ro.renovatorpro.domain.model.user.ProjectRole;
 import ro.renovatorpro.domain.service.CurrencyConverter;
 
 import java.math.BigDecimal;
@@ -22,7 +24,8 @@ import java.util.List;
  * Convertește, într-o singură tranzacție, TOATE sumele unui proiect în moneda țintă (Problema 1 din audit).
  * Regula de conversie e delegată la {@link CurrencyConverter} (pură, testată izolat); aici doar orchestrăm
  * citirea, aplicarea pe fiecare entitate și persistarea. Conversia în aceeași monedă e no-op efectiv
- * (factor identitate), dar tot re-scrie moneda proiectului — inofensiv.
+ * (factor identitate), dar tot re-scrie moneda proiectului — inofensiv. Modifică proiectul → doar OWNER
+ * (blueprint §5: „doar OWNER modifică proiectul"), la fel ca UpdateProjectUseCase.
  */
 @Service
 @RequiredArgsConstructor
@@ -31,10 +34,14 @@ public class ConvertProjectCurrencyService implements ConvertProjectCurrencyUseC
     private final ProjectRepository projectRepository;
     private final RoomRepository roomRepository;
     private final ItemRepository itemRepository;
+    private final MembershipGuard membershipGuard;
 
     @Override
     @Transactional
     public Project execute(String currentUserId, String projectId, Command command) {
+        if (!membershipGuard.hasRole(currentUserId, projectId, ProjectRole.OWNER)) {
+            throw new ProjectNotFoundException(projectId);
+        }
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
 

@@ -25,6 +25,17 @@ app:
   # Fără fallback intenționat — pe prod, domeniul Vercel real trebuie setat explicit (niciodată wildcard `*`).
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+  # Faza 5 — fără fallback intenționat: secretul JWT trebuie setat explicit pe prod (niciodată în git).
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-ttl-minutes: 15
+  auth:
+    refresh-token-ttl-days: 30
+    refresh-cookie-name: rp_refresh
+    # Vercel (frontend) și Render (backend) sunt origini diferite — cookie-ul cross-site are nevoie de
+    # SameSite=None (+ Secure, setat direct la construirea cookie-ului în AuthController). Pe dev,
+    # application-dev.yml suprascrie cu Lax (localhost:3001 → localhost:8080 nu e „cross-site" real).
+    refresh-cookie-same-site: None
 
 management:
   endpoints:

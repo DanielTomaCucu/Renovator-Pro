@@ -8,9 +8,11 @@ import ro.renovatorpro.application.port.out.IdGenerator;
 import ro.renovatorpro.application.port.out.ItemRepository;
 import ro.renovatorpro.application.port.out.RoomRepository;
 import ro.renovatorpro.application.port.out.TimeProvider;
+import ro.renovatorpro.application.security.MembershipGuard;
 import ro.renovatorpro.domain.exception.RoomNotFoundException;
 import ro.renovatorpro.domain.model.Item;
 import ro.renovatorpro.domain.model.Room;
+import ro.renovatorpro.domain.model.user.ProjectRole;
 import ro.renovatorpro.domain.service.AutoItemReconciler;
 
 import java.util.List;
@@ -24,12 +26,16 @@ public class UpdateRoomService implements UpdateRoomUseCase {
     private final ItemRepository itemRepository;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
+    private final MembershipGuard membershipGuard;
 
     @Override
     @Transactional
     public Result execute(String currentUserId, String roomId, Command command) {
         Room existing = roomRepository.findById(roomId).orElseThrow(() -> new RoomNotFoundException(roomId));
         String projectId = roomRepository.findProjectIdById(roomId).orElseThrow(() -> new RoomNotFoundException(roomId));
+        if (!membershipGuard.hasRole(currentUserId, projectId, ProjectRole.EDITOR)) {
+            throw new RoomNotFoundException(roomId);
+        }
         Room patched = new Room(
                 existing.id(),
                 command.type() != null ? command.type() : existing.type(),

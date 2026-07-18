@@ -4,3 +4,14 @@
 app:
   cors:
     allowed-origins: http://localhost:3001
+  jwt:
+    secret: test-secret-doar-pentru-teste-minim-32-caractere-lungime
+    access-token-ttl-minutes: 15
+  auth:
+    refresh-token-ttl-days: 30
+    refresh-cookie-name: rp_refresh
+    refresh-cookie-same-site: Lax
+    rate-limit:
+      # Relaxat doar în teste — mai multe clase de integrare rulează zeci de register/login din
+      # același „IP" (localhost) în aceeași fereastră; pragul de producție (10/min) rămâne în cod.
+      max-requests: 1000

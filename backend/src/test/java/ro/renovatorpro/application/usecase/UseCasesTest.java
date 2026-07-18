@@ -16,6 +16,7 @@ import ro.renovatorpro.application.port.in.Patch;
 import ro.renovatorpro.application.port.in.UpdateItemUseCase;
 import ro.renovatorpro.application.port.in.UpdateProjectUseCase;
 import ro.renovatorpro.application.port.in.UpdateRoomUseCase;
+import ro.renovatorpro.application.security.MembershipGuard;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.FlooringType;
 import ro.renovatorpro.domain.model.Item;
@@ -26,6 +27,7 @@ import ro.renovatorpro.domain.model.Money;
 import ro.renovatorpro.domain.model.Project;
 import ro.renovatorpro.domain.model.Room;
 import ro.renovatorpro.domain.model.RoomType;
+import ro.renovatorpro.domain.model.user.ProjectRole;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -45,6 +47,7 @@ class UseCasesTest {
     private FakeProjectRepository projectRepository;
     private FakeRoomRepository roomRepository;
     private FakeItemRepository itemRepository;
+    private FakeProjectMemberRepository projectMemberRepository;
     private FakeIdGenerator idGenerator;
     private FakeTimeProvider timeProvider;
 
@@ -67,24 +70,29 @@ class UseCasesTest {
         projectRepository = new FakeProjectRepository();
         roomRepository = new FakeRoomRepository();
         itemRepository = new FakeItemRepository();
+        projectMemberRepository = new FakeProjectMemberRepository();
         idGenerator = new FakeIdGenerator();
         timeProvider = new FakeTimeProvider();
 
         projectRepository.seed(new Project(PROJECT_ID, "Proiectul Meu", Money.of(1000), Currency.EUR, null));
+        // OWNER pe propriul proiect — testele de mai jos exercită logica de business, nu autorizarea
+        // (asta are teste dedicate, vezi IdorAuthorizationTest).
+        projectMemberRepository.grant(PROJECT_ID, USER, ProjectRole.OWNER);
+        MembershipGuard membershipGuard = new MembershipGuard(projectMemberRepository);
 
-        getProject = new GetProjectService(projectRepository);
-        getRooms = new GetRoomsService(roomRepository);
-        getItems = new GetItemsService(roomRepository, itemRepository);
-        updateProject = new UpdateProjectService(projectRepository);
-        addRoom = new AddRoomService(roomRepository, idGenerator);
-        updateRoom = new UpdateRoomService(roomRepository, itemRepository, idGenerator, timeProvider);
-        deleteRoom = new DeleteRoomService(roomRepository, itemRepository);
-        addItem = new AddItemService(itemRepository, idGenerator, timeProvider);
-        updateItem = new UpdateItemService(itemRepository, timeProvider);
-        deleteItem = new DeleteItemService(itemRepository);
-        convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository);
-        getSummary = new GetProjectSummaryService(projectRepository, roomRepository, itemRepository);
-        getSpendingTimeline = new GetSpendingTimelineService(roomRepository, itemRepository);
+        getProject = new GetProjectService(projectRepository, membershipGuard);
+        getRooms = new GetRoomsService(roomRepository, membershipGuard);
+        getItems = new GetItemsService(roomRepository, itemRepository, membershipGuard);
+        updateProject = new UpdateProjectService(projectRepository, membershipGuard);
+        addRoom = new AddRoomService(roomRepository, idGenerator, membershipGuard);
+        updateRoom = new UpdateRoomService(roomRepository, itemRepository, idGenerator, timeProvider, membershipGuard);
+        deleteRoom = new DeleteRoomService(roomRepository, itemRepository, membershipGuard);
+        addItem = new AddItemService(itemRepository, roomRepository, idGenerator, timeProvider, membershipGuard);
+        updateItem = new UpdateItemService(itemRepository, roomRepository, timeProvider, membershipGuard);
+        deleteItem = new DeleteItemService(itemRepository, roomRepository, membershipGuard);
+        convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository, membershipGuard);
+        getSummary = new GetProjectSummaryService(projectRepository, roomRepository, itemRepository, membershipGuard);
+        getSpendingTimeline = new GetSpendingTimelineService(roomRepository, itemRepository, membershipGuard);
     }
 
     @Test

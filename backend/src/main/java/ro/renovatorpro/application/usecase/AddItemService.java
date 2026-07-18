@@ -6,9 +6,13 @@ import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.AddItemUseCase;
 import ro.renovatorpro.application.port.out.IdGenerator;
 import ro.renovatorpro.application.port.out.ItemRepository;
+import ro.renovatorpro.application.port.out.RoomRepository;
 import ro.renovatorpro.application.port.out.TimeProvider;
+import ro.renovatorpro.application.security.MembershipGuard;
+import ro.renovatorpro.domain.exception.RoomNotFoundException;
 import ro.renovatorpro.domain.model.Item;
 import ro.renovatorpro.domain.model.ItemStatus;
+import ro.renovatorpro.domain.model.user.ProjectRole;
 
 import java.time.Instant;
 
@@ -17,12 +21,19 @@ import java.time.Instant;
 public class AddItemService implements AddItemUseCase {
 
     private final ItemRepository itemRepository;
+    private final RoomRepository roomRepository;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
+    private final MembershipGuard membershipGuard;
 
     @Override
     @Transactional
     public Item execute(String currentUserId, Command command) {
+        String projectId = roomRepository.findProjectIdById(command.roomId())
+                .orElseThrow(() -> new RoomNotFoundException(command.roomId()));
+        if (!membershipGuard.hasRole(currentUserId, projectId, ProjectRole.EDITOR)) {
+            throw new RoomNotFoundException(command.roomId());
+        }
         // source e non-opțional în frontend (Item.source: string) — dacă un client API omite câmpul,
         // normalizăm la "" aici, nu lăsăm null să ajungă la INSERT (coloana e NOT NULL).
         String source = command.source() != null ? command.source() : "";

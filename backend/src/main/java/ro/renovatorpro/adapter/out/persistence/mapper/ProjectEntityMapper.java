@@ -11,5 +11,6 @@ public interface ProjectEntityMapper {
     Project toDomain(ProjectEntity entity);
 
     @Mapping(target = "ownerId", source = "ownerId")
+    @Mapping(target = "inviteCode", ignore = true)
     ProjectEntity toEntity(Project project, String ownerId);
 }

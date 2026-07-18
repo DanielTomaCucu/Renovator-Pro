@@ -35,7 +35,7 @@ public class RoomController {
 
     @GetMapping("/api/projects/{projectId}/rooms")
     public List<RoomResponse> list(@PathVariable String projectId) {
-        return getRoomsUseCase.execute(WebConstants.STUB_USER_ID, projectId).stream()
+        return getRoomsUseCase.execute(CurrentUser.id(), projectId).stream()
                 .map(room -> mapper.toResponse(room, projectId))
                 .toList();
     }
@@ -44,20 +44,20 @@ public class RoomController {
     @ResponseStatus(HttpStatus.CREATED)
     public RoomResponse create(@PathVariable String projectId, @Valid @RequestBody RoomCreateRequest request) {
         AddRoomUseCase.Command command = mapper.toAddCommand(request);
-        Room room = addRoomUseCase.execute(WebConstants.STUB_USER_ID, projectId, command);
+        Room room = addRoomUseCase.execute(CurrentUser.id(), projectId, command);
         return mapper.toResponse(room, projectId);
     }
 
     @PatchMapping("/api/rooms/{id}")
     public RoomResponse update(@PathVariable String id, @RequestBody RoomUpdateRequest request) {
         UpdateRoomUseCase.Command command = mapper.toUpdateCommand(request);
-        UpdateRoomUseCase.Result result = updateRoomUseCase.execute(WebConstants.STUB_USER_ID, id, command);
+        UpdateRoomUseCase.Result result = updateRoomUseCase.execute(CurrentUser.id(), id, command);
         return mapper.toResponse(result.room(), result.projectId());
     }
 
     @DeleteMapping("/api/rooms/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {
-        deleteRoomUseCase.execute(WebConstants.STUB_USER_ID, id);
+        deleteRoomUseCase.execute(CurrentUser.id(), id);
     }
 }
