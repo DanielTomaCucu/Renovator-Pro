@@ -156,12 +156,12 @@ export default function SetariPage() {
               onClick={handleSaveDetails}
               disabled={detailsPending}
               aria-busy={detailsPending}
-              className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {detailsPending ? (
                 <Spinner />
               ) : (
-                <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.save}</span>
+                <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
               )}
               Salvează Detaliile
             </button>
@@ -250,12 +250,12 @@ export default function SetariPage() {
                 onClick={handleSave}
                 disabled={currencyPending}
                 aria-busy={currencyPending}
-                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {currencyPending ? (
                   <Spinner />
                 ) : (
-                  <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.save}</span>
+                  <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
                 )}
                 {conversionNeeded ? "Convertește și Salvează" : "Salvează Setările"}
               </button>

@@ -16,7 +16,6 @@ export const NAV_ICONS = {
   elemente: "shopping_cart",
   centralizator: "table_chart",
   analiza: "leaderboard",
-  galerie: "auto_awesome",
   setari: "settings",
   collapseSidebar: "menu_open",
   sidebarAddRoom: "add_circle",
