@@ -99,28 +99,28 @@ export default function Sidebar() {
               </Link>
             );
           })}
-        </div>
-        {session && (
-          <div className="flex items-center justify-between gap-3 border-t border-line p-3">
-            <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-primary">
-              <span className="material-symbols-outlined shrink-0 text-[20px] text-muted">
+          {session && (
+            <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted">
+              <span className="material-symbols-outlined shrink-0 text-[20px]">
                 {NAV_ICONS.profil}
               </span>
-              <span className="truncate">{session.user.username}</span>
-            </span>
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={loggingOut}
-              aria-label="Ieși din cont"
-              className="shrink-0 rounded-lg p-2 text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
-            >
-              {loggingOut ? <Spinner /> : (
-                <span className="material-symbols-outlined text-[20px]">{ACTION_ICONS.logout}</span>
-              )}
-            </button>
-          </div>
-        )}
+              <span className="flex-1 truncate text-sm font-medium text-primary">
+                {session.user.username}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                aria-label="Ieși din cont"
+                className="shrink-0 rounded-lg p-1 text-muted hover:bg-surface-low hover:text-tertiary disabled:opacity-50"
+              >
+                {loggingOut ? <Spinner /> : (
+                  <span className="material-symbols-outlined text-[20px]">{ACTION_ICONS.logout}</span>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </nav>
 
       <aside
@@ -181,43 +181,29 @@ export default function Sidebar() {
             </Link>
           );
         })}
-        <span
-          title="Galerie Inspirație (indisponibil)"
-          className={`flex cursor-not-allowed items-center text-muted opacity-50 ${
-            collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2"
-          }`}
-        >
-          <span className="material-symbols-outlined shrink-0 text-[20px]">
-            {NAV_ICONS.galerie}
-          </span>
-          {!collapsed && <span className="truncate text-sm font-medium">Galerie Inspirație</span>}
-        </span>
       </nav>
 
       <div className="space-y-2 border-t border-line pt-3">
         {session && (
-          <div
-            className={`flex items-center rounded-lg ${collapsed ? "flex-col gap-1 p-1" : "justify-between gap-2 px-1 py-1"}`}
-          >
-            <span
-              title={collapsed ? session.user.username : undefined}
-              className={`flex min-w-0 items-center text-primary ${collapsed ? "justify-center" : "gap-2"}`}
-            >
-              <span className="material-symbols-outlined shrink-0 text-[20px] text-muted">
-                {NAV_ICONS.profil}
+          <div className={`flex items-center rounded-lg ${collapsed ? "justify-center p-2" : "justify-between gap-3 px-3 py-1.5"}`}>
+            {!collapsed && (
+              <span className="flex min-w-0 items-center gap-3 text-primary">
+                <span className="material-symbols-outlined shrink-0 text-[20px] text-muted">
+                  {NAV_ICONS.profil}
+                </span>
+                <span className="truncate text-sm font-medium">{session.user.username}</span>
               </span>
-              {!collapsed && <span className="truncate text-sm font-medium">{session.user.username}</span>}
-            </span>
+            )}
             <button
               type="button"
               onClick={handleLogout}
               disabled={loggingOut}
-              title="Ieși din cont"
+              title={collapsed ? `${session.user.username} — Ieși din cont` : "Ieși din cont"}
               aria-label="Ieși din cont"
-              className="shrink-0 rounded-lg p-1.5 text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
+              className="shrink-0 rounded-lg p-1 text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
             >
               {loggingOut ? <Spinner /> : (
-                <span className="material-symbols-outlined text-[18px]">{ACTION_ICONS.logout}</span>
+                <span className="material-symbols-outlined text-[20px]">{ACTION_ICONS.logout}</span>
               )}
             </button>
           </div>
