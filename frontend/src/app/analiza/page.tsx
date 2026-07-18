@@ -5,11 +5,12 @@ import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/shared/store";
 import { donutSegments, formatMoney, timelinePoints, totalEstimated } from "@/shared/functions";
 import { ItemStatus } from "@/shared/types";
-import { ACTION_ICONS, ANALYTICS_ICONS } from "@/shared/icons";
+import { ACTION_ICONS, ANALYTICS_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
 import DashboardSummaryCard, {
   SummaryAccentFooter,
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
+import EmptyState from "@/components/EmptyState";
 import { formatMonthLabel } from "./dates";
 
 /** Padding vertical al viewBox-ului (0 0 800 200) pt. graficul de evoluție — nu chiar marginile, ca linia să nu atingă marginile. */
@@ -136,8 +137,20 @@ export default function AnalizaPage() {
         />
       </div>
 
+      {rooms.length === 0 && (
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-10">
+          <EmptyState
+            icon={TECHNICAL_ICONS.addRoomEmpty}
+            title="Niciun grafic încă"
+            description="Adaugă camere și elemente de cumpărat ca să vezi aici distribuția costurilor și evoluția cheltuielilor."
+            actionLabel="Mergi la Configurare"
+            actionHref="/configurare"
+          />
+        </div>
+      )}
+
       {/* Desktop — bento grid, vezi „Analiză Bugetară - Meniu Restrâns Premium v2" */}
-      <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
+      <div className={`mx-auto ${rooms.length === 0 ? "hidden" : "hidden md:block"} max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-10`}>
         {/* Grafice */}
         <div className="grid grid-cols-12 gap-6">
           {/* Evoluția Cheltuielilor — date REALE, pe luna cumpărării (Problema 3 din audit). */}
@@ -448,7 +461,7 @@ export default function AnalizaPage() {
       </div>
 
       {/* Mobil — vezi „Analiză Bugetară - Mobile Premium Black Theme" (fără bottom nav, se face în Flutter) */}
-      <div className="mx-auto max-w-md space-y-6 px-4 py-6 md:hidden">
+      <div className={`space-y-6 px-4 py-6 ${rooms.length === 0 ? "hidden" : "md:hidden"}`}>
         {/* Grafice */}
         <section className="space-y-3">
           <div className="rounded-xl border border-line bg-surface p-5">

@@ -12,6 +12,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import PageHeader from "@/components/PageHeader";
 import SortableTh from "@/components/SortableTh";
 import Spinner from "@/components/Spinner";
+import EmptyState from "@/components/EmptyState";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import {
@@ -23,7 +24,7 @@ import {
 } from "@/shared/functions";
 import { useSortableTable } from "@/shared/useSortableTable";
 import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
-import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
+import { ACTION_ICONS, ROOM_TYPE_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
 import { DeleteTarget } from "./DeleteTarget";
 import { ItemDrawerState } from "./ItemDrawerState";
 import { ItemDetailsState } from "./ItemDetailsState";
@@ -297,6 +298,15 @@ export default function ElementePage() {
 
         {/* Camere */}
         <div className="space-y-6">
+          {rooms.length === 0 && (
+            <EmptyState
+              icon={TECHNICAL_ICONS.addRoomEmpty}
+              title="Nicio cameră adăugată încă"
+              description="Adaugă prima cameră ca să începi să urmărești elementele de cumpărat și bugetul lor."
+              actionLabel="+ Adaugă Cameră"
+              onAction={() => setRoomDrawerOpen(true)}
+            />
+          )}
           {rooms.map((room) => {
             const allRoomItems = itemsForRoom(items, room.id);
             const roomItems = itemsForRoom(visibleItems, room.id);
@@ -654,6 +664,15 @@ export default function ElementePage() {
 
         {/* Camere — acordeon */}
         <div className="space-y-3">
+          {rooms.length === 0 && (
+            <EmptyState
+              icon={TECHNICAL_ICONS.addRoomEmpty}
+              title="Nicio cameră adăugată încă"
+              description="Adaugă prima cameră ca să începi să urmărești elementele de cumpărat."
+              actionLabel="+ Adaugă Cameră"
+              onAction={() => setRoomDrawerOpen(true)}
+            />
+          )}
           {rooms
             .filter((room) => !mobileFilterRoomId || room.id === mobileFilterRoomId)
             .map((room) => {

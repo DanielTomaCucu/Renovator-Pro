@@ -25,6 +25,7 @@ import DashboardSummaryCard, {
   SummaryAccentFooter,
   SummaryProgressFooter,
 } from "@/components/DashboardSummaryCard";
+import EmptyState from "@/components/EmptyState";
 
 type CentralizatorSortKey =
   | "name"
@@ -197,6 +198,15 @@ export default function CentralizatorPage() {
       {/* Desktop — vezi „Tabel Centralizator - Meniu Restrâns Premium" */}
       <div className="mx-auto hidden max-w-7xl space-y-8 px-4 py-6 sm:px-6 md:block lg:px-10">
         {/* Tabel */}
+        {items.length === 0 ? (
+          <EmptyState
+            icon={CENTRALIZATOR_ICONS.tabelDetaliat}
+            title="Niciun element în tabel încă"
+            description="Adaugă camere și elemente de cumpărat din pagina „Elemente” — tabelul centralizator se completează automat."
+            actionLabel="Mergi la Elemente"
+            actionHref="/elemente"
+          />
+        ) : (
         <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
           <div className="flex items-center justify-between border-b border-line bg-surface px-6 py-4 sm:px-8">
             <div className="flex items-center gap-3">
@@ -407,6 +417,7 @@ export default function CentralizatorPage() {
             </table>
           </div>
         </div>
+        )}
 
         {/* Acțiuni */}
         <div className="flex flex-col items-center justify-between gap-6 rounded-xl border border-line bg-surface p-6 shadow-sm sm:p-8 md:flex-row">
@@ -428,6 +439,15 @@ export default function CentralizatorPage() {
       {/* Mobil — vezi „Centralizator Costuri - Mobile Table View" (fără bottom nav, se face în Flutter) */}
       <div className="pb-40 md:hidden">
         <div className="px-4 py-4">
+          {items.length === 0 && (
+            <EmptyState
+              icon={CENTRALIZATOR_ICONS.tabelDetaliat}
+              title="Niciun element în tabel încă"
+              description="Adaugă camere și elemente de cumpărat din pagina „Elemente”."
+              actionLabel="Mergi la Elemente"
+              actionHref="/elemente"
+            />
+          )}
           {/* Secțiuni per cameră — acordeon cu tabel scrollabil orizontal */}
           <div className="mt-4 flex flex-col gap-6">
             {rooms.map((room) => {
