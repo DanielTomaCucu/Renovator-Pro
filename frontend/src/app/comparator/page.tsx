@@ -57,11 +57,11 @@ export default function ComparatorPage() {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="basis-full font-heading text-lg font-bold text-primary md:hidden">Comparator Oferte</h1>
           {rooms.length > 1 && (
-            <div className="flex flex-1 flex-wrap items-center justify-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1">
               <button
                 type="button"
                 onClick={() => setRoomFilter("all")}
-                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
                   roomFilter === "all"
                     ? "border-primary bg-primary text-white"
                     : "border-line text-muted hover:bg-surface-low"
@@ -74,7 +74,7 @@ export default function ComparatorPage() {
                   key={r.id}
                   type="button"
                   onClick={() => setRoomFilter(r.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
                     roomFilter === r.id
                       ? "border-primary bg-primary text-white"
                       : "border-line text-muted hover:bg-surface-low"

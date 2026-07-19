@@ -95,7 +95,7 @@ export default function ProjectSharingCard() {
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-      <div className="border-b border-line bg-surface-low/50 p-6">
+      <div className="border-b border-line bg-surface p-6">
         <div className="mb-2 flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">{DOCUMENT_ICONS.share}</span>
           <h3 className="font-heading text-lg font-bold text-primary">Partajare proiect</h3>

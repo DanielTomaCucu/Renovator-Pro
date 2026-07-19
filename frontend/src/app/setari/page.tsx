@@ -122,7 +122,7 @@ export default function SetariPage() {
 
         {/* Detalii Proiect — titlu + buget total, editabile (Problema 5 din audit). */}
         <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-          <div className="border-b border-line bg-surface-low/50 p-6">
+          <div className="border-b border-line bg-surface p-6">
             <div className="mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">
                 {SETTINGS_ICONS.verifiedUser}
@@ -185,7 +185,7 @@ export default function SetariPage() {
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
           {/* Configurare Monedă */}
           <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm lg:col-span-2">
-            <div className="border-b border-line bg-surface-low/50 p-6">
+            <div className="border-b border-line bg-surface p-6">
               <div className="mb-2 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">
                   {SETTINGS_ICONS.currencyExchange}

@@ -10,9 +10,10 @@ import ComparisonGroupStatusChip from "@/components/ComparisonGroupStatusChip";
 import { useStore } from "@/shared/store";
 import { formatMoney, safeHttpUrl } from "@/shared/functions";
 import { ComparisonGroupStatus, Offer } from "@/shared/types";
-import { ACTION_ICONS, COMPARATOR_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
+import { COMPARATOR_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import Spinner from "@/components/Spinner";
+import Drawer from "@/components/Drawer";
 import OfferCard from "./OfferCard";
 import OfferFormDrawer from "./OfferFormDrawer";
 import OfferGallery from "./OfferGallery";
@@ -174,23 +175,12 @@ export default function ComparisonGroupDetailPage() {
         </div>
       )}
 
-      {viewOffer && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setViewOffer(null)} aria-hidden />
-          <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-[24px] bg-surface p-6 shadow-2xl sm:rounded-lg sm:shadow-xl">
-            <button
-              type="button"
-              onClick={() => setViewOffer(null)}
-              aria-label="Închide"
-              className="icon-btn absolute right-4 top-4 rounded-full p-1 text-muted hover:bg-surface-low"
-            >
-              <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.close}</span>
-            </button>
-
+      <Drawer open={!!viewOffer} title={viewOffer?.name || "Detalii ofertă"} onClose={() => setViewOffer(null)}>
+        {viewOffer && (
+          <>
             <div className="space-y-3">
               <OfferGallery images={viewOffer.images} />
 
-              <h2 className="pr-8 font-heading text-lg font-bold text-primary">{viewOffer.name || "Fără nume"}</h2>
               {viewOffer.store && <p className="text-sm font-medium text-muted">{viewOffer.store}</p>}
 
               <div className="flex items-baseline justify-between border-t border-line pt-3">
@@ -224,9 +214,9 @@ export default function ComparisonGroupDetailPage() {
                 <p className="whitespace-pre-wrap border-t border-line pt-3 text-sm text-muted">{viewOffer.notes}</p>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Drawer>
     </div>
   );
 }
