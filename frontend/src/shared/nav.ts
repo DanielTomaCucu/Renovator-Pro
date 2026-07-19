@@ -12,5 +12,11 @@ export const mainNav = [
   { href: "/analiza", label: "Grafice Buget", icon: NAV_ICONS.analiza },
 ];
 
-/** Link secundar (Setări) — doar în footer-ul sidebar-ului desktop și dropdown-ul mobil, NU în bottom nav (4 tab-uri fixe, fără loc pentru un al 5-lea). */
-export const secondaryNav = { href: "/setari", label: "Setări", icon: NAV_ICONS.setari };
+/**
+ * Linkuri secundare (Comparator Oferte, Setări) — doar în footer-ul sidebar-ului desktop și dropdown-ul
+ * mobil, NU în bottom nav (4 tab-uri fixe din `mainNav`, fără loc pentru mai multe).
+ */
+export const secondaryNav = [
+  { href: "/comparator", label: "Comparator Oferte", icon: NAV_ICONS.comparator },
+  { href: "/setari", label: "Setări", icon: NAV_ICONS.setari },
+];

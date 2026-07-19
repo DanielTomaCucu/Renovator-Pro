@@ -54,7 +54,7 @@
   unitPrice: number;
   productUrl?: string;
   imageUrl?: string;
-  origin: ItemOrigin;         // enum: "Manual" | "Din Configurare" — proveniența elementului
+  origin: ItemOrigin;         // enum: "Manual" | "Din Configurare" | "Din Comparator" — proveniența elementului
   createdAt: string;          // ISO 8601 — setat de server la creare, imutabil, NU trimis de client
   purchasedAt?: string;       // ISO 8601 — setat de server la tranziția spre Cumpărat, absent dacă nu a fost cumpărat încă
 }
@@ -73,6 +73,57 @@ unei camere (`Room.floorMaterial`/`floorArea`/`perimeter`/`wallTiling`) — vezi
 recreează reconcilierea la fiecare `PATCH /api/rooms/{id}`: elementele existente cu `origin: "Din Configurare"`
 pentru acea cameră își păstrează `id`/`unitPrice`/`status`/`createdAt`/`purchasedAt`, doar `name`/`quantity` se
 recalculează; cele fără corespondent nou se șterg; elementele `origin: "Manual"` nu sunt niciodată atinse de acest proces.
+
+### `ComparisonGroup` + `Offer` — Comparator de Oferte
+
+**Implementat.** Un grup de comparație = un produs de decis pentru o cameră (ex. „Gresie baie"), cu N
+oferte comparate. Vezi `docs/cerinte-comparator-oferte.md` pentru descrierea funcțională completă.
+
+```ts
+// ComparisonGroup
+{
+  id: string;
+  roomId: string;
+  name: string;
+  materialType: MaterialType;
+  status: ComparisonGroupStatus;  // enum: "În analiză" | "Decis"
+  chosenOfferId?: string;         // setat DOAR de POST .../choose
+  createdItemId?: string;         // idem — Item-ul creat la alegere (rămâne chiar dacă itemul e șters ulterior)
+  createdAt: string;              // ISO 8601, server-side
+  offers: Offer[];                // nested — un singur GET pt. toată pagina /comparator
+}
+
+// Offer — TOATE câmpurile descriptive OPȚIONALE (fluxul principal: „fac poze în magazin, completez restul acasă")
+{
+  id: string;
+  groupId: string;
+  name?: string;
+  store?: string;
+  unitPrice?: number;
+  quantity?: number;
+  productUrl?: string;
+  images: string[];       // max 8 — fiecare URL http(s) SAU `data:image/...;base64,...` (poză din telefon, comprimată client-side), ca `Item.imageUrl`. NICIODATĂ absent — `[]` dacă nu are poze.
+  notes?: string;
+  createdAt: string;      // ISO 8601, server-side
+}
+```
+
+⚠️ **Deviere deliberată de la designul inițial:** pozele NU trăiesc într-un tabel separat cu upload
+multipart/BYTEA — sunt string-uri simple (URL sau data-URI), refolosind exact convenția deja existentă
+pt. `Item.imageUrl` (validare `ItemUrlValidation`, compresie canvas client-side înainte de encodare —
+`app/comparator/[groupId]/compressImage.ts`). Mai simplu, consistent cu restul aplicației, fără infra nouă.
+
+**`POST /api/comparison-groups/{id}/choose`** — body `{offerId, quantity?}`, response `{group, item}`.
+Creează un `Item` în camera grupului: `name` = `offer.name` ?? numele grupului; `source` = `offer.store` ?? `""`;
+`unitPrice` = `offer.unitPrice` ?? 0; `quantity` = din body, altfel `offer.quantity`, altfel 1; `imageUrl` =
+prima poză de tip URL din `offer.images` (pozele data-URI nu se copiază); `origin: "Din Comparator"`.
+Re-alegerea pe un grup deja Decis creează un ALT item (nu îl suprascrie pe cel vechi) și actualizează
+`chosenOfferId`/`createdItemId`. Oferta trebuie să aparțină grupului indicat, altfel `400`.
+
+**Conversia de monedă** (`POST /api/projects/{id}/currency`) convertește și `offers.unitPrice` ale
+proiectului (ofertele fără preț se sar). **Ștergerea unei camere** șterge cascade și grupurile ei + ofertele.
+**Ștergerea unui grup** șterge ofertele lui, dar NU atinge `Item`-ul deja creat din el (`createdItemId` rămâne
+în istoric, poate ajunge să pointeze spre un item de mult șters — nu e problemă, e doar istoric).
 
 ## Endpoint-uri planificate
 
@@ -94,6 +145,14 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 | `convertCurrency(target, rate)` | `/api/projects/{id}/currency` | `POST` | Conversie reală a TUTUROR sumelor proiectului — vezi secțiunea dedicată mai jos |
 | `summary` (store) | `/api/projects/{id}/summary` | `GET` | Agregările calculate server-side — vezi secțiunea „Agregări server-side" |
 | `spendingTimeline` (store) | `/api/projects/{id}/spending-timeline` | `GET` | Serie temporală de cheltuieli cumulate — vezi secțiunea dedicată mai jos |
+| `comparisonGroups` (store) | `/api/projects/{id}/comparison-groups` | `GET` | `ComparisonGroup[]`, cu `offers` nested — vezi secțiunea „Comparator de Oferte" |
+| `addComparisonGroup(roomId, data)` | `/api/rooms/{roomId}/comparison-groups` | `POST` | Body: `{name, materialType}`. Response: `ComparisonGroup` (offers `[]`) |
+| `updateComparisonGroup(id, patch)` | `/api/comparison-groups/{id}` | `PATCH` | Body: `Partial<{name, materialType, roomId}>` |
+| `deleteComparisonGroup(id)` | `/api/comparison-groups/{id}` | `DELETE` | Șterge și ofertele (cascade); NU atinge `Item`-ul creat din grup |
+| `addOffer(groupId, data)` | `/api/comparison-groups/{groupId}/offers` | `POST` | Body: `Omit<Offer, "id"\|"groupId"\|"createdAt">` — TOATE câmpurile opționale, `{}` valid |
+| `updateOffer(id, patch)` | `/api/offers/{id}` | `PATCH` | `null` explicit pe un câmp = șterge valoarea (ca la `Room`) |
+| `deleteOffer(id)` | `/api/offers/{id}` | `DELETE` | Dacă era `chosenOfferId`, referința devine `null` (statusul grupului rămâne Decis) |
+| `chooseOffer(groupId, offerId, quantity?)` | `/api/comparison-groups/{groupId}/choose` | `POST` | Creează `Item` (origin `Din Comparator`), marchează grupul Decis — vezi secțiunea dedicată |
 
 ## Autentificare (Faza 5)
 

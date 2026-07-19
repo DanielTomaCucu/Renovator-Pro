@@ -41,7 +41,14 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 
 ### Funcții locale de pagină
 
-_(niciuna momentan — `dimensions.ts` a fost promovat în `shared/functions/` de îndată ce a devenit necesar și din `store.tsx`, nu doar din pagina `configurare`)_
+| Funcție | Fișier / Locație | Ce face | Folosită în |
+|---|---|---|---|
+| `offerPriceRange(offers)` | `app/comparator/groupOffers.ts` (local) | interval min–max al ofertelor CU preț completat (null dacă niciuna) | `/comparator` (carduri de grup) |
+| `cheapestOfferId(offers)` | `app/comparator/[groupId]/offerCompare.ts` (local) | id-ul ofertei cu cel mai mic preț, doar între cele CU preț | `/comparator/[groupId]` (badge „Cel mai bun preț") |
+| `compressImage(file, maxSide?, quality?)` | `app/comparator/[groupId]/compressImage.ts` (local) | comprimă o poză (canvas, redimensionare + reencodare JPEG) înainte de a o encoda ca data URI | `OfferFormDrawer` |
+| `detectStoreName()` | `app/comparator/[groupId]/detectStore.ts` (local) | geolocation → reverse-geocoding Nominatim, best-effort (null la refuz/timeout) | `OfferFormDrawer` (buton „Detectează magazinul") |
+
+_(`dimensions.ts` a fost promovat în `shared/functions/` de îndată ce a devenit necesar și din `store.tsx`, nu doar din pagina `configurare`)_
 
 ## Registru de tipuri (`src/shared/types/`, un fișier per tip)
 
@@ -49,7 +56,7 @@ _(niciuna momentan — `dimensions.ts` a fost promovat în `shared/functions/` d
 |---|---|---|
 | `RoomType` | `RoomType.ts` | enum |
 | `ItemStatus` | `ItemStatus.ts` | enum |
-| `ItemOrigin` | `ItemOrigin.ts` | enum (Manual / Configurare — proveniența unui element) |
+| `ItemOrigin` | `ItemOrigin.ts` | enum (Manual / Configurare / Comparator — proveniența unui element) |
 | `MaterialType` | `MaterialType.ts` | enum (extins cu `Plinta`, `Tapet`, `GlafFereastra`) |
 | `Currency` | `Currency.ts` | enum |
 | `FlooringType` | `FlooringType.ts` | enum (Parchet Laminat / Gresie / Mochetă) |
@@ -68,8 +75,11 @@ _(niciuna momentan — `dimensions.ts` a fost promovat în `shared/functions/` d
 | `Project` | `Project.ts` | interface (extins cu `totalArea?: number`) |
 | `ProjectSummary` | `ProjectSummary.ts` | interface (agregări server-side: `totalEstimated`, `totalSpent`, `budgetRemaining`, `purchaseProgress`, `boughtCount`, `costPerRoom: RoomCost[]`, `costPerCategory: CategoryCost[]`, `technical: TechnicalSummary`) |
 | `SpendingTimelinePoint` | `SpendingTimelinePoint.ts` | interface (`month: string` "yyyy-MM", `cumulativeSpent: number`) — serie cumulativă pe luna cumpărării |
-| `RenovationStore` | `RenovationStore.ts` | interface |
+| `RenovationStore` | `RenovationStore.ts` | interface (extins cu `comparisonGroups` + 7 mutații ale Comparatorului de Oferte) |
 | `DonutSegment` | `DonutSegment.ts` | interface |
+| `ComparisonGroupStatus` | `ComparisonGroupStatus.ts` | enum (În analiză / Decis) |
+| `Offer` | `Offer.ts` | interface (o ofertă dintr-un grup de comparație — TOATE câmpurile descriptive opționale; `images: string[]`, URL sau data-URI, ca `Item.imageUrl`) |
+| `ComparisonGroup` | `ComparisonGroup.ts` | interface (grup de comparație pt. o cameră, cu `offers: Offer[]` nested) |
 
 Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur loc):
 
@@ -1165,3 +1175,55 @@ de șantier). Toate implementate în aceeași sesiune, cu teste + verificare man
 `app/register/page.tsx`, `components/ItemDetailsDrawer.tsx`; `docs/api-contract.md`.
 
 **Branch:** `040-audit-calcule-securitate`.
+
+---
+
+### 2026-07-19 — Comparator de Oferte (pagină nouă `/comparator`)
+
+Implementat `docs/cerinte-comparator-oferte.md` complet (backend + frontend), cu o singură deviere
+deliberată de la document: **pozele sunt `string[]` (URL http(s) sau `data:image/...;base64,...`, ca
+`Item.imageUrl`), NU un tabel separat `offer_images` cu BYTEA + upload multipart.** Motiv: codul avea deja
+pattern-ul „poză din telefon → FileReader → data URL" (`elemente/page.tsx`, Adăugare Rapidă) — l-am
+extins cu compresie canvas (`compressImage.ts`, lipsă înainte) în loc să introduc o arhitectură de storage
+nouă, nefolosită nicăieri altundeva în aplicație.
+
+**Backend** (arhitectură hexagonală, oglinda Room/Item): `ComparisonGroup` (roomId, name, materialType,
+status, chosenOfferId?, createdItemId?) + `Offer` (groupId + TOATE câmpurile descriptive opționale —
+niciun câmp obligatoriu, fluxul principal e „fac poze în magazin, completez restul acasă"). `V6__comparator.sql`.
+Endpoint-uri: `GET /api/projects/{id}/comparison-groups` (nested, un singur GET pt. toată pagina),
+`POST /api/rooms/{roomId}/comparison-groups`, `PATCH`/`DELETE /api/comparison-groups/{id}`,
+`POST .../offers`, `PATCH`/`DELETE /api/offers/{id}`, `POST /api/comparison-groups/{id}/choose`
+(creează `Item` cu `origin: "Din Comparator"`, fallback-uri explicite pe fiecare câmp opțional lipsă;
+re-alegerea suprascrie `chosenOfferId`/`createdItemId` fără să șteargă itemul vechi). `ItemOrigin` +
+`COMPARATOR`. Conversia de monedă (`ConvertProjectCurrencyService`) și ștergerea de cameră (`DeleteRoomService`)
+extinse să acopere și grupurile/ofertele. Toate câmpurile ofertei folosesc `Patch<T>`/`JsonNullable` la
+PATCH (ca la `Room`), ca userul să poată goli explicit un preț introdus greșit. 126 teste (unit + controller
++ `SchemaMigrationTest` pe Postgres real via Testcontainers).
+
+**Frontend:** tipuri noi (`ComparisonGroupStatus`, `Offer`, `ComparisonGroup`), `RenovationStore` +
+`store.tsx` extinse cu `comparisonGroups` + 7 mutații. Pagina listă `/comparator` (filtru pe cameră,
+`DashboardSummaryCard`, carduri cu interval de preț). Pagina de detaliu `/comparator/[groupId]`:
+oferte una lângă alta (desktop) / stivuite (mobil) prin `flex-col sm:flex-row sm:flex-wrap` — un singur
+DOM tree responsive, ca `Drawer`/`ConfirmDialog`, nu randare dublă. `OfferFormDrawer` — niciun câmp
+obligatoriu, poze prin capture foto (compresie client-side) SAU URL, buton „📍 Detectează magazinul"
+(geolocation + reverse-geocoding Nominatim, best-effort, coordonatele nu se salvează). Navigare: `secondaryNav`
+din `shared/nav.ts` a devenit array (`Comparator Oferte` + `Setări`) — bottom nav mobil rămâne neschimbat
+(4 tab-uri fixe din `mainNav`).
+
+**Bug prins la verificarea vizuală (Browser pane):** backend-ul (Jackson) serializează câmpurile opționale
+absente ca `null` explicit, nu le omite — dar `Offer`/`ComparisonGroup` le declară `T | undefined` (regula
+de aur #1). Fără normalizare, un preț neintrodus (`null`) trecea verificări `unitPrice !== undefined` ca
+valid, iar `formatMoney(null, …)` afișa „0 EUR" (Intl coercitivizează `null` la 0) — inclusiv badge-ul fals
+„Cel mai bun preț" pe o ofertă fără preț. Fix: `normalizeOffer`/`normalizeComparisonGroup` în `store.tsx`,
+aplicate la fiecare punct unde datele intră din API (load inițial, add/update/choose).
+
+**Fișiere atinse:** backend — 56 fișiere noi (`domain/model/{ComparisonGroup,ComparisonGroupStatus,Offer}.java`,
+`application/{port,usecase}/*ComparisonGroup*.java`, `*Offer*.java`, `adapter/**/*ComparisonGroup*`,
+`*Offer*`, `V6__comparator.sql`), + `ItemOrigin.java`, `DtoConversionSupport.java`, `GlobalExceptionHandler.java`,
+`DeleteRoomService.java`, `ConvertProjectCurrencyService.java`, teste; frontend —
+`shared/types/{ComparisonGroupStatus,Offer,ComparisonGroup}.ts` (noi), `shared/types/{ItemOrigin,RenovationStore}.ts`,
+`shared/store.tsx`, `shared/{nav.ts,icons.ts}`, `components/{Sidebar,OriginBadge}.tsx`,
+`components/ComparisonGroupStatusChip.tsx` (nou), `app/comparator/**` (pagină nouă completă).
+`docs/api-contract.md` actualizat cu endpoint-urile noi.
+
+**Branch:** `041-comparator-oferte`.

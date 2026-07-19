@@ -1,8 +1,15 @@
 # Cerințe — Comparator de Oferte (pagină nouă `/comparator`)
 
-> Status: 🟡 **de implementat.** Funcționalitate nouă: userul compară mai multe oferte (magazine/prețuri/poze)
-> pentru un produs de renovare (ex. „gresie baie"), pe camere, și transformă oferta aleasă într-un element
-> de cumpărat. De citit împreună cu `docs/api-contract.md` și `CLAUDE.md` (design system, workflow Git).
+> Status: ✅ **implementat** (branch `041-comparator-oferte`, `docs/progress.md` → 2026-07-19). Funcționalitate
+> nouă: userul compară mai multe oferte (magazine/prețuri/poze) pentru un produs de renovare (ex. „gresie baie"),
+> pe camere, și transformă oferta aleasă într-un element de cumpărat. De citit împreună cu `docs/api-contract.md`
+> (secțiunea „ComparisonGroup + Offer") și `CLAUDE.md` (design system, workflow Git).
+>
+> ⚠️ **Deviere de la documentul original:** pozele NU folosesc tabelul separat `offer_images` (BYTEA +
+> upload multipart) descris mai jos — sunt string-uri simple (URL http(s) sau `data:image/...;base64,...`,
+> comprimate client-side prin canvas), refolosind convenția deja existentă pt. `Item.imageUrl`. Secțiunea
+> „Poze — upload real din telefon" de mai jos rămâne ca istoric al deciziei inițiale; implementarea reală
+> e mai simplă și consistentă cu restul aplicației — vezi `docs/api-contract.md` pentru shape-ul final.
 
 ## Descriere funcțională
 
