@@ -47,14 +47,17 @@ public interface UpdateRoomUseCase {
             Patch<RoomShape> wallShape,
             Patch<WallTiling> wallTiling,
             Patch<WallFinish> wallFinish,
-            Patch<Map<Wall, RoomWindow>> windows
+            Patch<Map<Wall, RoomWindow>> windows,
+            Patch<Boolean> ceilingPaint,
+            Patch<Boolean> underfloorHeating
     ) {
         /** true dacă patch-ul atinge orice câmp de configurare tehnică — declanșează reconcilierea elementelor auto-generate. */
         public boolean touchesTechnicalFields() {
             return floorMaterial.isPresent() || floorArea.isPresent() || perimeter.isPresent()
                     || tileSize.isPresent() || installationType.isPresent() || doors.isPresent()
                     || baseboardHeight.isPresent() || wallShape.isPresent() || wallTiling.isPresent()
-                    || wallFinish.isPresent() || windows.isPresent();
+                    || wallFinish.isPresent() || windows.isPresent() || ceilingPaint.isPresent()
+                    || underfloorHeating.isPresent();
         }
     }
 }

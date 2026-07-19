@@ -51,7 +51,9 @@ public class UpdateRoomService implements UpdateRoomUseCase {
                 command.wallShape().resolve(existing.wallShape()),
                 command.wallTiling().resolve(existing.wallTiling()),
                 command.wallFinish().resolve(existing.wallFinish()),
-                command.windows().resolve(existing.windows())
+                command.windows().resolve(existing.windows()),
+                command.ceilingPaint().resolve(existing.ceilingPaint()),
+                command.underfloorHeating().resolve(existing.underfloorHeating())
         );
 
         Room saved = roomRepository.update(patched);

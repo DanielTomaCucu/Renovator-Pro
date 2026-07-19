@@ -34,6 +34,16 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `windowArea(room, wall)` | `shared/functions/dimensions.ts` | aria ferestrei unui perete dat (0 dacă nu are fereastră) | intern în `wallTilingArea`/`wallFinishArea` |
 | `windowTrimLength(room)` | `shared/functions/dimensions.ts` | lungime totală de glaf/bordură pt. toate ferestrele (Σ perimetru) + 5% pierdere | intern (`computeRoomDimensions`) |
 | `computeRoomDimensions(room)` | `shared/functions/dimensions.ts` | breakdown complet de necesar material (oglinda `RoomDimensionsCalculator.java`) — PREVIEW client la editare + fallback; sursa de adevăr e `room.dimensions` de la server | `configurare` (RoomTechnicalCard preview), `ApartmentPdfDocument` (fallback), `roomCalcRows.ts` |
+| `netWallTilingArea(room)` | `shared/functions/dimensions.ts` | suprafață NETĂ de faianță (fără pierdere de tăiere) — pt. amorsă/adeziv/chit, nu plăcile tăiate | intern (`wallTilingArea`, `tilingPrimerLiters`, `wallAdhesiveKg`, `groutKg`) |
+| `netFloorTilingArea(room)` | `shared/functions/dimensions.ts` | suprafață NETĂ de pardoseală gresie (= `floorArea`, doar la Gresie) | intern (`tilingPrimerLiters`, `floorAdhesiveKg`, `groutKg`) |
+| `ceilingPaintArea(room)` | `shared/functions/dimensions.ts` | aria zugrăvirii tavanului (`floorArea × 1.10`), activată explicit, orice pardoseală — A.1 | intern (`computeRoomDimensions`, `paintPrimerLiters`), `roomCalcRows.ts` |
+| `paintAboveTilingArea(room)` | `shared/functions/dimensions.ts` | aria vopselei deasupra faianței, doar Gresie cu `roomHeight > tileHeight` — A.2 | intern (`computeRoomDimensions`, `paintPrimerLiters`), `roomCalcRows.ts` |
+| `paintPrimerLiters(room)` | `shared/functions/dimensions.ts` | amorsă sub zugrăveală (pereți+tavan+deasupra faianței), litri rotunjiți ↑ — B.4 | `computeRoomDimensions`, `roomCalcRows.ts` |
+| `tilingPrimerLiters(room)` | `shared/functions/dimensions.ts` | amorsă sub adezivul de plăci (arii nete pardoseală+faianță), litri rotunjiți ↑ — B.5 | `computeRoomDimensions`, `roomCalcRows.ts` |
+| `floorAdhesiveKg(room)` / `wallAdhesiveKg(room)` | `shared/functions/dimensions.ts` | adeziv de plăci (kg) după `TileSize`, doar Gresie/faianță — C.6/C.7 | `computeRoomDimensions`, `adhesiveBags`, `roomCalcRows.ts` |
+| `adhesiveBags(room)` | `shared/functions/dimensions.ts` | saci de 25kg (floor+wall adeziv, produs comun), ceil — C.8 | `computeRoomDimensions`, `roomCalcRows.ts` |
+| `groutKg(room)` | `shared/functions/dimensions.ts` | chit de rosturi (pardoseală+faianță), kg rotunjit ↑ — C.9 | `computeRoomDimensions`, `roomCalcRows.ts` |
+| `underlayArea(room)` | `shared/functions/dimensions.ts` | folie sub parchet laminat (mp, ceil), doar `FlooringType.ParchetLaminat` — D.10 | `computeRoomDimensions`, `roomCalcRows.ts` |
 | `buildRoomCalcRows(room, dims)` | `app/configurare/roomCalcRows.ts` (local) | rândurile din „Calcule Detaliate" (label/valoare/formulă/math) din `dims` (server sau preview) | `RoomTechnicalCard`, `ApartmentPdfDocument` |
 | `timelinePoints(data)` | `shared/functions/charts.ts` | normalizează `SpendingTimelinePoint[]` (din `spending-timeline`) în puncte {x,y}∈[0,1] pt. graficul de evoluție — geometrie de prezentare | `analiza` |
 | `useAsyncAction(action)` | `shared/useAsyncAction.ts` | hook — rulează o acțiune (mutație de store), expune `{ run, pending }` pt. spinner-ul din butoane; ignoră apeluri re-entrante, guard de unmount | `ItemFormDrawer`, `RoomFormDrawer`, `ConfirmDialog`, `elemente/page.tsx` (Adăugare Rapidă), `RoomTechnicalCard` (Salvează), `setari/page.tsx` (ambele butoane) |
@@ -1227,3 +1237,58 @@ aplicate la fiecare punct unde datele intră din API (load inițial, add/update/
 `docs/api-contract.md` actualizat cu endpoint-urile noi.
 
 **Branch:** `041-comparator-oferte`.
+
+---
+
+### 2026-07-19 — Zugrăveli complete + consumabile de montaj în Configurator
+
+Implementat `docs/cerinte-zugraveli.md` complet (backend + frontend): tavan zugrăvit + vopsea deasupra
+faianței (la Gresie) și consumabilele de montaj lipsă: amorsă (zugrăveală + sub placări, DOUĂ elemente
+distincte cu același `MaterialType.Amorsa`), adeziv de plăci, chit de rosturi, folie sub parchet
+(XPS/încălzire în pardoseală). Toate devin elemente auto-generate în `/elemente`, ca gresia/vopseaua azi.
+
+**Model de date:** `WallTiling` primește `roomHeight?`/`tileSize?` (JSONB, fără migrare SQL — record cu
+constructor de compatibilitate pt. call site-urile vechi cu 3 argumente). `Room` primește `ceilingPaint?`/
+`underfloorHeating?` (`V7__consumabile.sql`, `ceiling_paint`/`underfloor_heating BOOLEAN`).
+
+**`RoomDimensionsCalculator`:** 10 formule noi (A.1–D.10, constante cu comentariu-sursă lângă cele
+existente) + două helpere interne (`netWallTilingArea`/`netFloorTilingArea`) — ariile NETE (fără pierderea
+de tăiere) sunt expuse separat de cele cu pierdere, nu derivate prin împărțire înapoi. `paintLiters` devine
+agregatul camerei (pereți + tavan + deasupra faianței), nu doar vopseaua pereților.
+
+**Bug prins înainte de a ajunge în producție (nu în UI, în design-ul reconcilierii):** `AutoItemReconciler`
+matcha elementele existente cu drafturile proaspete DOAR după `materialType` (`findFirst`, fără să consume
+din pool) — sigur cât timp fiecare `MaterialType` apărea o singură dată per cameră. Amorsă zugrăveală +
+Amorsă placări introduc DOUĂ drafturi cu același `MaterialType.Amorsa` simultan — fără fix, al doilea
+draft ar fi „furat" id-ul primului existent, coliziune la salvare (un element pierdut silențios). Fix:
+`reconcile()` consumă elementele existente dintr-un pool mutabil (`unmatchedExisting.remove(existing)`),
+nu doar `findFirst` pe lista originală — fiecare element existent se potrivește cu UN SINGUR draft.
+
+**Elementul `Vopsea`:** singurul element auto-generat cu unitate ≠ mp/ml — cantitatea e în LITRI
+(`paintLiters` agregat), nu arie. Generat acum și la Gresie (tavan/deasupra faianței), nu doar Parchet/
+Mochetă. `Folie parchet` are nume dublu (XPS 3mm / încălzire în pardoseală) după `underfloorHeating`, dar
+rămâne UN SINGUR slot logic la reconciliere (același `materialType`, doar numele se recalculează).
+
+**UI (`RoomTechnicalCard`):** toggle „Zugrăvește tavanul" (orice pardoseală, cu `floorArea` completată),
+la faianță — input „Înălțime cameră (m)" + select „Mărime plăci faianță" (opțional, hint „implicit:
+Medie"), la Parchet Laminat — toggle „Încălzire în pardoseală". Panoul „Calcule Detaliate" (`roomCalcRows.ts`):
+8 rânduri noi cu formula explicită + numerele reale (inclusiv rândul „Vopsea Total" cerut explicit în
+`cerinte-zugraveli.md`: `30.0 mp × 2 straturi ÷ 11 mp/l = 5.5 l`, nu doar rezultatul).
+
+**Verificat manual în browser** (Baie, Gresie 6mp + tavan + faianță 2 pereți, plăci Mari, roomHeight 2.7m):
+toate cele 6 elemente auto-generate apar corect în `/elemente` cu cantitățile calculate server-side
+(Gresie 6.6mp, Vopsea (tavan) 1.5l, Amorsă zugrăveală 1l, Amorsă placări 1l, Adeziv 1 sac, Chit 2kg);
+preview client (`computeRoomDimensions`) identic cu valorile server după salvare.
+
+**Fișiere atinse:** backend — `domain/model/{Room,WallTiling,MaterialType}.java`,
+`domain/service/{RoomDimensionsCalculator,AutoItemReconciler}.java`, `V7__consumabile.sql`,
+`adapter/in/web/dto/{RoomDimensionsDto,RoomResponse,RoomCreateRequest,RoomUpdateRequest,WallTilingDto}.java`,
+`adapter/in/web/mapper/RoomDtoMapper.java`, `adapter/out/persistence/entity/RoomEntity.java`,
+`application/port/in/{AddRoomUseCase,UpdateRoomUseCase}.java`,
+`application/usecase/{AddRoomService,UpdateRoomService}.java`, teste
+(`RoomDimensionsCalculatorTest`, `AutoItemReconcilerTest`, `UseCasesTest` — call sites actualizate la
+noile câmpuri); frontend — `shared/types/{Room,WallTiling,RoomDimensions,MaterialType}.ts`,
+`shared/functions/dimensions.ts`, `app/configurare/{RoomTechnicalCard.tsx,roomCalcRows.ts}`,
+`app/centralizator/page.tsx` (badge-uri culoare pt. cele 4 `MaterialType` noi); `docs/api-contract.md`.
+
+**Branch:** `042-cerinte-zugraveli-consumabile`.

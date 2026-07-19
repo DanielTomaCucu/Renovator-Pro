@@ -101,4 +101,10 @@ public class RoomEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "wall_finish", columnDefinition = "jsonb")
     private WallFinish wallFinish;
+
+    @Column(name = "ceiling_paint")
+    private Boolean ceilingPaint;
+
+    @Column(name = "underfloor_heating")
+    private Boolean underfloorHeating;
 }

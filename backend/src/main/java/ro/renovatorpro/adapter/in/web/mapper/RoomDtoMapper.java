@@ -40,6 +40,8 @@ public interface RoomDtoMapper {
         double baseboardLength = RoomDimensionsCalculator.baseboardLength(room);
         double windowTrimLength = RoomDimensionsCalculator.windowTrimLength(room);
         double paintArea = RoomDimensionsCalculator.wallFinishArea(room, WallFinishType.VOPSEA);
+        double ceilingPaintArea = RoomDimensionsCalculator.ceilingPaintArea(room);
+        double paintAboveTilingArea = RoomDimensionsCalculator.paintAboveTilingArea(room);
         return new RoomDimensionsDto(
                 RoomDimensionsCalculator.hasFloorConfig(room),
                 RoomDimensionsCalculator.floorMaterialNeeded(room),
@@ -51,9 +53,18 @@ public interface RoomDtoMapper {
                 windowTrimLength,
                 RoomDimensionsCalculator.totalDoorWidth(room),
                 RoomDimensionsCalculator.floorWasteRatio(room),
-                RoomDimensionsCalculator.paintLiters(paintArea),
+                RoomDimensionsCalculator.paintLiters(paintArea + ceilingPaintArea + paintAboveTilingArea),
                 RoomDimensionsCalculator.barsNeeded(baseboardLength),
-                RoomDimensionsCalculator.barsNeeded(windowTrimLength)
+                RoomDimensionsCalculator.barsNeeded(windowTrimLength),
+                ceilingPaintArea,
+                paintAboveTilingArea,
+                RoomDimensionsCalculator.paintPrimerLiters(room),
+                RoomDimensionsCalculator.tilingPrimerLiters(room),
+                RoomDimensionsCalculator.floorAdhesiveKg(room),
+                RoomDimensionsCalculator.wallAdhesiveKg(room),
+                RoomDimensionsCalculator.adhesiveBags(room),
+                RoomDimensionsCalculator.groutKg(room),
+                RoomDimensionsCalculator.underlayArea(room)
         );
     }
 
@@ -78,7 +89,9 @@ public interface RoomDtoMapper {
                 DtoConversionSupport.toPatch(request.wallShape(), DtoConversionSupport::toRoomShape),
                 DtoConversionSupport.toPatch(request.wallTiling(), this::toDomain),
                 DtoConversionSupport.toPatch(request.wallFinish(), this::toDomain),
-                DtoConversionSupport.toPatch(request.windows(), this::toWindowsMap)
+                DtoConversionSupport.toPatch(request.windows(), this::toWindowsMap),
+                DtoConversionSupport.toPatch(request.ceilingPaint()),
+                DtoConversionSupport.toPatch(request.underfloorHeating())
         );
     }
 

@@ -47,4 +47,8 @@ export interface Room {
    * (`GET .../rooms`); absent pe o cameră construită local (ex. `draft` în curs de editare). Vezi `RoomDimensions`.
    */
   dimensions?: RoomDimensions;
+  /** Zugrăvirea tavanului — activată explicit. Aria = floorArea. Disponibilă la ORICE pardoseală. */
+  ceilingPaint?: boolean;
+  /** Încălzire în pardoseală — schimbă tipul foliei de sub parchet. Doar la Parchet Laminat. */
+  underfloorHeating?: boolean;
 }

@@ -39,7 +39,9 @@ public interface AddRoomUseCase {
             RoomShape wallShape,
             WallTiling wallTiling,
             WallFinish wallFinish,
-            Map<Wall, RoomWindow> windows
+            Map<Wall, RoomWindow> windows,
+            Boolean ceilingPaint,
+            Boolean underfloorHeating
     ) {
     }
 }

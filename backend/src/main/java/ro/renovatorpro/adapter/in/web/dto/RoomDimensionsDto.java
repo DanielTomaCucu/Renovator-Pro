@@ -23,6 +23,24 @@ public record RoomDimensionsDto(
         /** Câte bare de plintă (2 ml/bară) trebuie cumpărate — CALC-8. */
         int baseboardBars,
         /** Câte bare de glaf fereastră (2 ml/bară) trebuie cumpărate — CALC-8. */
-        int windowTrimBars
+        int windowTrimBars,
+        /** mp, cu pierdere — A.1. */
+        double ceilingPaintArea,
+        /** mp, cu pierdere — A.2. */
+        double paintAboveTilingArea,
+        /** litri amorsă zugrăveală, rotunjit în sus la 1 l — B.4. */
+        double paintPrimerLiters,
+        /** litri amorsă sub placări, rotunjit în sus la 1 l — B.5. */
+        double tilingPrimerLiters,
+        /** kg adeziv pardoseală — C.6. */
+        double floorAdhesiveKg,
+        /** kg adeziv faianță — C.7. */
+        double wallAdhesiveKg,
+        /** saci 25 kg, ceil — C.8. */
+        int adhesiveBags,
+        /** kg chit rosturi, ceil — C.9. */
+        double groutKg,
+        /** mp folie parchet, ceil — D.10. */
+        double underlayArea
 ) {
 }

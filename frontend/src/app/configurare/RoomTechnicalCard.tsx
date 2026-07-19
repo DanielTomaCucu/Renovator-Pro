@@ -361,6 +361,8 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
       wallShape: draft.wallShape ?? null,
       wallTiling: draft.wallTiling ?? null,
       wallFinish: draft.wallFinish ?? null,
+      ceilingPaint: draft.ceilingPaint ?? null,
+      underfloorHeating: draft.underfloorHeating ?? null,
     });
     setOpen(false);
     setSectionsOpen({ floor: false, walls: false, windows: false, doors: false });
@@ -659,11 +661,33 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 )}
                 <IconSelectField
                   label="Tip montaj"
-                  wrapperClassName="md:col-span-2"
+                  wrapperClassName={draft.floorMaterial === FlooringType.ParchetLaminat ? "" : "md:col-span-2"}
                   value={draft.installationType ?? ""}
                   onChange={(v) => patch({ installationType: (v || undefined) as InstallationType })}
                   options={installationTypeOptions}
                 />
+                {draft.floorMaterial === FlooringType.ParchetLaminat && (
+                  <label className="flex select-none items-center gap-2 self-end pb-3 text-sm font-medium text-muted">
+                    <input
+                      type="checkbox"
+                      checked={!!draft.underfloorHeating}
+                      onChange={(e) => patch({ underfloorHeating: e.target.checked })}
+                      className="h-4 w-4 rounded border-line text-primary focus:ring-primary/20"
+                    />
+                    Încălzire în pardoseală
+                  </label>
+                )}
+                {!!draft.floorArea && (
+                  <label className="flex select-none items-center gap-2 pb-1 text-sm font-medium text-muted md:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={!!draft.ceilingPaint}
+                      onChange={(e) => patch({ ceilingPaint: e.target.checked })}
+                      className="h-4 w-4 rounded border-line text-primary focus:ring-primary/20"
+                    />
+                    Zugrăvește tavanul
+                  </label>
+                )}
               </div>
             </TechnicalSection>
 
@@ -719,6 +743,40 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                           }
                         />
                       </label>
+                      <label className="space-y-1">
+                        <span className={labelCls}>Înălțime cameră (m)</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          max={6}
+                          placeholder="ex: 2.70"
+                          className={inputCls}
+                          value={draft.wallTiling!.roomHeight ?? ""}
+                          onChange={(e) =>
+                            patch({
+                              wallTiling: {
+                                ...draft.wallTiling!,
+                                roomHeight: e.target.value ? Number(e.target.value) : undefined,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <IconSelectField
+                        label="Mărime plăci faianță"
+                        value={draft.wallTiling!.tileSize ?? ""}
+                        onChange={(v) =>
+                          patch({
+                            wallTiling: {
+                              ...draft.wallTiling!,
+                              tileSize: (v || undefined) as TileSize | undefined,
+                            },
+                          })
+                        }
+                        options={tileSizeOptions}
+                        placeholder="— implicit: Medie —"
+                      />
                     </div>
                     <div className="pt-2">
                       <RoomShapeLengthInputs
@@ -732,7 +790,8 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                     </div>
                     <p className="text-[10px] italic text-muted">
                       * Aceste dimensiuni sunt utilizate pentru calculul exact al necesarului de
-                      faianță și plintă.
+                      faianță și plintă. Înălțimea camerei (dacă e mai mare decât înălțimea de
+                      placare) activează calculul vopselei de deasupra faianței.
                     </p>
                   </>
                 </TechnicalSection>

@@ -1,6 +1,9 @@
 import { FlooringType, Room, RoomDimensions } from "@/shared/types";
 import { roomPerimeter, wallTilingWasteRatio } from "@/shared/functions/dimensions";
 
+/** Formatează un număr cu 2 zecimale, ca la celelalte formule din panou. */
+const mp = (value: number) => value.toFixed(2);
+
 export type RoomCalcRow = { label: string; value: string; formula: string; math: string; note?: string };
 
 /** Formatează un factor (0.15) ca procent întreg pt. afișare în formule ("15%"). */
@@ -78,11 +81,92 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
 
   if (!isGresie && paintArea > 0) {
     rows.push({
-      label: "Vopsea",
+      label: "Vopsea Pereți",
       value: `${paintArea.toFixed(2)} mp`,
       formula: "(Σ lungime pereți cu vopsea × înălțime − gol ușă) + 10% pierdere",
       math: `${paintArea.toFixed(2)} mp`,
-      note: `≈ ${dims.paintLiters.toFixed(1)} litri (2 straturi, ~11 mp/litru/strat)`,
+    });
+  }
+
+  if (dims.ceilingPaintArea > 0) {
+    rows.push({
+      label: "Vopsea Tavan",
+      value: `${mp(dims.ceilingPaintArea)} mp`,
+      formula: "Suprafață utilă (tavan = pardoseală) + 10% pierdere",
+      math: `${mp(room.floorArea ?? 0)} × 1.10 = ${mp(dims.ceilingPaintArea)} mp`,
+    });
+  }
+
+  if (dims.paintAboveTilingArea > 0) {
+    rows.push({
+      label: "Vopsea Deasupra Faianței",
+      value: `${mp(dims.paintAboveTilingArea)} mp`,
+      formula:
+        "(pereți placați × (înălțime cameră − înălțime placare) + pereți neplacați × înălțime cameră − goluri) + 10% pierdere",
+      math: `${mp(dims.paintAboveTilingArea)} mp`,
+    });
+  }
+
+  const totalPaintArea = paintArea + dims.ceilingPaintArea + dims.paintAboveTilingArea;
+  if (dims.paintLiters > 0) {
+    rows.push({
+      label: "Vopsea Total",
+      value: `${dims.paintLiters.toFixed(1)} l`,
+      formula: "Suprafață totală (pereți + tavan + deasupra faianței) × 2 straturi ÷ 11 mp/l",
+      math: `${mp(totalPaintArea)} mp × 2 straturi ÷ 11 mp/l = ${dims.paintLiters.toFixed(1)} l`,
+      note: "Rotunjit în sus la 0.5 litri — se vinde în ambalaje standard.",
+    });
+  }
+
+  const totalPrimerPaintArea = paintArea + wallpaperArea + dims.ceilingPaintArea + dims.paintAboveTilingArea;
+  if (dims.paintPrimerLiters > 0) {
+    rows.push({
+      label: "Amorsă Zugrăveală",
+      value: `${dims.paintPrimerLiters.toFixed(0)} l`,
+      formula: "Σ arii de vopsit/tapetat (pereți + tavan + deasupra faianței) × 0.10 l/mp",
+      math: `${mp(totalPrimerPaintArea)} mp × 0.10 = ${dims.paintPrimerLiters.toFixed(0)} l`,
+      note: "Rotunjit în sus la litru întreg — se vinde la 1/4/10 l.",
+    });
+  }
+
+  if (dims.tilingPrimerLiters > 0) {
+    rows.push({
+      label: "Amorsă Placări",
+      value: `${dims.tilingPrimerLiters.toFixed(0)} l`,
+      formula: "(arie netă pardoseală gresie + arie netă faianță) × 0.15 l/mp",
+      math: `${dims.tilingPrimerLiters.toFixed(0)} l`,
+      note: "Arii NETE, fără pierderea de tăiere — amorsa acoperă suprafața reală, nu plăcile tăiate.",
+    });
+  }
+
+  const adhesiveKg = dims.floorAdhesiveKg + dims.wallAdhesiveKg;
+  if (dims.adhesiveBags > 0) {
+    rows.push({
+      label: "Adeziv Gresie și Faianță",
+      value: `${mp(adhesiveKg)} kg (${dims.adhesiveBags} saci)`,
+      formula: "Arie netă × kg/mp (după mărime plăci, dublă încleiere la Mare/Foarte mare) + 10% marjă",
+      math: `${mp(dims.floorAdhesiveKg)} + ${mp(dims.wallAdhesiveKg)} = ${mp(adhesiveKg)} kg → ${dims.adhesiveBags} saci de 25 kg`,
+    });
+  }
+
+  if (dims.groutKg > 0) {
+    rows.push({
+      label: "Chit de Rosturi",
+      value: `${mp(dims.groutKg)} kg`,
+      formula: "(arie netă pardoseală × kg/mp + arie netă faianță × kg/mp) + 10% marjă",
+      math: `${mp(dims.groutKg)} kg`,
+      note: "Rotunjit în sus la kg întreg.",
+    });
+  }
+
+  if (dims.underlayArea > 0 && room.floorMaterial === FlooringType.ParchetLaminat) {
+    rows.push({
+      label: room.underfloorHeating
+        ? "Folie Parchet — Încălzire în Pardoseală"
+        : "Folie Parchet — XPS 3 mm",
+      value: `${dims.underlayArea.toFixed(0)} mp`,
+      formula: "Suprafață pardoseală + 5% suprapuneri la îmbinări",
+      math: `${mp(room.floorArea ?? 0)} × 1.05 = ${dims.underlayArea.toFixed(0)} mp`,
     });
   }
 

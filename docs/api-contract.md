@@ -36,7 +36,7 @@
 }
 ```
 
-**Câmpuri tehnice** (`floorMaterial`, `floorArea`, `perimeter`, `tileSize`, `installationType`, `doors`, `baseboardHeight`, `wallShape`, `wallTiling`, `wallFinish`, `windows`) — vezi `src/shared/types/Room.ts` pentru shape-ul complet, omis aici din motive istorice (contractul nu a fost actualizat la fiecare extindere a modelului tehnic; sursa de adevăr rămâne codul TS, regula #1 de mai sus). `doors`/`windows` sunt ambele `Partial<Record<Wall, { width, height }>>` — max. o ușă ȘI o fereastră per perete (pot coexista pe același perete). `wallShape` e un enum (`"Pătrat" | "Dreptunghi" | "Neregulată"`), doar UI (nu afectează formulele) — controlează câte din cele 4 chei ale `wallLengths` sunt independente în interfață și validează client-side ca suprafața implicată de `wallLengths` să nu depășească `floorArea`; backend-ul poate stoca valoarea dar nu are nevoie s-o valideze suplimentar.
+**Câmpuri tehnice** (`floorMaterial`, `floorArea`, `perimeter`, `tileSize`, `installationType`, `doors`, `baseboardHeight`, `wallShape`, `wallTiling`, `wallFinish`, `windows`, `ceilingPaint`, `underfloorHeating`) — vezi `src/shared/types/Room.ts` pentru shape-ul complet, omis aici din motive istorice (contractul nu a fost actualizat la fiecare extindere a modelului tehnic; sursa de adevăr rămâne codul TS, regula #1 de mai sus). `doors`/`windows` sunt ambele `Partial<Record<Wall, { width, height }>>` — max. o ușă ȘI o fereastră per perete (pot coexista pe același perete). `wallShape` e un enum (`"Pătrat" | "Dreptunghi" | "Neregulată"`), doar UI (nu afectează formulele) — controlează câte din cele 4 chei ale `wallLengths` sunt independente în interfață și validează client-side ca suprafața implicată de `wallLengths` să nu depășească `floorArea`; backend-ul poate stoca valoarea dar nu are nevoie s-o valideze suplimentar. `ceilingPaint?: boolean` — zugrăvirea tavanului, activată explicit, disponibilă la orice pardoseală. `underfloorHeating?: boolean` — încălzire în pardoseală, doar la Parchet Laminat, schimbă tipul foliei de sub parchet (nu afectează aria). `WallTiling` primește și el două câmpuri noi opționale: `roomHeight?: number` (înălțimea totală a camerei, pt. vopseaua de deasupra faianței, trebuie `> tileHeight`, `≤ 6`) și `tileSize?: TileSize` (mărimea plăcilor de faianță, pt. consumul de adeziv/chit; absent → Medie).
 
 **Regulă de business critică pt. backend** (`shared/functions/dimensions.ts`): `wallTiling` (faianță) și `wallFinish` (vopsea/tapet) sunt **mutual exclusive**, determinate de `floorMaterial` — `wallTiling` doar când `floorMaterial === "Gresie"`, `wallFinish` doar altfel (Parchet Laminat/Mochetă). La Gresie, plinta (`baseboardHeight × perimetru`) se adaugă la necesarul de gresie (nu e produs separat); la celelalte pardoseli, plinta rămâne element `MaterialType.Plintă` separat. `windows` (max. o fereastră per perete, `width`/`height`) se scade din aria de faianță/vopsea/tapet a peretelui respectiv (pe lângă golul ușii, nu în locul lui) și generează separat un element `MaterialType.GlafFereastra` (Σ perimetrul ferestrelor, +5% pierdere). Orice implementare server-side a recalculării trebuie să replice exact aceste ramificații — nu doar formulele individuale.
 
@@ -46,7 +46,8 @@
   id: string;
   roomId: string;
   name: string;
-  materialType: MaterialType; // enum: "Gresie" | "Faianță" | "Plintă" | "Parchet" | "Vopsea" | "Tapet" | "Glaf Fereastră" | "Sanitare"
+  materialType: MaterialType; // enum: "Gresie" | "Faianță" | "Plintă" | "Parchet" | "Vopsea" | "Tapet" | "Glaf Fereastră"
+                               //     | "Amorsă" | "Adeziv plăci" | "Chit de rosturi" | "Folie parchet" | "Sanitare"
                                //     | "Mobilă" | "Electrocasnice" | "Corpuri de iluminat" | "Altele"
   source: string;
   status: ItemStatus;         // enum: "În așteptare" | "Planificat" | "Cumpărat"
@@ -241,14 +242,33 @@ dimensions: {
   windowTrimLength: number; totalDoorWidth: number;
   // Adăugate în auditul de calcule de șantier (docs/tickete-audit-calcule-securitate.md, CALC-1…8):
   floorWasteRatio: number;   // pierderea reală aplicată pardoselii (0.10/0.15/0.18 + 0.02 la plăci mari)
-  paintLiters: number;       // vopsea recomandată, în litri (2 straturi, 11 mp/litru/strat)
+  paintLiters: number;       // vopsea recomandată AGREGATĂ (pereți+tavan+deasupra faianței), în litri (2 straturi, 11 mp/litru/strat)
   baseboardBars: number;     // câte bare de plintă (2 ml/bară) trebuie cumpărate
   windowTrimBars: number;    // câte bare de glaf (2 ml/bară) trebuie cumpărate
+  // Adăugate în docs/cerinte-zugraveli.md (zugrăveli complete + consumabile de montaj):
+  ceilingPaintArea: number;      // mp, cu pierdere — A.1
+  paintAboveTilingArea: number;  // mp, cu pierdere — A.2 (doar Gresie, roomHeight > tileHeight)
+  paintPrimerLiters: number;     // litri amorsă zugrăveală, rotunjit ↑ la 1 l — B.4
+  tilingPrimerLiters: number;    // litri amorsă sub placări, rotunjit ↑ la 1 l — B.5
+  floorAdhesiveKg: number;       // kg adeziv pardoseală (doar Gresie) — C.6
+  wallAdhesiveKg: number;        // kg adeziv faianță — C.7
+  adhesiveBags: number;          // saci de 25 kg (floor+wall), ceil — C.8
+  groutKg: number;               // kg chit rosturi (pardoseală+faianță), ceil — C.9
+  underlayArea: number;          // mp folie sub parchet laminat, ceil — D.10
 }
 ```
 Frontend-ul păstrează un calcul client identic (`shared/functions/dimensions.ts` → `computeRoomDimensions`)
 DOAR ca preview instant la editarea unei camere (pe `draft`, înainte de salvare) și ca fallback; PDF-ul exportat
 folosește `room.dimensions` de la server. Formulele client oglindesc 1:1 backend-ul.
+
+**Zugrăveli complete + consumabile de montaj** (`docs/cerinte-zugraveli.md`): `paintLiters` e acum agregatul
+camerei (pereți la Parchet/Mochetă + tavan la orice pardoseală + deasupra faianței la Gresie), nu doar
+vopseaua pereților. Elementul auto-generat `Vopsea` reflectă acest agregat (cantitate în LITRI, nu mp — singurul
+element auto-generat cu unitate diferită de mp/ml). Arii NETE (fără pierderea de tăiere) sunt expuse intern în
+`RoomDimensionsCalculator`/`dimensions.ts` (`netFloorTilingArea`/`netWallTilingArea`) pt. amorsă/adeziv/chit —
+acestea acoperă suprafața reală, nu plăcile tăiate. 4 valori noi `MaterialType`: `Amorsă`, `Adeziv plăci`,
+`Chit de rosturi`, `Folie parchet`. `Folie parchet` are DOUĂ nume posibile (XPS 3mm / încălzire în pardoseală,
+după `Room.underfloorHeating`) dar rămâne UN SINGUR slot logic la reconciliere (același `materialType`).
 
 **Pierderile de material NU mai sunt procente flat** (audit 2026-07-18, `docs/tickete-audit-calcule-securitate.md`):
 - Pardoseală/faianță: 10% montaj drept, 15% diagonal, 18% herringbone (`Room.installationType`), +2% la
@@ -264,8 +284,8 @@ folosește `room.dimensions` de la server. Formulele client oglindesc 1:1 backen
 simplă — `null`/absent = nu se modifică (nu pot fi șterse, nu are sens).
 
 Pentru câmpurile tehnice OPȚIONALE (`floorMaterial`, `floorArea`, `perimeter`, `tileSize`, `installationType`,
-`doors`, `baseboardHeight`, `wallShape`, `wallTiling`, `wallFinish`, `windows`) body-ul JSON distinge acum
-**trei** stări, nu două:
+`doors`, `baseboardHeight`, `wallShape`, `wallTiling`, `wallFinish`, `windows`, `ceilingPaint`,
+`underfloorHeating`) body-ul JSON distinge acum **trei** stări, nu două:
 1. **cheia absentă din body** → câmpul nu se modifică (comportamentul vechi, neschimbat);
 2. **cheia prezentă cu valoare `null`** → câmpul se **ȘTERGE explicit** (nou — înainte era indistinguibil de #1,
    motiv pentru care dezactivarea placării/finisajului de pereți sau golirea suprafeței pardoselii nu se
