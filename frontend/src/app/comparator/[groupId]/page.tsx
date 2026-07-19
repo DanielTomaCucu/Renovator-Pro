@@ -8,13 +8,14 @@ import EmptyState from "@/components/EmptyState";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ComparisonGroupStatusChip from "@/components/ComparisonGroupStatusChip";
 import { useStore } from "@/shared/store";
-import { formatMoney } from "@/shared/functions";
+import { formatMoney, safeHttpUrl } from "@/shared/functions";
 import { ComparisonGroupStatus, Offer } from "@/shared/types";
-import { COMPARATOR_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
+import { ACTION_ICONS, COMPARATOR_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import Spinner from "@/components/Spinner";
 import OfferCard from "./OfferCard";
 import OfferFormDrawer from "./OfferFormDrawer";
+import OfferGallery from "./OfferGallery";
 import { OfferDrawerState } from "./OfferDrawerState";
 import { cheapestOfferId } from "./offerCompare";
 
@@ -25,6 +26,7 @@ export default function ComparisonGroupDetailPage() {
   const [offerDrawer, setOfferDrawer] = useState<OfferDrawerState>({ open: false });
   const [deleteOfferId, setDeleteOfferId] = useState<string | null>(null);
   const [chooseOfferTarget, setChooseOfferTarget] = useState<Offer | null>(null);
+  const [viewOffer, setViewOffer] = useState<Offer | null>(null);
 
   const group = comparisonGroups.find((g) => g.id === groupId);
   const { run: confirmChoose, pending: choosing } = useAsyncAction(async () => {
@@ -109,7 +111,7 @@ export default function ComparisonGroupDetailPage() {
             onAction={() => setOfferDrawer({ open: true })}
           />
         ) : (
-          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {group.offers.map((offer) => (
               <OfferCard
                 key={offer.id}
@@ -120,6 +122,7 @@ export default function ComparisonGroupDetailPage() {
                 onEdit={() => setOfferDrawer({ open: true, offer })}
                 onDelete={() => setDeleteOfferId(offer.id)}
                 onChoose={() => setChooseOfferTarget(offer)}
+                onViewDetails={() => setViewOffer(offer)}
               />
             ))}
           </div>
@@ -166,6 +169,60 @@ export default function ComparisonGroupDetailPage() {
               >
                 Anulează
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewOffer && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setViewOffer(null)} aria-hidden />
+          <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-[24px] bg-surface p-6 shadow-2xl sm:rounded-lg sm:shadow-xl">
+            <button
+              type="button"
+              onClick={() => setViewOffer(null)}
+              aria-label="Închide"
+              className="icon-btn absolute right-4 top-4 rounded-full p-1 text-muted hover:bg-surface-low"
+            >
+              <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.close}</span>
+            </button>
+
+            <div className="space-y-3">
+              <OfferGallery images={viewOffer.images} />
+
+              <h2 className="pr-8 font-heading text-lg font-bold text-primary">{viewOffer.name || "Fără nume"}</h2>
+              {viewOffer.store && <p className="text-sm font-medium text-muted">{viewOffer.store}</p>}
+
+              <div className="flex items-baseline justify-between border-t border-line pt-3">
+                <span className="font-mono text-xl font-bold text-primary">
+                  {viewOffer.unitPrice !== undefined ? formatMoney(viewOffer.unitPrice, project.currency) : "—"}
+                </span>
+                {viewOffer.quantity !== undefined && (
+                  <span className="font-mono text-sm text-muted">
+                    × {viewOffer.quantity}
+                    {viewOffer.unitPrice !== undefined &&
+                      ` = ${formatMoney(viewOffer.unitPrice * viewOffer.quantity, project.currency)}`}
+                  </span>
+                )}
+              </div>
+
+              {safeHttpUrl(viewOffer.productUrl) && (
+                <a
+                  href={safeHttpUrl(viewOffer.productUrl)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-secondary hover:underline"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                    {COMPARATOR_ICONS.externalLink}
+                  </span>
+                  Deschide produsul
+                </a>
+              )}
+
+              {viewOffer.notes && (
+                <p className="whitespace-pre-wrap border-t border-line pt-3 text-sm text-muted">{viewOffer.notes}</p>
+              )}
             </div>
           </div>
         </div>

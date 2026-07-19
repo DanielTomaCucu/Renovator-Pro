@@ -57,11 +57,11 @@ export default function ComparatorPage() {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="basis-full font-heading text-lg font-bold text-primary md:hidden">Comparator Oferte</h1>
           {rooms.length > 1 && (
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1">
+            <div className="flex flex-1 flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => setRoomFilter("all")}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
                   roomFilter === "all"
                     ? "border-primary bg-primary text-white"
                     : "border-line text-muted hover:bg-surface-low"
@@ -74,7 +74,7 @@ export default function ComparatorPage() {
                   key={r.id}
                   type="button"
                   onClick={() => setRoomFilter(r.id)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
                     roomFilter === r.id
                       ? "border-primary bg-primary text-white"
                       : "border-line text-muted hover:bg-surface-low"
@@ -92,7 +92,7 @@ export default function ComparatorPage() {
             <button
               type="button"
               onClick={() => setDrawer({ open: true })}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] sm:ml-auto"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] ml-auto"
             >
               <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.newGroup}</span>
               Grup Nou
@@ -145,11 +145,11 @@ export default function ComparatorPage() {
                         <ComparisonGroupStatusChip status={group.status} size="sm" />
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-line pt-3">
-                        <span className="text-xs font-medium text-muted">
+                      <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
+                        <span className="shrink-0 text-xs font-medium text-muted">
                           {group.offers.length} {group.offers.length === 1 ? "ofertă" : "oferte"}
                         </span>
-                        <span className="font-mono text-sm font-bold text-primary">
+                        <span className="text-right font-mono text-sm font-bold text-primary">
                           {range ? (range.min === range.max ? money(range.min) : `${money(range.min)} – ${money(range.max)}`) : "—"}
                         </span>
                       </div>
@@ -168,7 +168,7 @@ export default function ComparatorPage() {
                           type="button"
                           onClick={() => setDeleteTargetId(group.id)}
                           aria-label="Șterge grupul"
-                          className="icon-btn shrink-0 rounded-md border border-line p-2 text-muted transition-colors hover:border-tertiary hover:text-tertiary"
+                          className="icon-btn shrink-0 rounded-md p-2 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
                         >
                           <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
                         </button>
