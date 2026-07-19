@@ -16,6 +16,7 @@ export const NAV_ICONS = {
   elemente: "shopping_cart",
   centralizator: "table_chart",
   analiza: "leaderboard",
+  comparator: "compare_arrows",
   setari: "settings",
   collapseSidebar: "menu_open",
   sidebarAddRoom: "add_circle",
@@ -140,4 +141,17 @@ export const TECHNICAL_ICONS = {
 export const SETTINGS_ICONS = {
   currencyExchange: "currency_exchange",
   verifiedUser: "verified_user",
+} as const;
+
+/** Iconițe pentru Comparatorul de Oferte (pagina listă + pagina de comparare). */
+export const COMPARATOR_ICONS = {
+  newGroup: "add_box",
+  bestPrice: "military_tech",
+  detectStore: "my_location",
+  addPhoto: "add_a_photo",
+  gallery: "photo_library",
+  choose: "task_alt",
+  chosen: "check_circle",
+  emptyState: "compare_arrows",
+  externalLink: "open_in_new",
 } as const;

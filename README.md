@@ -43,6 +43,8 @@ fallback, nu e obligatoriu de setat local).
 ## Documentație
 
 - **[docs/audit-remedieri.md](docs/audit-remedieri.md)** — 🔴 probleme cunoscute + plan detaliat de remediere (de citit înainte de a lucra la fixuri).
+- **[docs/cerinte-zugraveli.md](docs/cerinte-zugraveli.md)** — 🟡 de implementat: zugrăveli complete în configurator (tavan + vopsea deasupra faianței) + consumabile de montaj (amorsă, adeziv plăci, chit de rosturi, folie parchet cu/fără încălzire în pardoseală), norme de consum cu surse, tickete BE/FE.
+- **[docs/cerinte-comparator-oferte.md](docs/cerinte-comparator-oferte.md)** — 🟡 de implementat: pagină nouă `/comparator` (grupuri de oferte per cameră, poze din telefon + upload, detectare magazin din locație, niciun câmp obligatoriu, alegere → element de cumpărat), tickete BE/FE.
 - **[docs/cerinte-loading-states.md](docs/cerinte-loading-states.md)** — 🟡 specificație de implementat: skeleton la încărcarea paginii + spinner în butoane pe durata requesturilor.
 - **[docs/cerinte-autentificare.md](docs/cerinte-autentificare.md)** — ✅ Faza 5 implementată (register/login pe username + parolă, JWT, autorizare pe membership, partajare proiect prin cod de invitație). Rămâne manual doar setarea `JWT_SECRET` pe Render (vezi „Deploy” mai jos).
 - **[docs/cerinte-keepalive-render.md](docs/cerinte-keepalive-render.md)** — ✅ implementat (`.github/workflows/keepalive.yml`): keep-alive Render 08:00–21:00 (GitHub Actions cron; ~403 h/lună din cele 750 gratuite). Rămâne manual doar setarea variabilei `RENDER_APP_URL` (vezi „Deploy” mai jos).

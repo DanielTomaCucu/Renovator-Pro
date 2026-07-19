@@ -24,7 +24,7 @@ import {
 } from "@/shared/functions";
 import { useSortableTable } from "@/shared/useSortableTable";
 import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
-import { ACTION_ICONS, ROOM_TYPE_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
+import { ACTION_ICONS, COMPARATOR_ICONS, ROOM_TYPE_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
 import { DeleteTarget } from "./DeleteTarget";
 import { ItemDrawerState } from "./ItemDrawerState";
 import { ItemDetailsState } from "./ItemDetailsState";
@@ -178,10 +178,37 @@ export default function ElementePage() {
 
       {/* Desktop — vezi „Elemente de Cumpărat - Meniu Restrâns" */}
       <div className="mx-auto hidden max-w-7xl space-y-6 px-4 py-6 sm:px-6 md:block lg:px-10">
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-3">
+          {rooms.length > 1 && (
+            <section className="flex gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => setMobileFilterRoomId(null)}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                  mobileFilterRoomId === null
+                    ? "bg-primary text-white"
+                    : "border border-line bg-surface text-muted hover:bg-surface-low"
+                }`}
+              >
+                Toate
+              </button>
+              {rooms.map((room) => (
+                <button
+                  key={room.id}
+                  onClick={() => setMobileFilterRoomId(room.id)}
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                    mobileFilterRoomId === room.id
+                      ? "bg-primary text-white"
+                      : "border border-line bg-surface text-muted hover:bg-surface-low"
+                  }`}
+                >
+                  {room.name}
+                </button>
+              ))}
+            </section>
+          )}
           <button
             onClick={() => setRoomDrawerOpen(true)}
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
+            className="ml-auto shrink-0 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
           >
             + Adaugă Cameră
           </button>
@@ -266,9 +293,9 @@ export default function ElementePage() {
                   </button>
                 </div>
               ) : (
-                <label className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 text-[12px] font-bold uppercase text-white transition-colors hover:border-white/40 hover:bg-white/20">
+                <label className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 text-[12px] font-bold text-white transition-colors hover:border-white/40 hover:bg-white/20">
                   <span className="material-symbols-outlined icon-btn">
-                    {ACTION_ICONS.photoCamera}
+                    {COMPARATOR_ICONS.addPhoto}
                   </span>
                   Fă o poză
                   <input
@@ -310,7 +337,9 @@ export default function ElementePage() {
               onAction={() => setRoomDrawerOpen(true)}
             />
           )}
-          {rooms.map((room) => {
+          {rooms
+            .filter((room) => !mobileFilterRoomId || room.id === mobileFilterRoomId)
+            .map((room) => {
             const allRoomItems = itemsForRoom(items, room.id);
             const roomItems = itemsForRoom(visibleItems, room.id);
             const spentInRoom = roomSpent(items, room.id);
@@ -640,8 +669,8 @@ export default function ElementePage() {
                     </button>
                   </div>
                 ) : (
-                  <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded border border-dashed border-line bg-surface-low p-3 text-[12px] font-bold uppercase text-muted active:scale-[0.98]">
-                    <span className="material-symbols-outlined">{ACTION_ICONS.photoCamera}</span>
+                  <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded border border-dashed border-line bg-surface-low p-3 text-[12px] font-bold text-muted active:scale-[0.98]">
+                    <span className="material-symbols-outlined">{COMPARATOR_ICONS.addPhoto}</span>
                     Fă o poză
                     <input
                       type="file"

@@ -19,7 +19,7 @@ export default function Sidebar() {
   const { run: handleLogout, pending: loggingOut } = useAsyncAction(logout);
 
   const currentPageTitle =
-    [...nav, secondaryNav].find((item) => pathname.startsWith(item.href))?.label ??
+    [...nav, ...secondaryNav].find((item) => pathname.startsWith(item.href))?.label ??
     "Renovator Pro";
 
   return (
@@ -76,7 +76,7 @@ export default function Sidebar() {
           </div>
         </div>
         <div className="space-y-0.5 p-3">
-          {[...nav, secondaryNav].map((item) => {
+          {[...nav, ...secondaryNav].map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <Link
@@ -209,25 +209,31 @@ export default function Sidebar() {
           </div>
         )}
         <div className="space-y-0.5">
-          <Link
-            href={secondaryNav.href}
-            title={collapsed ? secondaryNav.label : undefined}
-            className={`flex items-center rounded-lg transition-all ${
-              collapsed ? "justify-center p-2" : "gap-3 px-3 py-1.5"
-            } ${
-              pathname.startsWith(secondaryNav.href)
-                ? "bg-secondary/10 text-secondary"
-                : "text-muted hover:bg-surface hover:text-primary"
-            }`}
-          >
-            <span
-              className="material-symbols-outlined shrink-0 text-[20px]"
-              style={pathname.startsWith(secondaryNav.href) ? { fontVariationSettings: '"FILL" 1' } : undefined}
-            >
-              {secondaryNav.icon}
-            </span>
-            {!collapsed && <span className="truncate text-sm font-medium">{secondaryNav.label}</span>}
-          </Link>
+          {secondaryNav.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={collapsed ? item.label : undefined}
+                className={`flex items-center rounded-lg transition-all ${
+                  collapsed ? "justify-center p-2" : "gap-3 px-3 py-1.5"
+                } ${
+                  active
+                    ? "bg-secondary/10 text-secondary"
+                    : "text-muted hover:bg-surface hover:text-primary"
+                }`}
+              >
+                <span
+                  className="material-symbols-outlined shrink-0 text-[20px]"
+                  style={active ? { fontVariationSettings: '"FILL" 1' } : undefined}
+                >
+                  {item.icon}
+                </span>
+                {!collapsed && <span className="truncate text-sm font-medium">{item.label}</span>}
+              </Link>
+            );
+          })}
 
           <button
             type="button"

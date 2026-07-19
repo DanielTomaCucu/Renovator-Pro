@@ -5,15 +5,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
+import ro.renovatorpro.application.port.out.ComparisonGroupRepository;
 import ro.renovatorpro.application.port.out.ItemRepository;
+import ro.renovatorpro.application.port.out.OfferRepository;
 import ro.renovatorpro.application.port.out.ProjectRepository;
 import ro.renovatorpro.application.port.out.RoomRepository;
 import ro.renovatorpro.application.security.MembershipGuard;
 import ro.renovatorpro.domain.exception.ImplausibleExchangeRateException;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
+import ro.renovatorpro.domain.model.ComparisonGroup;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.Item;
 import ro.renovatorpro.domain.model.Money;
+import ro.renovatorpro.domain.model.Offer;
 import ro.renovatorpro.domain.model.Project;
 import ro.renovatorpro.domain.model.Room;
 import ro.renovatorpro.domain.model.user.ProjectRole;
@@ -36,6 +40,8 @@ public class ConvertProjectCurrencyService implements ConvertProjectCurrencyUseC
     private final ProjectRepository projectRepository;
     private final RoomRepository roomRepository;
     private final ItemRepository itemRepository;
+    private final ComparisonGroupRepository comparisonGroupRepository;
+    private final OfferRepository offerRepository;
     private final MembershipGuard membershipGuard;
 
     /**
@@ -82,10 +88,23 @@ public class ConvertProjectCurrencyService implements ConvertProjectCurrencyUseC
         }
 
         // 3. Prețul unitar al fiecărui element din proiect.
-        List<Item> items = itemRepository.findByRoomIds(rooms.stream().map(Room::id).toList());
+        List<String> roomIds = rooms.stream().map(Room::id).toList();
+        List<Item> items = itemRepository.findByRoomIds(roomIds);
         for (Item item : items) {
             Money convertedPrice = CurrencyConverter.convert(item.unitPrice(), from, to, rate);
             itemRepository.save(withUnitPrice(item, convertedPrice));
+        }
+
+        // 4. Prețul unitar al fiecărei oferte din Comparatorul de Oferte — altfel ofertele rămân în
+        // moneda veche și comparația cu bugetul (deja convertit) minte. Ofertele fără preț se sar.
+        List<String> groupIds = comparisonGroupRepository.findByRoomIds(roomIds).stream()
+                .map(ComparisonGroup::id).toList();
+        if (!groupIds.isEmpty()) {
+            for (Offer offer : offerRepository.findByGroupIds(groupIds)) {
+                if (offer.unitPrice() == null) continue;
+                Money convertedPrice = CurrencyConverter.convert(offer.unitPrice(), from, to, rate);
+                offerRepository.save(withUnitPrice(offer, convertedPrice));
+            }
         }
 
         return saved;
@@ -113,5 +132,11 @@ public class ConvertProjectCurrencyService implements ConvertProjectCurrencyUseC
         return new Item(item.id(), item.roomId(), item.name(), item.materialType(), item.source(),
                 item.status(), item.quantity(), unitPrice, item.productUrl(), item.imageUrl(), item.origin(),
                 item.createdAt(), item.purchasedAt());
+    }
+
+    /** Reconstruiește o ofertă doar cu prețul unitar schimbat — restul câmpurilor se păstrează. */
+    private static Offer withUnitPrice(Offer offer, Money unitPrice) {
+        return new Offer(offer.id(), offer.groupId(), offer.name(), offer.store(), unitPrice,
+                offer.quantity(), offer.productUrl(), offer.images(), offer.notes(), offer.createdAt());
     }
 }

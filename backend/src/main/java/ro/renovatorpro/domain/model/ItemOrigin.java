@@ -1,9 +1,10 @@
 package ro.renovatorpro.domain.model;
 
-/** Proveniența unui element: introdus manual de user sau generat automat din „Configurare Apartament". */
+/** Proveniența unui element: introdus manual, generat automat din „Configurare Apartament", sau creat din Comparatorul de Oferte. */
 public enum ItemOrigin {
     MANUAL("Manual"),
-    CONFIGURARE("Din Configurare");
+    CONFIGURARE("Din Configurare"),
+    COMPARATOR("Din Comparator");
 
     private final String label;
 

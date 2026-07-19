@@ -9,7 +9,18 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Currency, Item, Project, ProjectSummary, RenovationStore, Room, SpendingTimelinePoint } from "./types";
+import {
+  ComparisonGroup,
+  Currency,
+  Item,
+  MaterialType,
+  Offer,
+  Project,
+  ProjectSummary,
+  RenovationStore,
+  Room,
+  SpendingTimelinePoint,
+} from "./types";
 import { api } from "./api-client";
 import { useAuth } from "./AuthProvider";
 import PageSkeleton from "@/components/PageSkeleton";
@@ -19,6 +30,34 @@ const StoreContext = createContext<RenovationStore | null>(null);
 /** Extrage un mesaj afișabil dintr-o eroare de fetch/API — `ApiError` are `.message` util, restul nu. */
 function toErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : "A apărut o eroare neașteptată. Încearcă din nou.";
+}
+
+/**
+ * Backend-ul (Jackson) serializează câmpurile opționale ABSENTE ca `null` explicit, nu le omite —
+ * dar tipurile TS (`Offer`/`ComparisonGroup`) le declară `T | undefined` (regula de aur #1: niciun
+ * `| null` în tipurile de domeniu). Fără normalizare, un preț neintrodus (`null`) trecea verificări de
+ * genul `unitPrice !== undefined` ca fiind valid, iar `formatMoney(null, …)` afișa „0 EUR" (Intl
+ * coercitivizează `null` la 0) — un bug real, prins la verificarea vizuală a comparatorului de oferte.
+ */
+function normalizeOffer(offer: Offer): Offer {
+  return {
+    ...offer,
+    name: offer.name ?? undefined,
+    store: offer.store ?? undefined,
+    unitPrice: offer.unitPrice ?? undefined,
+    quantity: offer.quantity ?? undefined,
+    productUrl: offer.productUrl ?? undefined,
+    notes: offer.notes ?? undefined,
+  };
+}
+
+function normalizeComparisonGroup(group: ComparisonGroup): ComparisonGroup {
+  return {
+    ...group,
+    chosenOfferId: group.chosenOfferId ?? undefined,
+    createdItemId: group.createdItemId ?? undefined,
+    offers: group.offers.map(normalizeOffer),
+  };
 }
 
 /**
@@ -45,6 +84,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([]);
   const [summary, setSummary] = useState<ProjectSummary | null>(null);
   const [spendingTimeline, setSpendingTimeline] = useState<SpendingTimelinePoint[] | null>(null);
+  const [comparisonGroups, setComparisonGroups] = useState<ComparisonGroup[]>([]);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -68,14 +108,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       api.get<Item[]>(`/api/projects/${projectId}/items`),
       api.get<ProjectSummary>(`/api/projects/${projectId}/summary`),
       api.get<SpendingTimelinePoint[]>(`/api/projects/${projectId}/spending-timeline`),
+      api.get<ComparisonGroup[]>(`/api/projects/${projectId}/comparison-groups`),
     ])
-      .then(([p, r, i, s, t]) => {
+      .then(([p, r, i, s, t, cg]) => {
         if (cancelled) return;
         setProject(p);
         setRooms(r);
         setItems(i);
         setSummary(s);
         setSpendingTimeline(t);
+        setComparisonGroups(cg.map(normalizeComparisonGroup));
       })
       .catch((err) => {
         if (cancelled) return;
@@ -164,6 +206,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await api.delete(`/api/rooms/${id}`);
         setRooms((prev) => prev.filter((r) => r.id !== id));
         setItems((prev) => prev.filter((i) => i.roomId !== id));
+        // Cascade — șterge și grupurile de comparație ale camerei (backend-ul le-a șters deja).
+        setComparisonGroups((prev) => prev.filter((g) => g.roomId !== id));
         await reloadAggregates();
       } catch (err) {
         setError(toErrorMessage(err));
@@ -211,6 +255,100 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [reloadAggregates]
   );
 
+  const addComparisonGroup = useCallback(
+    async (roomId: string, data: { name: string; materialType: MaterialType }) => {
+      try {
+        const created = await api.post<ComparisonGroup>(`/api/rooms/${roomId}/comparison-groups`, data);
+        setComparisonGroups((prev) => [...prev, normalizeComparisonGroup(created)]);
+      } catch (err) {
+        setError(toErrorMessage(err));
+      }
+    },
+    []
+  );
+
+  const updateComparisonGroup = useCallback(
+    async (id: string, patch: { name?: string; materialType?: MaterialType; roomId?: string }) => {
+      try {
+        const updated = await api.patch<ComparisonGroup>(`/api/comparison-groups/${id}`, patch);
+        setComparisonGroups((prev) => prev.map((g) => (g.id === id ? normalizeComparisonGroup(updated) : g)));
+      } catch (err) {
+        setError(toErrorMessage(err));
+      }
+    },
+    []
+  );
+
+  const deleteComparisonGroup = useCallback(async (id: string) => {
+    try {
+      await api.delete(`/api/comparison-groups/${id}`);
+      setComparisonGroups((prev) => prev.filter((g) => g.id !== id));
+    } catch (err) {
+      setError(toErrorMessage(err));
+    }
+  }, []);
+
+  const addOffer = useCallback(
+    async (groupId: string, data: Omit<Offer, "id" | "groupId" | "createdAt">) => {
+      try {
+        const created = normalizeOffer(await api.post<Offer>(`/api/comparison-groups/${groupId}/offers`, data));
+        setComparisonGroups((prev) =>
+          prev.map((g) => (g.id === groupId ? { ...g, offers: [...g.offers, created] } : g))
+        );
+      } catch (err) {
+        setError(toErrorMessage(err));
+      }
+    },
+    []
+  );
+
+  const updateOffer = useCallback(async (id: string, patch: { [K in keyof Offer]?: Offer[K] | null }) => {
+    try {
+      const updated = normalizeOffer(await api.patch<Offer>(`/api/offers/${id}`, patch));
+      setComparisonGroups((prev) =>
+        prev.map((g) =>
+          g.id === updated.groupId ? { ...g, offers: g.offers.map((o) => (o.id === id ? updated : o)) } : g
+        )
+      );
+    } catch (err) {
+      setError(toErrorMessage(err));
+    }
+  }, []);
+
+  const deleteOffer = useCallback(async (id: string) => {
+    try {
+      await api.delete(`/api/offers/${id}`);
+      setComparisonGroups((prev) =>
+        prev.map((g) => ({
+          ...g,
+          offers: g.offers.filter((o) => o.id !== id),
+          chosenOfferId: g.chosenOfferId === id ? undefined : g.chosenOfferId,
+        }))
+      );
+    } catch (err) {
+      setError(toErrorMessage(err));
+    }
+  }, []);
+
+  const chooseOffer = useCallback(
+    async (groupId: string, offerId: string, quantity?: number) => {
+      try {
+        const result = await api.post<{ group: ComparisonGroup; item: Item }>(
+          `/api/comparison-groups/${groupId}/choose`,
+          { offerId, quantity }
+        );
+        setComparisonGroups((prev) =>
+          prev.map((g) => (g.id === groupId ? normalizeComparisonGroup(result.group) : g))
+        );
+        setItems((prev) => [...prev, result.item]);
+        await reloadAggregates();
+      } catch (err) {
+        setError(toErrorMessage(err));
+      }
+    },
+    [reloadAggregates]
+  );
+
   const value = useMemo<RenovationStore | null>(
     () =>
       project && summary && spendingTimeline
@@ -220,6 +358,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             items,
             summary,
             spendingTimeline,
+            comparisonGroups,
             error,
             dismissError,
             updateProject,
@@ -230,11 +369,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             addItem,
             updateItem,
             deleteItem,
+            addComparisonGroup,
+            updateComparisonGroup,
+            deleteComparisonGroup,
+            addOffer,
+            updateOffer,
+            deleteOffer,
+            chooseOffer,
           }
         : null,
     [
       project,
       rooms,
+      comparisonGroups,
+      addComparisonGroup,
+      updateComparisonGroup,
+      deleteComparisonGroup,
+      addOffer,
+      updateOffer,
+      deleteOffer,
+      chooseOffer,
       items,
       summary,
       spendingTimeline,
