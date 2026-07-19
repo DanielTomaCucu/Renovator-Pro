@@ -42,18 +42,6 @@ export default function ComparatorPage() {
         searchPlaceholder="Caută grup..."
         searchValue={search}
         onSearchChange={setSearch}
-        actions={
-          rooms.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setDrawer({ open: true })}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98]"
-            >
-              <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.newGroup}</span>
-              Grup Nou
-            </button>
-          )
-        }
       />
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-10">
@@ -65,14 +53,14 @@ export default function ComparatorPage() {
           ]}
         />
 
-        {/* Header mobil (fără PageHeader vizibil sub md) + buton Grup Nou */}
-        <div className="flex items-center justify-between gap-3 md:hidden">
-          <h1 className="font-heading text-lg font-bold text-primary">Comparator Oferte</h1>
+        {/* Titlu mobil (PageHeader e ascuns sub md) + buton Grup Nou, deasupra filtrelor pe orice dimensiune. */}
+        <div className="flex items-center gap-3">
+          <h1 className="flex-1 font-heading text-lg font-bold text-primary md:hidden">Comparator Oferte</h1>
           {rooms.length > 0 && (
             <button
               type="button"
               onClick={() => setDrawer({ open: true })}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold uppercase text-white active:scale-[0.98]"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] md:ml-auto"
             >
               <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.newGroup}</span>
               Grup Nou
@@ -142,26 +130,24 @@ export default function ComparatorPage() {
                       className="group relative flex flex-col gap-3 rounded-xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md"
                     >
                       <Link href={`/comparator/${group.id}`} className="flex flex-col gap-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h3 className="truncate font-heading text-base font-bold text-primary">
-                              {group.name}
-                            </h3>
-                            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
-                              {room && (
-                                <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
-                                  {ROOM_TYPE_ICONS[room.type]}
-                                </span>
-                              )}
-                              {room?.name ?? "Cameră ștearsă"} · {group.materialType}
-                            </p>
-                          </div>
-                          <ComparisonGroupStatusChip status={group.status} size="sm" />
+                        <div className="min-w-0 pr-8">
+                          <h3 className="truncate font-heading text-base font-bold text-primary">
+                            {group.name}
+                          </h3>
+                          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
+                            {room && (
+                              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
+                                {ROOM_TYPE_ICONS[room.type]}
+                              </span>
+                            )}
+                            {room?.name ?? "Cameră ștearsă"} · {group.materialType}
+                          </p>
                         </div>
 
                         <div className="flex items-center justify-between border-t border-line pt-3">
-                          <span className="text-xs font-bold uppercase tracking-wide text-muted">
+                          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted">
                             {group.offers.length} {group.offers.length === 1 ? "ofertă" : "oferte"}
+                            <ComparisonGroupStatusChip status={group.status} size="sm" />
                           </span>
                           <span className="font-mono text-sm font-bold text-primary">
                             {range ? (range.min === range.max ? money(range.min) : `${money(range.min)} – ${money(range.max)}`) : "—"}

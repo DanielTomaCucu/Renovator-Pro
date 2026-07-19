@@ -59,24 +59,12 @@ export default function ComparisonGroupDetailPage() {
       <PageHeader title={group.name} showSearch={false} />
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-10">
-        <div className="md:hidden">
-          <Link href="/comparator" className="inline-flex items-center gap-1 text-xs font-bold uppercase text-muted">
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/comparator" className="inline-flex items-center gap-1 text-xs font-bold uppercase text-muted hover:text-primary">
             <span className="material-symbols-outlined icon-btn">arrow_back</span>
             Comparator
           </Link>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-heading text-xl font-bold text-primary">{group.name}</h1>
-          <ComparisonGroupStatusChip status={group.status} />
-          <span className="inline-flex items-center gap-1 text-xs text-muted">
-            {room && (
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                {ROOM_TYPE_ICONS[room.type]}
-              </span>
-            )}
-            {room?.name ?? "Cameră ștearsă"} · {group.materialType}
-          </span>
+          <ComparisonGroupStatusChip status={group.status} size="sm" />
         </div>
 
         {group.status === ComparisonGroupStatus.Decis && (
@@ -89,14 +77,23 @@ export default function ComparisonGroupDetailPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-muted">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-1 truncate text-xs font-bold uppercase tracking-wide text-muted">
             {group.offers.length} {group.offers.length === 1 ? "ofertă" : "oferte"}
+            <span className="normal-case">
+              {" · "}
+              {room && (
+                <span className="material-symbols-outlined align-middle" style={{ fontSize: 13 }}>
+                  {ROOM_TYPE_ICONS[room.type]}
+                </span>
+              )}{" "}
+              {room?.name ?? "Cameră ștearsă"} · {group.materialType}
+            </span>
           </h2>
           <button
             type="button"
             onClick={() => setOfferDrawer({ open: true })}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold uppercase text-white transition-transform hover:opacity-90 active:scale-[0.98]"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98]"
           >
             <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.addPhoto}</span>
             Adaugă Ofertă
