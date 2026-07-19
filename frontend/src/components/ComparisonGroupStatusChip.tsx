@@ -1,7 +1,7 @@
 import { ComparisonGroupStatus } from "@/shared/types";
 
 const styles: Record<ComparisonGroupStatus, string> = {
-  [ComparisonGroupStatus.InAnaliza]: "bg-sky-100 text-sky-700",
+  [ComparisonGroupStatus.InAnaliza]: "bg-indigo-100 text-indigo-700",
   [ComparisonGroupStatus.Decis]: "bg-emerald-100 text-emerald-700",
 };
 

@@ -154,7 +154,7 @@ export default function ComparisonGroupDetailPage() {
                 onClick={confirmChoose}
                 disabled={choosing}
                 aria-busy={choosing}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold uppercase tracking-widest text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:py-2.5 sm:text-sm sm:font-semibold sm:normal-case sm:tracking-normal"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:py-2.5 sm:font-semibold"
               >
                 {choosing && <Spinner />}
                 Alege Oferta
@@ -162,7 +162,7 @@ export default function ComparisonGroupDetailPage() {
               <button
                 onClick={() => setChooseOfferTarget(null)}
                 disabled={choosing}
-                className="w-full rounded-xl py-3 text-sm font-medium uppercase tracking-widest text-muted transition-transform hover:bg-surface-low active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:border sm:border-line sm:py-2.5 sm:text-sm sm:font-medium sm:normal-case sm:tracking-normal"
+                className="w-full rounded-xl py-3 text-sm font-medium text-muted transition-transform hover:bg-surface-low active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:border sm:border-line sm:py-2.5"
               >
                 Anulează
               </button>

@@ -53,14 +53,46 @@ export default function ComparatorPage() {
           ]}
         />
 
-        {/* Titlu mobil (PageHeader e ascuns sub md) + buton Grup Nou, deasupra filtrelor pe orice dimensiune. */}
-        <div className="flex items-center gap-3">
-          <h1 className="flex-1 font-heading text-lg font-bold text-primary md:hidden">Comparator Oferte</h1>
+        {/* Titlu mobil (PageHeader e ascuns sub md) pe rândul lui; filtrele + butonul Grup Nou pe același rând. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="basis-full font-heading text-lg font-bold text-primary md:hidden">Comparator Oferte</h1>
+          {rooms.length > 1 && (
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => setRoomFilter("all")}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                  roomFilter === "all"
+                    ? "border-primary bg-primary text-white"
+                    : "border-line text-muted hover:bg-surface-low"
+                }`}
+              >
+                Toate camerele
+              </button>
+              {rooms.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setRoomFilter(r.id)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                    roomFilter === r.id
+                      ? "border-primary bg-primary text-white"
+                      : "border-line text-muted hover:bg-surface-low"
+                  }`}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                    {ROOM_TYPE_ICONS[r.type]}
+                  </span>
+                  {r.name}
+                </button>
+              ))}
+            </div>
+          )}
           {rooms.length > 0 && (
             <button
               type="button"
               onClick={() => setDrawer({ open: true })}
-              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] md:ml-auto"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] sm:ml-auto"
             >
               <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.newGroup}</span>
               Grup Nou
@@ -78,39 +110,6 @@ export default function ComparatorPage() {
           />
         ) : (
           <>
-            {rooms.length > 1 && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                <button
-                  type="button"
-                  onClick={() => setRoomFilter("all")}
-                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
-                    roomFilter === "all"
-                      ? "border-primary bg-primary text-white"
-                      : "border-line text-muted hover:bg-surface-low"
-                  }`}
-                >
-                  Toate camerele
-                </button>
-                {rooms.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setRoomFilter(r.id)}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
-                      roomFilter === r.id
-                        ? "border-primary bg-primary text-white"
-                        : "border-line text-muted hover:bg-surface-low"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-                      {ROOM_TYPE_ICONS[r.type]}
-                    </span>
-                    {r.name}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {visibleGroups.length === 0 ? (
               <EmptyState
                 icon={COMPARATOR_ICONS.emptyState}
@@ -127,42 +126,53 @@ export default function ComparatorPage() {
                   return (
                     <div
                       key={group.id}
-                      className="group relative flex flex-col gap-3 rounded-xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-md"
+                      className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm transition-shadow hover:shadow-md"
                     >
-                      <Link href={`/comparator/${group.id}`} className="flex flex-col gap-3">
-                        <div className="min-w-0 pr-8">
-                          <h3 className="truncate font-heading text-base font-bold text-primary">
-                            {group.name}
-                          </h3>
-                          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-1 text-[11px] font-medium text-muted">
                             {room && (
-                              <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
+                              <span className="material-symbols-outlined shrink-0" style={{ fontSize: 13 }}>
                                 {ROOM_TYPE_ICONS[room.type]}
                               </span>
                             )}
-                            {room?.name ?? "Cameră ștearsă"} · {group.materialType}
+                            <span className="truncate">{room?.name ?? "Cameră ștearsă"} · {group.materialType}</span>
                           </p>
+                          <h3 className="truncate font-heading text-base font-bold text-primary">
+                            {group.name}
+                          </h3>
                         </div>
+                        <ComparisonGroupStatusChip status={group.status} size="sm" />
+                      </div>
 
-                        <div className="flex items-center justify-between border-t border-line pt-3">
-                          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-muted">
-                            {group.offers.length} {group.offers.length === 1 ? "ofertă" : "oferte"}
-                            <ComparisonGroupStatusChip status={group.status} size="sm" />
-                          </span>
-                          <span className="font-mono text-sm font-bold text-primary">
-                            {range ? (range.min === range.max ? money(range.min) : `${money(range.min)} – ${money(range.max)}`) : "—"}
-                          </span>
-                        </div>
-                      </Link>
+                      <div className="flex items-center justify-between border-t border-line pt-3">
+                        <span className="text-xs font-medium text-muted">
+                          {group.offers.length} {group.offers.length === 1 ? "ofertă" : "oferte"}
+                        </span>
+                        <span className="font-mono text-sm font-bold text-primary">
+                          {range ? (range.min === range.max ? money(range.min) : `${money(range.min)} – ${money(range.max)}`) : "—"}
+                        </span>
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTargetId(group.id)}
-                        aria-label="Șterge grupul"
-                        className="icon-btn absolute right-3 top-3 rounded-full p-1.5 text-muted opacity-0 hover:bg-surface-low hover:text-tertiary group-hover:opacity-100 focus:opacity-100"
-                      >
-                        <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/comparator/${group.id}`}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-line py-1.5 text-xs font-semibold text-secondary transition-colors hover:bg-surface-low"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                            {ACTION_ICONS.viewDetails}
+                          </span>
+                          Vezi detalii
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTargetId(group.id)}
+                          aria-label="Șterge grupul"
+                          className="icon-btn shrink-0 rounded-md border border-line p-2 text-muted transition-colors hover:border-tertiary hover:text-tertiary"
+                        >
+                          <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

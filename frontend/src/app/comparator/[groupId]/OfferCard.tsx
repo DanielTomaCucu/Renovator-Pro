@@ -83,7 +83,7 @@ export default function OfferCard({
           type="button"
           onClick={onChoose}
           disabled={isChosen}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary py-2 text-xs font-bold uppercase text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary py-2 text-xs font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.choose}</span>
           {isChosen ? "Aleasă" : "Alege"}

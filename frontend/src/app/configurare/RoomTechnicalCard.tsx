@@ -284,19 +284,19 @@ function ResultRow({
 }) {
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between text-sm">
+      <div className="mb-0.5 flex items-center justify-between text-xs">
         <span className="text-muted">{label}</span>
         <span className="font-mono font-bold">{value}</span>
       </div>
-      <div className="rounded border border-line bg-surface-low p-1.5 font-mono text-[10px] text-muted">
+      <div className="rounded border border-line bg-surface-low p-1 font-mono text-[9px] leading-snug text-muted">
         Formulă: {highlightWastePercent(formula)}
         <br />
         Calcul: {math}
       </div>
       {note && (
-        <p className="mt-1 flex items-center gap-1 text-[10px] italic text-tertiary">
+        <p className="mt-0.5 flex items-center gap-1 text-[9px] italic leading-snug text-tertiary">
           <span
-            className="material-symbols-outlined shrink-0 text-[12px]"
+            className="material-symbols-outlined shrink-0 text-[11px]"
             style={{ fontVariationSettings: '"FILL" 0, "wght" 400, "GRAD" 0, "opsz" 12' }}
           >
             info
@@ -799,7 +799,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 <button
                   type="button"
                   onClick={toggleWallTiling}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold uppercase text-secondary hover:bg-surface-low"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold text-secondary hover:bg-surface-low"
                 >
                   <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
                   Adaugă placare pereți
@@ -910,7 +910,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               <button
                 type="button"
                 onClick={toggleWallFinish}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold uppercase text-secondary hover:bg-surface-low"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold text-secondary hover:bg-surface-low"
               >
                 <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
                 Adaugă finisaj pereți
@@ -1004,7 +1004,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 <button
                   type="button"
                   onClick={addWindow}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold uppercase text-secondary hover:bg-surface-low"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold text-secondary hover:bg-surface-low"
                 >
                   <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
                   Adaugă fereastră
@@ -1100,7 +1100,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 <button
                   type="button"
                   onClick={addDoor}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold uppercase text-secondary hover:bg-surface-low"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line p-3 text-xs font-bold text-secondary hover:bg-surface-low"
                 >
                   <span className="material-symbols-outlined text-sm">{ACTION_ICONS.add}</span>
                   Adaugă ușă
@@ -1117,10 +1117,10 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
             <h4 className="mb-4 border-b border-line pb-2 text-xs font-bold uppercase tracking-wider text-muted">
               Schiță &amp; Rezultat
             </h4>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <RoomSketch room={draft} />
 
-              <div className="space-y-3 rounded-xl border border-line bg-surface p-4">
+              <div className="space-y-2 rounded-xl border border-line bg-surface p-4">
                 <div className="flex items-center justify-between border-b border-line/50 pb-2 text-sm font-bold">
                   <span className="text-[11px] uppercase tracking-tight">Calcule Detaliate</span>
                   <span className="material-symbols-outlined text-sm text-muted">
@@ -1128,7 +1128,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                   </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {calcRows.map((row) => (
                     <ResultRow key={row.label} {...row} />
                   ))}
@@ -1161,13 +1161,13 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
             </div>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex">
             <button
               type="button"
               onClick={handleSave}
               disabled={savePending}
               aria-busy={savePending}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {savePending && <Spinner />}
               Salvează

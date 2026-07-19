@@ -183,7 +183,7 @@ export default function ElementePage() {
             <section className="flex gap-2 overflow-x-auto pb-1">
               <button
                 onClick={() => setMobileFilterRoomId(null)}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold transition-colors ${
                   mobileFilterRoomId === null
                     ? "bg-primary text-white"
                     : "border border-line bg-surface text-muted hover:bg-surface-low"
@@ -195,7 +195,7 @@ export default function ElementePage() {
                 <button
                   key={room.id}
                   onClick={() => setMobileFilterRoomId(room.id)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold transition-colors ${
                     mobileFilterRoomId === room.id
                       ? "bg-primary text-white"
                       : "border border-line bg-surface text-muted hover:bg-surface-low"
@@ -286,7 +286,7 @@ export default function ElementePage() {
                   <button
                     type="button"
                     onClick={() => setQaImage(undefined)}
-                    className="flex items-center gap-1 text-[11px] font-bold uppercase text-tertiary"
+                    className="flex items-center gap-1 text-[11px] font-bold text-tertiary"
                   >
                     <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
                     Elimină
@@ -551,7 +551,7 @@ export default function ElementePage() {
         <section className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           <button
             onClick={() => setMobileFilterRoomId(null)}
-            className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+            className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold transition-colors ${
               mobileFilterRoomId === null
                 ? "bg-primary text-white"
                 : "border border-line bg-surface text-muted hover:bg-surface-low"
@@ -563,7 +563,7 @@ export default function ElementePage() {
             <button
               key={room.id}
               onClick={() => setMobileFilterRoomId(room.id)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-bold transition-colors ${
                 mobileFilterRoomId === room.id
                   ? "bg-primary text-white"
                   : "border border-line bg-surface text-muted hover:bg-surface-low"
@@ -660,7 +660,7 @@ export default function ElementePage() {
                     <button
                       type="button"
                       onClick={() => setQaImage(undefined)}
-                      className="ml-auto flex items-center gap-1 text-[11px] font-bold uppercase text-tertiary"
+                      className="ml-auto flex items-center gap-1 text-[11px] font-bold text-tertiary"
                     >
                       <span className="material-symbols-outlined icon-btn">
                         {ACTION_ICONS.delete}
@@ -686,7 +686,7 @@ export default function ElementePage() {
                 type="submit"
                 disabled={quickAddPending}
                 aria-busy={quickAddPending}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-4 text-[12px] font-bold uppercase tracking-widest text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-4 text-[12px] font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {quickAddPending && <Spinner />}
                 Salvează Articol

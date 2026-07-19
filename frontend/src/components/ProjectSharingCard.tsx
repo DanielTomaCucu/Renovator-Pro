@@ -119,7 +119,7 @@ export default function ProjectSharingCard() {
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="shrink-0 rounded-lg border border-line px-4 py-3 text-xs font-bold uppercase text-muted hover:bg-surface-low"
+                    className="shrink-0 rounded-lg border border-line px-4 py-3 text-xs font-bold text-muted hover:bg-surface-low"
                   >
                     {copied ? "Copiat ✓" : "Copiază"}
                   </button>
@@ -138,7 +138,7 @@ export default function ProjectSharingCard() {
                 onClick={loadInviteCode}
                 disabled={loadingCode}
                 aria-busy={loadingCode}
-                className="flex items-center gap-2 rounded-lg border border-line px-4 py-3 text-xs font-bold uppercase text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg border border-line px-4 py-3 text-xs font-bold text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loadingCode && <Spinner />}
                 Arată codul

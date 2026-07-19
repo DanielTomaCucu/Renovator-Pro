@@ -320,7 +320,7 @@ export default function AnalizaPage() {
                     <button
                       type="button"
                       onClick={() => setSelectedRoom(null)}
-                      className="mt-1.5 flex items-center gap-0.5 text-[10px] font-bold uppercase text-secondary hover:underline"
+                      className="mt-1.5 flex items-center gap-0.5 text-[10px] font-bold text-secondary hover:underline"
                     >
                       <span className="material-symbols-outlined text-[12px]">
                         {ACTION_ICONS.close}
@@ -543,7 +543,7 @@ export default function AnalizaPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedRoom(null)}
-                  className="flex items-center gap-0.5 text-[10px] font-bold uppercase text-secondary"
+                  className="flex items-center gap-0.5 text-[10px] font-bold text-secondary"
                 >
                   <span className="material-symbols-outlined text-[12px]">
                     {ACTION_ICONS.close}
