@@ -2,8 +2,11 @@ package ro.renovatorpro.application.usecase;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ro.renovatorpro.application.port.in.AddComparisonGroupUseCase;
 import ro.renovatorpro.application.port.in.AddItemUseCase;
+import ro.renovatorpro.application.port.in.AddOfferUseCase;
 import ro.renovatorpro.application.port.in.AddRoomUseCase;
+import ro.renovatorpro.application.port.in.ChooseOfferUseCase;
 import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
 import ro.renovatorpro.application.port.in.DeleteItemUseCase;
 import ro.renovatorpro.application.port.in.GetProjectSummaryUseCase;
@@ -17,6 +20,8 @@ import ro.renovatorpro.application.port.in.UpdateItemUseCase;
 import ro.renovatorpro.application.port.in.UpdateProjectUseCase;
 import ro.renovatorpro.application.port.in.UpdateRoomUseCase;
 import ro.renovatorpro.application.security.MembershipGuard;
+import ro.renovatorpro.domain.model.ComparisonGroup;
+import ro.renovatorpro.domain.model.ComparisonGroupStatus;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.FlooringType;
 import ro.renovatorpro.domain.model.Item;
@@ -24,6 +29,7 @@ import ro.renovatorpro.domain.model.ItemOrigin;
 import ro.renovatorpro.domain.model.ItemStatus;
 import ro.renovatorpro.domain.model.MaterialType;
 import ro.renovatorpro.domain.model.Money;
+import ro.renovatorpro.domain.model.Offer;
 import ro.renovatorpro.domain.model.Project;
 import ro.renovatorpro.domain.model.Room;
 import ro.renovatorpro.domain.model.RoomType;
@@ -32,6 +38,7 @@ import ro.renovatorpro.domain.model.user.ProjectRole;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.YearMonth;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -47,6 +54,8 @@ class UseCasesTest {
     private FakeProjectRepository projectRepository;
     private FakeRoomRepository roomRepository;
     private FakeItemRepository itemRepository;
+    private FakeComparisonGroupRepository comparisonGroupRepository;
+    private FakeOfferRepository offerRepository;
     private FakeProjectMemberRepository projectMemberRepository;
     private FakeIdGenerator idGenerator;
     private FakeTimeProvider timeProvider;
@@ -64,12 +73,17 @@ class UseCasesTest {
     private ConvertProjectCurrencyUseCase convertCurrency;
     private GetProjectSummaryUseCase getSummary;
     private GetSpendingTimelineUseCase getSpendingTimeline;
+    private AddComparisonGroupUseCase addComparisonGroup;
+    private AddOfferUseCase addOffer;
+    private ChooseOfferUseCase chooseOffer;
 
     @BeforeEach
     void setUp() {
         projectRepository = new FakeProjectRepository();
         roomRepository = new FakeRoomRepository();
         itemRepository = new FakeItemRepository();
+        comparisonGroupRepository = new FakeComparisonGroupRepository();
+        offerRepository = new FakeOfferRepository(comparisonGroupRepository);
         projectMemberRepository = new FakeProjectMemberRepository();
         idGenerator = new FakeIdGenerator();
         timeProvider = new FakeTimeProvider();
@@ -86,13 +100,16 @@ class UseCasesTest {
         updateProject = new UpdateProjectService(projectRepository, membershipGuard);
         addRoom = new AddRoomService(roomRepository, idGenerator, membershipGuard);
         updateRoom = new UpdateRoomService(roomRepository, itemRepository, idGenerator, timeProvider, membershipGuard);
-        deleteRoom = new DeleteRoomService(roomRepository, itemRepository, membershipGuard);
+        deleteRoom = new DeleteRoomService(roomRepository, itemRepository, comparisonGroupRepository, offerRepository, membershipGuard);
         addItem = new AddItemService(itemRepository, roomRepository, idGenerator, timeProvider, membershipGuard);
         updateItem = new UpdateItemService(itemRepository, roomRepository, timeProvider, membershipGuard);
         deleteItem = new DeleteItemService(itemRepository, roomRepository, membershipGuard);
-        convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository, membershipGuard);
+        convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository, comparisonGroupRepository, offerRepository, membershipGuard);
         getSummary = new GetProjectSummaryService(projectRepository, roomRepository, itemRepository, membershipGuard);
         getSpendingTimeline = new GetSpendingTimelineService(roomRepository, itemRepository, membershipGuard);
+        addComparisonGroup = new AddComparisonGroupService(comparisonGroupRepository, roomRepository, idGenerator, timeProvider, membershipGuard);
+        addOffer = new AddOfferService(offerRepository, comparisonGroupRepository, roomRepository, idGenerator, timeProvider, membershipGuard);
+        chooseOffer = new ChooseOfferService(comparisonGroupRepository, offerRepository, roomRepository, itemRepository, idGenerator, timeProvider, membershipGuard);
     }
 
     @Test
@@ -359,5 +376,86 @@ class UseCasesTest {
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
 
         assertThat(getSpendingTimeline.execute(USER, PROJECT_ID)).isEmpty();
+    }
+
+    @Test
+    void addOfferAccepaOOfertaComplectGoala() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+
+        Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(null, null, null, null, null, null, null));
+
+        assertThat(offer.name()).isNull();
+        assertThat(offer.unitPrice()).isNull();
+        assertThat(offer.images()).isEmpty();
+        assertThat(group.status()).isEqualTo(ComparisonGroupStatus.IN_ANALIZA);
+    }
+
+    @Test
+    void chooseOfferCreeazaItemDinComparatorSiMarcheazaGrupulDecis() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                "Gresie Tivoli 60x60", "Dedeman", Money.of(45), BigDecimal.TEN, "https://dedeman.ro/gresie",
+                List.of("https://img/1.jpg", "data:image/jpeg;base64,abc"), "Arată bine"));
+
+        ChooseOfferUseCase.Result result = chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer.id(), null));
+
+        assertThat(result.group().status()).isEqualTo(ComparisonGroupStatus.DECIS);
+        assertThat(result.group().chosenOfferId()).isEqualTo(offer.id());
+        assertThat(result.group().createdItemId()).isEqualTo(result.item().id());
+        Item item = result.item();
+        assertThat(item.roomId()).isEqualTo(room.id());
+        assertThat(item.name()).isEqualTo("Gresie Tivoli 60x60");
+        assertThat(item.source()).isEqualTo("Dedeman");
+        assertThat(item.unitPrice().amount()).isEqualByComparingTo("45.00");
+        assertThat(item.quantity()).isEqualByComparingTo(BigDecimal.TEN);
+        assertThat(item.origin()).isEqualTo(ItemOrigin.COMPARATOR);
+        assertThat(item.status()).isEqualTo(ItemStatus.IN_ASTEPTARE);
+        assertThat(item.imageUrl()).isEqualTo("https://img/1.jpg"); // prima poză URL — data-uri nu se copiază
+        assertThat(itemRepository.findById(item.id())).isPresent();
+    }
+
+    @Test
+    void chooseOfferPeOfertaGoalaFoloseasteFallbackuri() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(null, null, null, null, null, null, null));
+
+        ChooseOfferUseCase.Result result = chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer.id(), null));
+
+        Item item = result.item();
+        assertThat(item.name()).isEqualTo("Gresie baie"); // fallback pe numele grupului
+        assertThat(item.source()).isEqualTo("");
+        assertThat(item.unitPrice().amount()).isEqualByComparingTo("0.00");
+        assertThat(item.quantity()).isEqualByComparingTo(BigDecimal.ONE);
+    }
+
+    @Test
+    void deleteRoomStergeSiGrupurileDeComparatieSiOferteleLor() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                "Gresie", "Dedeman", Money.of(45), BigDecimal.TEN, null, List.of(), null));
+
+        deleteRoom.execute(USER, room.id());
+
+        assertThat(comparisonGroupRepository.findById(group.id())).isEmpty();
+        assertThat(offerRepository.findById(offer.id())).isEmpty();
+    }
+
+    @Test
+    void convertCurrencyConvertesteSiPretulOfertelor() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        Offer cuPret = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                "Gresie", "Dedeman", Money.of(100), BigDecimal.ONE, null, List.of(), null));
+        Offer faraPret = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                "Gresie 2", "Leroy Merlin", null, null, null, List.of(), null));
+
+        convertCurrency.execute(USER, PROJECT_ID, new ConvertProjectCurrencyUseCase.Command(Currency.RON, new BigDecimal("5.00")));
+
+        assertThat(offerRepository.findById(cuPret.id()).orElseThrow().unitPrice().amount()).isEqualByComparingTo("500.00");
+        assertThat(offerRepository.findById(faraPret.id()).orElseThrow().unitPrice()).isNull(); // fără preț — sărită
     }
 }

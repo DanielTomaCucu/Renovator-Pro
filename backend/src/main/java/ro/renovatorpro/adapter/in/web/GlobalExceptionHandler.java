@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ro.renovatorpro.domain.exception.AccountLockedException;
+import ro.renovatorpro.domain.exception.ComparisonGroupNotFoundException;
 import ro.renovatorpro.domain.exception.DomainException;
 import ro.renovatorpro.domain.exception.DuplicateUsernameException;
 import ro.renovatorpro.domain.exception.InvalidCredentialsException;
@@ -16,6 +17,7 @@ import ro.renovatorpro.domain.exception.InvalidInviteCodeException;
 import ro.renovatorpro.domain.exception.InvalidRefreshTokenException;
 import ro.renovatorpro.domain.exception.InvalidRegistrationException;
 import ro.renovatorpro.domain.exception.ItemNotFoundException;
+import ro.renovatorpro.domain.exception.OfferNotFoundException;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.exception.RoomNotFoundException;
 
@@ -32,7 +34,7 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler({ProjectNotFoundException.class, RoomNotFoundException.class, ItemNotFoundException.class,
-            InvalidInviteCodeException.class})
+            ComparisonGroupNotFoundException.class, OfferNotFoundException.class, InvalidInviteCodeException.class})
     public ProblemDetail handleNotFound(DomainException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }

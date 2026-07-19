@@ -2,6 +2,7 @@ package ro.renovatorpro.adapter.in.web.mapper;
 
 import org.openapitools.jackson.nullable.JsonNullable;
 import ro.renovatorpro.application.port.in.Patch;
+import ro.renovatorpro.domain.model.ComparisonGroupStatus;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.FlooringType;
 import ro.renovatorpro.domain.model.InstallationType;
@@ -116,6 +117,14 @@ public final class DtoConversionSupport {
     }
 
     public static String fromItemOrigin(ItemOrigin value) {
+        return value == null ? null : value.label();
+    }
+
+    public static ComparisonGroupStatus toComparisonGroupStatus(String label) {
+        return label == null ? null : ComparisonGroupStatus.fromLabel(label);
+    }
+
+    public static String fromComparisonGroupStatus(ComparisonGroupStatus value) {
         return value == null ? null : value.label();
     }
 

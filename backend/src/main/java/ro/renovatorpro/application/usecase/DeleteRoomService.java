@@ -4,16 +4,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
+import ro.renovatorpro.application.port.out.ComparisonGroupRepository;
 import ro.renovatorpro.application.port.out.ItemRepository;
+import ro.renovatorpro.application.port.out.OfferRepository;
 import ro.renovatorpro.application.port.out.RoomRepository;
 import ro.renovatorpro.application.security.MembershipGuard;
 import ro.renovatorpro.domain.exception.RoomNotFoundException;
 import ro.renovatorpro.domain.model.user.ProjectRole;
 
 /**
- * Ștergerea unei camere elimină ȘI elementele ei — cascade explicit aici, la nivel de business, chiar
- * dacă schema DB are deja {@code ON DELETE CASCADE} (blueprint §Task 3.2: regula trebuie să existe
- * independent de constrângerea de schemă — un backend viitor pe alt store nu ar mai avea cascade gratis).
+ * Ștergerea unei camere elimină ȘI elementele ei + grupurile de comparație (cu ofertele lor) — cascade
+ * explicit aici, la nivel de business, chiar dacă schema DB are deja {@code ON DELETE CASCADE}
+ * (blueprint §Task 3.2: regula trebuie să existe independent de constrângerea de schemă — un backend
+ * viitor pe alt store nu ar mai avea cascade gratis).
  */
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,8 @@ public class DeleteRoomService implements DeleteRoomUseCase {
 
     private final RoomRepository roomRepository;
     private final ItemRepository itemRepository;
+    private final ComparisonGroupRepository comparisonGroupRepository;
+    private final OfferRepository offerRepository;
     private final MembershipGuard membershipGuard;
 
     @Override
@@ -31,6 +36,8 @@ public class DeleteRoomService implements DeleteRoomUseCase {
             throw new RoomNotFoundException(roomId);
         }
         itemRepository.deleteByRoomId(roomId);
+        offerRepository.deleteByRoomId(roomId);
+        comparisonGroupRepository.deleteByRoomId(roomId);
         roomRepository.deleteById(roomId);
     }
 }
