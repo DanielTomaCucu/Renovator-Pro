@@ -38,7 +38,7 @@ public class DeleteOfferService implements DeleteOfferUseCase {
         if (offerId.equals(group.chosenOfferId())) {
             ComparisonGroup cleared = new ComparisonGroup(
                     group.id(), group.roomId(), group.name(), group.materialType(),
-                    group.status(), null, group.createdItemId(), group.createdAt()
+                    group.status(), null, group.createdItemId(), group.linkedItemId(), group.createdAt()
             );
             comparisonGroupRepository.save(cleared);
         }

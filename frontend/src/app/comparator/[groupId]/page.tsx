@@ -9,8 +9,8 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import ComparisonGroupStatusChip from "@/components/ComparisonGroupStatusChip";
 import { useStore } from "@/shared/store";
 import { formatMoney, safeHttpUrl } from "@/shared/functions";
-import { ComparisonGroupStatus, Offer } from "@/shared/types";
-import { COMPARATOR_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
+import { ComparisonGroupStatus, ItemOrigin, Offer } from "@/shared/types";
+import { ACTION_ICONS, COMPARATOR_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import Spinner from "@/components/Spinner";
 import Drawer from "@/components/Drawer";
@@ -22,7 +22,7 @@ import { cheapestOfferId } from "./offerCompare";
 
 export default function ComparisonGroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
-  const { project, rooms, comparisonGroups, deleteOffer, chooseOffer } = useStore();
+  const { project, rooms, items, comparisonGroups, deleteOffer, chooseOffer } = useStore();
 
   const [offerDrawer, setOfferDrawer] = useState<OfferDrawerState>({ open: false });
   const [deleteOfferId, setDeleteOfferId] = useState<string | null>(null);
@@ -56,6 +56,13 @@ export default function ComparisonGroupDetailPage() {
   const room = rooms.find((r) => r.id === group.roomId);
   const cheapestId = cheapestOfferId(group.offers);
   const offerToDelete = group.offers.find((o) => o.id === deleteOfferId);
+  // Re-validare defensivă client-side a legăturii (docs/cerinte-comparator-config-sync.md) — backend-ul
+  // re-rezolvă oricum la choose; aici e doar pentru afișare (banner + textul dialogului de confirmare).
+  const linkedItem = group.linkedItemId
+    ? items.find(
+        (i) => i.id === group.linkedItemId && i.origin === ItemOrigin.Configurare && i.materialType === group.materialType
+      )
+    : undefined;
 
   return (
     <div>
@@ -69,6 +76,19 @@ export default function ComparisonGroupDetailPage() {
           </Link>
           <ComparisonGroupStatusChip status={group.status} size="sm" />
         </div>
+
+        {group.status === ComparisonGroupStatus.InAnaliza && linkedItem && (
+          <div className="flex items-start gap-2 rounded-lg bg-surface-low px-4 py-2.5 text-xs text-muted">
+            <span className="material-symbols-outlined shrink-0" style={{ fontSize: 16 }}>
+              {ACTION_ICONS.link}
+            </span>
+            <span>
+              La alegerea unei oferte se va completa elementul{" "}
+              <strong className="text-primary">«{linkedItem.name}»</strong> din configurare, nu se va crea
+              un element nou.
+            </span>
+          </div>
+        )}
 
         {group.status === ComparisonGroupStatus.Decis && (
           <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -150,8 +170,19 @@ export default function ComparisonGroupDetailPage() {
           <div className="relative w-full max-w-sm rounded-t-[24px] bg-surface p-6 shadow-2xl sm:rounded-lg sm:shadow-xl">
             <h2 className="text-center font-heading text-lg font-semibold sm:text-left">Alege această ofertă?</h2>
             <p className="mt-2 text-center text-sm text-muted sm:text-left">
-              Se va crea elementul „{chooseOfferTarget.name || group.name}&rdquo; în camera {room?.name ?? "—"}, la prețul{" "}
-              {chooseOfferTarget.unitPrice !== undefined ? formatMoney(chooseOfferTarget.unitPrice, project.currency) : "0"}.
+              {linkedItem ? (
+                <>
+                  Se va actualiza elementul „{linkedItem.name}&rdquo; din configurare cu prețul{" "}
+                  {chooseOfferTarget.unitPrice !== undefined ? formatMoney(chooseOfferTarget.unitPrice, project.currency) : "0"}
+                  {chooseOfferTarget.store ? ` și magazinul „${chooseOfferTarget.store}”` : ""}. Cantitatea din
+                  configurare rămâne neschimbată.
+                </>
+              ) : (
+                <>
+                  Se va crea elementul „{chooseOfferTarget.name || group.name}&rdquo; în camera {room?.name ?? "—"}, la prețul{" "}
+                  {chooseOfferTarget.unitPrice !== undefined ? formatMoney(chooseOfferTarget.unitPrice, project.currency) : "0"}.
+                </>
+              )}
             </p>
             <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse sm:gap-3">
               <button

@@ -51,7 +51,7 @@ class ComparisonGroupControllerTest {
     private MockMvc mockMvc;
 
     private static ComparisonGroup group(String id, ComparisonGroupStatus status) {
-        return new ComparisonGroup(id, "r1", "Gresie baie", MaterialType.GRESIE, status, null, null, Instant.now());
+        return new ComparisonGroup(id, "r1", "Gresie baie", MaterialType.GRESIE, status, null, null, null, Instant.now());
     }
 
     private static Item item(String id) {

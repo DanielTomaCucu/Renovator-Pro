@@ -243,4 +243,21 @@ public final class AutoItemReconciler {
         result.addAll(mergedAutoItems);
         return result;
     }
+
+    /**
+     * Elementul „Din Configurare" pe care un grup de comparație nou/mutat ar trebui să-l lege
+     * (docs/cerinte-comparator-config-sync.md) — ținta pe care „choose" o va ACTUALIZA în loc să creeze
+     * un item nou. Candidați: {@code roomId} identic, {@code origin == CONFIGURARE}, {@code materialType}
+     * identic. Zero candidați (categorii care nu vin niciodată din configurator — Mobilă, Electrocasnice,
+     * Sanitare etc., sau camera încă neconfigurată) → {@code null}, „choose" rămâne pe ramura de azi
+     * (creează item nou). Mai mulți candidați (ex. „Amorsă zugrăveală" + „Amorsă placări", ambele
+     * {@code MaterialType.AMORSA}) → primul după {@code createdAt} crescător; UI-ul frontend poate oferi
+     * userului alegerea explicită a altui candidat (transmisă separat, nu prin această funcție).
+     */
+    public static Item resolveLinkedItem(List<Item> items, String roomId, MaterialType materialType) {
+        return items.stream()
+                .filter(i -> i.roomId().equals(roomId) && i.origin() == ItemOrigin.CONFIGURARE && i.materialType() == materialType)
+                .min(java.util.Comparator.comparing(Item::createdAt))
+                .orElse(null);
+    }
 }
