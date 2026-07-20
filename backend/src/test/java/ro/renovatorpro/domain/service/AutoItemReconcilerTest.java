@@ -9,6 +9,7 @@ import ro.renovatorpro.domain.model.MaterialType;
 import ro.renovatorpro.domain.model.Money;
 import ro.renovatorpro.domain.model.Room;
 import ro.renovatorpro.domain.model.RoomType;
+import ro.renovatorpro.domain.model.TileSize;
 import ro.renovatorpro.domain.model.Wall;
 import ro.renovatorpro.domain.model.WallFinish;
 import ro.renovatorpro.domain.model.WallFinishType;
@@ -133,5 +134,132 @@ class AutoItemReconcilerTest {
                 BigDecimal.ONE, Money.zero(), null, null, ItemOrigin.CONFIGURARE, Instant.now(), null);
         List<Item> reconciled = AutoItemReconciler.reconcile(List.of(altaCamera), baiaGresie(), () -> "new-id", Instant.now());
         assertThat(reconciled).contains(altaCamera);
+    }
+
+    // --- ZUG-BE-3: cele 7 elemente auto-generate noi (docs/cerinte-zugraveli.md) ---
+
+    private Room baieGresieCuTavanSiFaiantaCompleta() {
+        return Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1500))
+                .floorMaterial(FlooringType.GRESIE)
+                .floorArea(6.0)
+                .tileSize(TileSize.MARE)
+                .ceilingPaint(true)
+                .wallTiling(new WallTiling(2, 1.5, Map.of(Wall.NORD, 3.0, Wall.EST, 3.0), 2.5, TileSize.MARE))
+                .build();
+    }
+
+    @Test
+    void generateAutoItemsProduceVopseaAgregataInLitriInclusivLaGresie() {
+        List<AutoItemReconciler.ItemDraft> drafts = AutoItemReconciler.generateAutoItems(baieGresieCuTavanSiFaiantaCompleta());
+        assertThat(drafts).anySatisfy(d -> {
+            assertThat(d.materialType()).isEqualTo(MaterialType.VOPSEA);
+            assertThat(d.name()).contains("tavan").contains("deasupra faianței");
+            assertThat(d.quantity()).isEqualByComparingTo("2.50");
+        });
+    }
+
+    @Test
+    void generateAutoItemsProduceAmorsaZugravealaSiAmorsaPlacariSeparat() {
+        List<AutoItemReconciler.ItemDraft> drafts = AutoItemReconciler.generateAutoItems(baieGresieCuTavanSiFaiantaCompleta());
+        long amorsaCount = drafts.stream().filter(d -> d.materialType() == MaterialType.AMORSA).count();
+        assertThat(amorsaCount).isEqualTo(2);
+        assertThat(drafts).anySatisfy(d -> {
+            assertThat(d.materialType()).isEqualTo(MaterialType.AMORSA);
+            assertThat(d.name()).isEqualTo("Amorsă zugrăveală");
+        });
+        assertThat(drafts).anySatisfy(d -> {
+            assertThat(d.materialType()).isEqualTo(MaterialType.AMORSA);
+            assertThat(d.name()).isEqualTo("Amorsă placări");
+        });
+    }
+
+    @Test
+    void generateAutoItemsProduceAdezivComunSiChitDeRosturi() {
+        List<AutoItemReconciler.ItemDraft> drafts = AutoItemReconciler.generateAutoItems(baieGresieCuTavanSiFaiantaCompleta());
+        assertThat(drafts).anySatisfy(d -> {
+            assertThat(d.materialType()).isEqualTo(MaterialType.ADEZIV_PLACARI);
+            assertThat(d.quantity()).isEqualByComparingTo("4.00");
+        });
+        assertThat(drafts).anySatisfy(d -> {
+            assertThat(d.materialType()).isEqualTo(MaterialType.CHIT_ROSTURI);
+            assertThat(d.quantity()).isEqualByComparingTo("2.00");
+        });
+    }
+
+    @Test
+    void generateAutoItemsRedenumesteFolieParchetDupaUnderfloorHeating() {
+        Room faraIncalzire = Room.builder("r1", RoomType.DORMITOR, "Dormitor", Money.of(1000))
+                .floorMaterial(FlooringType.PARCHET_LAMINAT).floorArea(10.0).underfloorHeating(false).build();
+        Room cuIncalzire = Room.builder("r1", RoomType.DORMITOR, "Dormitor", Money.of(1000))
+                .floorMaterial(FlooringType.PARCHET_LAMINAT).floorArea(10.0).underfloorHeating(true).build();
+
+        List<AutoItemReconciler.ItemDraft> faraDrafts = AutoItemReconciler.generateAutoItems(faraIncalzire);
+        List<AutoItemReconciler.ItemDraft> cuDrafts = AutoItemReconciler.generateAutoItems(cuIncalzire);
+
+        assertThat(faraDrafts).anySatisfy(d -> {
+            assertThat(d.materialType()).isEqualTo(MaterialType.FOLIE_PARCHET);
+            assertThat(d.name()).contains("XPS");
+        });
+        assertThat(cuDrafts).anySatisfy(d -> {
+            assertThat(d.materialType()).isEqualTo(MaterialType.FOLIE_PARCHET);
+            assertThat(d.name()).contains("încălzire în pardoseală");
+        });
+    }
+
+    @Test
+    void reconcileAtribuieIdSeparatCeloDouaElementeDeAmorsaCuAcelasiMaterialType() {
+        Room room = baieGresieCuTavanSiFaiantaCompleta();
+        AtomicInteger counter = new AtomicInteger();
+        List<Item> reconciled = AutoItemReconciler.reconcile(List.of(), room,
+                () -> "generated-" + counter.incrementAndGet(), Instant.now());
+
+        List<Item> amorsaItems = reconciled.stream().filter(i -> i.materialType() == MaterialType.AMORSA).toList();
+        assertThat(amorsaItems).hasSize(2);
+        // fiecare Amorsă are id propriu — niciun id duplicat/pierdut din coliziunea de materialType.
+        assertThat(amorsaItems.stream().map(Item::id).distinct()).hasSize(2);
+    }
+
+    @Test
+    void reconcilePastreazaPretulSiStatusulSeparatPentruFiecareAmorsaLaRecalcul() {
+        Room room = baieGresieCuTavanSiFaiantaCompleta();
+        Item amorsaZugraveala = new Item("amorsa-zug", "r1", "Amorsă zugrăveală", MaterialType.AMORSA,
+                "Dedeman", ItemStatus.CUMPARAT, BigDecimal.ONE, Money.of(30), null, null,
+                ItemOrigin.CONFIGURARE, Instant.now(), Instant.now());
+        Item amorsaPlacari = new Item("amorsa-plac", "r1", "Amorsă placări", MaterialType.AMORSA,
+                "Leroy Merlin", ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(45), null, null,
+                ItemOrigin.CONFIGURARE, Instant.now(), null);
+        List<Item> reconciled = AutoItemReconciler.reconcile(List.of(amorsaZugraveala, amorsaPlacari), room,
+                () -> "new-id", Instant.now());
+
+        Item zugravealaDupa = reconciled.stream().filter(i -> i.id().equals("amorsa-zug")).findFirst().orElseThrow();
+        Item placariDupa = reconciled.stream().filter(i -> i.id().equals("amorsa-plac")).findFirst().orElseThrow();
+        assertThat(zugravealaDupa.unitPrice().amount()).isEqualByComparingTo("30.00");
+        assertThat(zugravealaDupa.status()).isEqualTo(ItemStatus.CUMPARAT);
+        assertThat(zugravealaDupa.source()).isEqualTo("Dedeman");
+        assertThat(placariDupa.unitPrice().amount()).isEqualByComparingTo("45.00");
+        assertThat(placariDupa.status()).isEqualTo(ItemStatus.PLANIFICAT);
+        assertThat(placariDupa.source()).isEqualTo("Leroy Merlin");
+    }
+
+    @Test
+    void reconcileStergeAmorsaPlacariCandNuMaiEPlacareDarPastreazaAmorsaZugraveala() {
+        // Parchet (nu Gresie) + fără wallTiling -> fără nicio suprafață de placat -> Amorsă placări dispare;
+        // tavanul zugrăvit (orice pardoseală) tot cere Amorsă zugrăveală.
+        Room roomFaraFaianta = Room.builder("r1", RoomType.DORMITOR, "Dormitor", Money.of(1500))
+                .floorMaterial(FlooringType.PARCHET_LAMINAT)
+                .floorArea(6.0)
+                .ceilingPaint(true)
+                .build();
+        Item amorsaZugraveala = new Item("amorsa-zug", "r1", "Amorsă zugrăveală", MaterialType.AMORSA,
+                "", ItemStatus.IN_ASTEPTARE, BigDecimal.ONE, Money.zero(), null, null,
+                ItemOrigin.CONFIGURARE, Instant.now(), null);
+        Item amorsaPlacari = new Item("amorsa-plac", "r1", "Amorsă placări", MaterialType.AMORSA,
+                "", ItemStatus.IN_ASTEPTARE, BigDecimal.ONE, Money.zero(), null, null,
+                ItemOrigin.CONFIGURARE, Instant.now(), null);
+        List<Item> reconciled = AutoItemReconciler.reconcile(List.of(amorsaZugraveala, amorsaPlacari), roomFaraFaianta,
+                () -> "new-id", Instant.now());
+
+        assertThat(reconciled).anyMatch(i -> i.id().equals("amorsa-zug"));
+        assertThat(reconciled).noneMatch(i -> i.id().equals("amorsa-plac"));
     }
 }

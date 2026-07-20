@@ -21,6 +21,8 @@ public record RoomResponse(
         WallTilingDto wallTiling,
         WallFinishDto wallFinish,
         Map<String, RoomWindowDto> windows,
+        Boolean ceilingPaint,
+        Boolean underfloorHeating,
         /** Necesarul de material calculat server-side (sursa de adevăr) — vezi {@link RoomDimensionsDto}. */
         RoomDimensionsDto dimensions
 ) {

@@ -95,7 +95,7 @@ export default function ProjectSharingCard() {
 
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-      <div className="border-b border-line bg-surface-low/50 p-6">
+      <div className="border-b border-line bg-surface p-6">
         <div className="mb-2 flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">{DOCUMENT_ICONS.share}</span>
           <h3 className="font-heading text-lg font-bold text-primary">Partajare proiect</h3>
@@ -119,7 +119,7 @@ export default function ProjectSharingCard() {
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="shrink-0 rounded-lg border border-line px-4 py-3 text-xs font-bold uppercase text-muted hover:bg-surface-low"
+                    className="shrink-0 rounded-lg border border-line px-4 py-3 text-xs font-bold text-muted hover:bg-surface-low"
                   >
                     {copied ? "Copiat ✓" : "Copiază"}
                   </button>
@@ -138,7 +138,7 @@ export default function ProjectSharingCard() {
                 onClick={loadInviteCode}
                 disabled={loadingCode}
                 aria-busy={loadingCode}
-                className="flex items-center gap-2 rounded-lg border border-line px-4 py-3 text-xs font-bold uppercase text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg border border-line px-4 py-3 text-xs font-bold text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loadingCode && <Spinner />}
                 Arată codul

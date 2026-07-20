@@ -156,7 +156,7 @@ export default function OfferFormDrawer({
               </div>
             )}
             {images.length < MAX_IMAGES && (
-              <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-surface-low p-3 text-[12px] font-bold uppercase text-muted transition-colors hover:border-secondary hover:text-secondary active:scale-[0.98]">
+              <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-surface-low p-3 text-[12px] font-bold text-muted transition-colors hover:border-secondary hover:text-secondary active:scale-[0.98]">
                 {compressing ? <Spinner /> : (
                   <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.addPhoto}</span>
                 )}
@@ -184,7 +184,7 @@ export default function OfferFormDrawer({
                   type="button"
                   onClick={addImageUrl}
                   disabled={!imageUrlInput.trim()}
-                  className="shrink-0 rounded-md border border-line px-3 text-xs font-bold uppercase text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
+                  className="shrink-0 rounded-md border border-line px-3 text-xs font-bold text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Adaugă
                 </button>
@@ -215,7 +215,7 @@ export default function OfferFormDrawer({
               onClick={handleDetectStore}
               disabled={detecting}
               title="Detectează magazinul din locația curentă"
-              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2.5 text-xs font-bold uppercase text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2.5 text-xs font-bold text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
             >
               {detecting ? <Spinner /> : <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.detectStore}</span>}
             </button>

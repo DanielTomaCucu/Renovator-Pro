@@ -19,10 +19,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.adhesiveBags;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.baseboardLength;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.baseboardTileArea;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.ceilingPaintArea;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.floorMaterialNeeded;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.groutKg;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.hasFloorConfig;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.paintAboveTilingArea;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.paintLiters;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.paintPrimerLiters;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.tilingPrimerLiters;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.underlayArea;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.wallFinishArea;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.wallTilingArea;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.windowTrimLength;
@@ -105,20 +113,70 @@ public final class AutoItemReconciler {
             ));
         }
 
-        // Vopsea / Tapet — doar la Parchet/Mochetă (alternativa la faianță).
+        // Tapet — doar la Parchet/Mochetă (alternativa la faianță).
         if (!isGresie && room.wallFinish() != null) {
-            for (WallFinishType type : new WallFinishType[]{WallFinishType.VOPSEA, WallFinishType.TAPET}) {
-                double area = wallFinishArea(room, type);
-                long wallCount = room.wallFinish().finishes().values().stream().filter(f -> f == type).count();
-                if (area > 0) {
-                    drafts.add(new ItemDraft(
-                            room.id(),
-                            type.label() + " (" + wallCount + " pereți)",
-                            WALL_FINISH_MATERIAL_TYPE.get(type),
-                            round2(area)
-                    ));
-                }
+            double wallpaperArea = wallFinishArea(room, WallFinishType.TAPET);
+            long wallCount = room.wallFinish().finishes().values().stream()
+                    .filter(f -> f == WallFinishType.TAPET).count();
+            if (wallpaperArea > 0) {
+                drafts.add(new ItemDraft(
+                        room.id(),
+                        WallFinishType.TAPET.label() + " (" + wallCount + " pereți)",
+                        MaterialType.TAPET,
+                        round2(wallpaperArea)
+                ));
             }
+        }
+
+        // Vopsea — agregată pe cameră (pereți la Parchet/Mochetă + tavan + deasupra faianței la Gresie,
+        // ACUM la orice pardoseală, nu doar Parchet/Mochetă — docs/cerinte-zugraveli.md secțiunea A).
+        // Cantitatea e în LITRI (paintLiters), nu mp — spre deosebire de celelalte elemente auto-generate.
+        double wallPaintArea = wallFinishArea(room, WallFinishType.VOPSEA);
+        double ceilingArea = ceilingPaintArea(room);
+        double aboveTilingArea = paintAboveTilingArea(room);
+        double totalPaintLiters = paintLiters(wallPaintArea + ceilingArea + aboveTilingArea);
+        if (totalPaintLiters > 0) {
+            long paintedWallCount = room.wallFinish() == null ? 0 : room.wallFinish().finishes().values().stream()
+                    .filter(f -> f == WallFinishType.VOPSEA).count();
+            List<String> parts = new ArrayList<>();
+            if (paintedWallCount > 0) parts.add(paintedWallCount + " pereți");
+            if (ceilingArea > 0) parts.add("tavan");
+            if (aboveTilingArea > 0) parts.add("deasupra faianței");
+            String suffix = parts.isEmpty() ? "" : " (" + String.join(" + ", parts) + ")";
+            drafts.add(new ItemDraft(room.id(), "Vopsea" + suffix, MaterialType.VOPSEA, round2(totalPaintLiters)));
+        }
+
+        // Amorsă zugrăveală — sub vopsea/tapet (pereți + tavan + deasupra faianței).
+        double paintPrimer = paintPrimerLiters(room);
+        if (paintPrimer > 0) {
+            drafts.add(new ItemDraft(room.id(), "Amorsă zugrăveală", MaterialType.AMORSA, round2(paintPrimer)));
+        }
+
+        // Amorsă placări — sub adezivul de pardoseală/faianță.
+        double tilingPrimer = tilingPrimerLiters(room);
+        if (tilingPrimer > 0) {
+            drafts.add(new ItemDraft(room.id(), "Amorsă placări", MaterialType.AMORSA, round2(tilingPrimer)));
+        }
+
+        // Adeziv gresie și faianță — un singur produs cimentos, cantitate comună în saci de 25 kg.
+        int bags = adhesiveBags(room);
+        if (bags > 0) {
+            drafts.add(new ItemDraft(room.id(), "Adeziv gresie și faianță", MaterialType.ADEZIV_PLACARI, round2(bags)));
+        }
+
+        // Chit de rosturi — pardoseală gresie + faianță, cantitate comună în kg.
+        double grout = groutKg(room);
+        if (grout > 0) {
+            drafts.add(new ItemDraft(room.id(), "Chit de rosturi", MaterialType.CHIT_ROSTURI, round2(grout)));
+        }
+
+        // Folie sub parchet laminat — tipul (nume) depinde de underfloorHeating; același slot logic (materialType).
+        double underlay = underlayArea(room);
+        if (underlay > 0) {
+            String name = Boolean.TRUE.equals(room.underfloorHeating())
+                    ? "Folie parchet — încălzire în pardoseală (R mic)"
+                    : "Folie parchet — XPS 3 mm";
+            drafts.add(new ItemDraft(room.id(), name, MaterialType.FOLIE_PARCHET, round2(underlay)));
         }
 
         // Glaf/bordură ferestre — indiferent de tipul de pardoseală, ori de câte ori sunt ferestre configurate.
@@ -152,13 +210,19 @@ public final class AutoItemReconciler {
                 .filter(i -> i.roomId().equals(room.id()) && i.origin() == ItemOrigin.CONFIGURARE)
                 .toList();
 
+        // Pool mutabil, NU stream direct pe existingAutoItems — mai multe drafts proaspete pot avea
+        // ACELAȘI materialType (ex. Amorsă zugrăveală + Amorsă placări, ambele MaterialType.AMORSA);
+        // fiecare element existent trebuie consumat o singură dată, altfel două drafts ar „fura"
+        // id-ul aceluiași element existent (coliziune la salvare).
+        List<Item> unmatchedExisting = new ArrayList<>(existingAutoItems);
         List<Item> mergedAutoItems = new ArrayList<>();
         for (ItemDraft fresh : freshAutoItems) {
-            Item existing = existingAutoItems.stream()
+            Item existing = unmatchedExisting.stream()
                     .filter(i -> i.materialType() == fresh.materialType())
                     .findFirst()
                     .orElse(null);
             if (existing != null) {
+                unmatchedExisting.remove(existing);
                 // createdAt/purchasedAt se păstrează neschimbate — la fel ca id/preț/status/sursă.
                 mergedAutoItems.add(new Item(
                         existing.id(), existing.roomId(), fresh.name(), existing.materialType(),

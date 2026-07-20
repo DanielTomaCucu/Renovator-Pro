@@ -23,4 +23,22 @@ export interface RoomDimensions {
   baseboardBars: number;
   /** Câte bare de glaf fereastră (2 ml/bară) trebuie cumpărate — CALC-8. */
   windowTrimBars: number;
+  /** mp, cu pierdere — A.1. */
+  ceilingPaintArea: number;
+  /** mp, cu pierdere — A.2. */
+  paintAboveTilingArea: number;
+  /** litri amorsă zugrăveală, rotunjit ↑ la 1 l — B.4. */
+  paintPrimerLiters: number;
+  /** litri amorsă sub placări, rotunjit ↑ la 1 l — B.5. */
+  tilingPrimerLiters: number;
+  /** kg adeziv pardoseală — C.6. */
+  floorAdhesiveKg: number;
+  /** kg adeziv faianță — C.7. */
+  wallAdhesiveKg: number;
+  /** saci 25 kg, ceil — C.8. */
+  adhesiveBags: number;
+  /** kg chit rosturi, ceil — C.9. */
+  groutKg: number;
+  /** mp folie parchet, ceil — D.10. */
+  underlayArea: number;
 }

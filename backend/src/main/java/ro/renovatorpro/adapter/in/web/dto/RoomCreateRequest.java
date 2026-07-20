@@ -22,6 +22,8 @@ public record RoomCreateRequest(
         String wallShape,
         WallTilingDto wallTiling,
         WallFinishDto wallFinish,
-        Map<String, RoomWindowDto> windows
+        Map<String, RoomWindowDto> windows,
+        Boolean ceilingPaint,
+        Boolean underfloorHeating
 ) {
 }

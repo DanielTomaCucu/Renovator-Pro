@@ -26,6 +26,8 @@ public record RoomUpdateRequest(
         JsonNullable<String> wallShape,
         JsonNullable<WallTilingDto> wallTiling,
         JsonNullable<WallFinishDto> wallFinish,
-        JsonNullable<Map<String, RoomWindowDto>> windows
+        JsonNullable<Map<String, RoomWindowDto>> windows,
+        JsonNullable<Boolean> ceilingPaint,
+        JsonNullable<Boolean> underfloorHeating
 ) {
 }

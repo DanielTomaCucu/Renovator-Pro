@@ -14,6 +14,7 @@ export default function OfferCard({
   onEdit,
   onDelete,
   onChoose,
+  onViewDetails,
 }: {
   offer: Offer;
   currency: Currency;
@@ -22,6 +23,7 @@ export default function OfferCard({
   onEdit: () => void;
   onDelete: () => void;
   onChoose: () => void;
+  onViewDetails: () => void;
 }) {
   const total =
     offer.unitPrice !== undefined && offer.quantity !== undefined ? offer.unitPrice * offer.quantity : undefined;
@@ -29,7 +31,7 @@ export default function OfferCard({
 
   return (
     <div
-      className={`flex w-full shrink-0 flex-col gap-3 rounded-xl border bg-surface p-4 shadow-sm sm:w-72 ${
+      className={`flex w-full flex-col gap-3 rounded-xl border bg-surface p-4 shadow-sm ${
         isChosen ? "border-emerald-400 ring-1 ring-emerald-400" : "border-line"
       }`}
     >
@@ -83,10 +85,20 @@ export default function OfferCard({
           type="button"
           onClick={onChoose}
           disabled={isChosen}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary py-2 text-xs font-bold uppercase text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary py-2 text-xs font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.choose}</span>
           {isChosen ? "Aleasă" : "Alege"}
+        </button>
+        <button
+          type="button"
+          onClick={onViewDetails}
+          aria-label="Vezi detaliile ofertei"
+          className="rounded-md p-2 text-muted hover:bg-surface-low"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+            {ACTION_ICONS.viewDetails}
+          </span>
         </button>
         <button
           type="button"

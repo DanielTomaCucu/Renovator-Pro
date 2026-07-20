@@ -18,13 +18,22 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.adhesiveBags;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.barsNeeded;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.baseboardLength;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.baseboardTileArea;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.ceilingPaintArea;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.floorAdhesiveKg;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.floorMaterialNeeded;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.floorWasteRatio;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.groutKg;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.paintAboveTilingArea;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.paintLiters;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.paintPrimerLiters;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.roomPerimeter;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.tilingPrimerLiters;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.underlayArea;
+import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.wallAdhesiveKg;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.wallFinishArea;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.wallTilingArea;
 import static ro.renovatorpro.domain.service.RoomDimensionsCalculator.windowTrimLength;
@@ -235,5 +244,157 @@ class RoomDimensionsCalculatorTest {
         assertThat(barsNeeded(14.55)).isEqualTo(8);
         assertThat(barsNeeded(4.0)).isEqualTo(2);
         assertThat(barsNeeded(0.0)).isZero();
+    }
+
+    // --- ZUG: zugrăveli complete + consumabile de montaj (docs/cerinte-zugraveli.md) ---
+
+    /** Baie gresie 6mp, plăci Mari (60x60), faianță 2 pereți (N+E, 3ml fiecare, tileHeight 1.5m), roomHeight 2.5m, tavan zugrăvit. */
+    private Room baieGresieMareCuTavanSiDeasupraFaiantei() {
+        return Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1500))
+                .floorMaterial(FlooringType.GRESIE)
+                .floorArea(6.0)
+                .tileSize(TileSize.MARE)
+                .ceilingPaint(true)
+                .wallTiling(new WallTiling(2, 1.5, Map.of(Wall.NORD, 3.0, Wall.EST, 3.0), 2.5, TileSize.MARE))
+                .build();
+    }
+
+    @Test
+    void ceilingPaintAreaAplicaPierdereDe10ProcenteCandEsteActivat() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        assertThat(ceilingPaintArea(room)).isCloseTo(6.0 * 1.10, within(0.001));
+    }
+
+    @Test
+    void ceilingPaintAreaEsteZeroCandNuEActivat() {
+        Room room = Room.builder("r1", RoomType.DORMITOR, "Dormitor", Money.of(1000))
+                .floorMaterial(FlooringType.PARCHET_LAMINAT)
+                .floorArea(10.0)
+                .build();
+        assertThat(ceilingPaintArea(room)).isZero();
+    }
+
+    @Test
+    void paintAboveTilingAreaCalculeazaPeretiiPlacatiFaraScadereGoluriSiNeplacatiCuScadere() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        // pereți placați N+E: (3+3) * (2.5-1.5) = 6.0; pereți neplacați (S,V) fără lungime completată -> 0
+        double expected = 6.0 * (1 + 0.10);
+        assertThat(paintAboveTilingArea(room)).isCloseTo(expected, within(0.001));
+    }
+
+    @Test
+    void paintAboveTilingAreaEsteZeroCandRoomHeightLipsesteSauNuDepasesteTileHeight() {
+        Room faraRoomHeight = Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1000))
+                .floorMaterial(FlooringType.GRESIE)
+                .wallTiling(new WallTiling(2, 1.5, Map.of(Wall.NORD, 3.0, Wall.EST, 3.0)))
+                .build();
+        assertThat(paintAboveTilingArea(faraRoomHeight)).isZero();
+
+        Room roomHeightEgalTileHeight = Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1000))
+                .floorMaterial(FlooringType.GRESIE)
+                .wallTiling(new WallTiling(2, 1.5, Map.of(Wall.NORD, 3.0), 1.5, null))
+                .build();
+        assertThat(paintAboveTilingArea(roomHeightEgalTileHeight)).isZero();
+    }
+
+    @Test
+    void paintLitersAgregatIncludeTavanSiDeasupraFaiantei() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        double paintArea = wallFinishArea(room, WallFinishType.VOPSEA); // 0 la Gresie
+        double total = paintArea + ceilingPaintArea(room) + paintAboveTilingArea(room);
+        // 6.6 (tavan) + 6.6 (deasupra faianței) = 13.2mp -> 13.2*2/11 = 2.4l -> rotunjit sus la 0.5 -> 2.5l
+        assertThat(paintLiters(total)).isCloseTo(2.5, within(0.001));
+    }
+
+    @Test
+    void paintPrimerLitersAcopereZugravealaSiRotunjesteLaLitruIntreg() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        // (6.6 + 6.6) * 0.10 = 1.32 -> rotunjit sus la 2
+        assertThat(paintPrimerLiters(room)).isCloseTo(2.0, within(0.001));
+    }
+
+    @Test
+    void tilingPrimerLitersFoloseteAriiNeteSiRotunjesteLaLitruIntreg() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        // netFloor 6.0 + netFaianta (3+3)*1.5=9.0 = 15.0 -> *0.15=2.25 -> rotunjit sus la 3
+        assertThat(tilingPrimerLiters(room)).isCloseTo(3.0, within(0.001));
+    }
+
+    @Test
+    void floorAdhesiveKgFoloseteMareCuDublaIncleiere() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        // 6.0 * 5.5 * 1.10 = 36.3
+        assertThat(floorAdhesiveKg(room)).isCloseTo(36.3, within(0.001));
+    }
+
+    @Test
+    void wallAdhesiveKgFoloseteMareCuDublaIncleiere() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        // netFaianta 9.0 * 5.5 * 1.10 = 54.45
+        assertThat(wallAdhesiveKg(room)).isCloseTo(54.45, within(0.001));
+    }
+
+    @Test
+    void adhesiveBagsRotunjesteInSusSacul25Kg() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        // (36.3 + 54.45) / 25 = 3.63 -> 4 saci
+        assertThat(adhesiveBags(room)).isEqualTo(4);
+    }
+
+    @Test
+    void groutKgFoloseteTabelulPeTileSizeSiRotunjesteLaKgIntreg() {
+        Room room = baieGresieMareCuTavanSiDeasupraFaiantei();
+        // (6.0*0.10 + 9.0*0.10) * 1.10 = 1.65 -> rotunjit sus la 2
+        assertThat(groutKg(room)).isCloseTo(2.0, within(0.001));
+    }
+
+    @Test
+    void tileSizeAbsentFoloseesteMedieLaAdezivSiChit() {
+        Room room = Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1000))
+                .floorMaterial(FlooringType.GRESIE)
+                .floorArea(4.0)
+                .build();
+        // Medie: 3.5 kg/mp adeziv, 0.24 kg/mp chit
+        assertThat(floorAdhesiveKg(room)).isCloseTo(4.0 * 3.5 * 1.10, within(0.001));
+        assertThat(groutKg(room)).isCloseTo(Math.ceil(4.0 * 0.24 * 1.10), within(0.001));
+    }
+
+    @Test
+    void underlayAreaNuDepindeDeUnderfloorHeatingDoarNumeleElementuluiSeSchimba() {
+        Room faraIncalzire = Room.builder("r1", RoomType.DORMITOR, "Dormitor", Money.of(1000))
+                .floorMaterial(FlooringType.PARCHET_LAMINAT)
+                .floorArea(10.0)
+                .underfloorHeating(false)
+                .build();
+        Room cuIncalzire = Room.builder("r1", RoomType.DORMITOR, "Dormitor", Money.of(1000))
+                .floorMaterial(FlooringType.PARCHET_LAMINAT)
+                .floorArea(10.0)
+                .underfloorHeating(true)
+                .build();
+        assertThat(underlayArea(faraIncalzire)).isCloseTo(11.0, within(0.001));
+        assertThat(underlayArea(cuIncalzire)).isCloseTo(11.0, within(0.001));
+    }
+
+    @Test
+    void underlayAreaEsteZeroCandNuEParchetLaminat() {
+        Room room = Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1000))
+                .floorMaterial(FlooringType.GRESIE)
+                .floorArea(10.0)
+                .build();
+        assertThat(underlayArea(room)).isZero();
+    }
+
+    @Test
+    void cameraFaraNimicConfiguratToateConsumabileleNoiSuntZero() {
+        Room room = Room.builder("r1", RoomType.DORMITOR, "Dormitor", Money.of(1000)).build();
+        assertThat(ceilingPaintArea(room)).isZero();
+        assertThat(paintAboveTilingArea(room)).isZero();
+        assertThat(paintPrimerLiters(room)).isZero();
+        assertThat(tilingPrimerLiters(room)).isZero();
+        assertThat(floorAdhesiveKg(room)).isZero();
+        assertThat(wallAdhesiveKg(room)).isZero();
+        assertThat(adhesiveBags(room)).isZero();
+        assertThat(groutKg(room)).isZero();
+        assertThat(underlayArea(room)).isZero();
     }
 }

@@ -64,7 +64,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setMode("new-project")}
-              className={`flex-1 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wide transition-all ${
+              className={`flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all ${
                 mode === "new-project" ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-surface"
               }`}
             >
@@ -73,7 +73,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setMode("join")}
-              className={`flex-1 rounded-md px-3 py-2 text-xs font-bold uppercase tracking-wide transition-all ${
+              className={`flex-1 rounded-md px-3 py-2 text-xs font-bold transition-all ${
                 mode === "join" ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-surface"
               }`}
             >

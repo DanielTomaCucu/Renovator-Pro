@@ -8,13 +8,15 @@ import EmptyState from "@/components/EmptyState";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ComparisonGroupStatusChip from "@/components/ComparisonGroupStatusChip";
 import { useStore } from "@/shared/store";
-import { formatMoney } from "@/shared/functions";
+import { formatMoney, safeHttpUrl } from "@/shared/functions";
 import { ComparisonGroupStatus, Offer } from "@/shared/types";
 import { COMPARATOR_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import Spinner from "@/components/Spinner";
+import Drawer from "@/components/Drawer";
 import OfferCard from "./OfferCard";
 import OfferFormDrawer from "./OfferFormDrawer";
+import OfferGallery from "./OfferGallery";
 import { OfferDrawerState } from "./OfferDrawerState";
 import { cheapestOfferId } from "./offerCompare";
 
@@ -25,6 +27,7 @@ export default function ComparisonGroupDetailPage() {
   const [offerDrawer, setOfferDrawer] = useState<OfferDrawerState>({ open: false });
   const [deleteOfferId, setDeleteOfferId] = useState<string | null>(null);
   const [chooseOfferTarget, setChooseOfferTarget] = useState<Offer | null>(null);
+  const [viewOffer, setViewOffer] = useState<Offer | null>(null);
 
   const group = comparisonGroups.find((g) => g.id === groupId);
   const { run: confirmChoose, pending: choosing } = useAsyncAction(async () => {
@@ -109,7 +112,7 @@ export default function ComparisonGroupDetailPage() {
             onAction={() => setOfferDrawer({ open: true })}
           />
         ) : (
-          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {group.offers.map((offer) => (
               <OfferCard
                 key={offer.id}
@@ -120,6 +123,7 @@ export default function ComparisonGroupDetailPage() {
                 onEdit={() => setOfferDrawer({ open: true, offer })}
                 onDelete={() => setDeleteOfferId(offer.id)}
                 onChoose={() => setChooseOfferTarget(offer)}
+                onViewDetails={() => setViewOffer(offer)}
               />
             ))}
           </div>
@@ -154,7 +158,7 @@ export default function ComparisonGroupDetailPage() {
                 onClick={confirmChoose}
                 disabled={choosing}
                 aria-busy={choosing}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold uppercase tracking-widest text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:py-2.5 sm:text-sm sm:font-semibold sm:normal-case sm:tracking-normal"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:py-2.5 sm:font-semibold"
               >
                 {choosing && <Spinner />}
                 Alege Oferta
@@ -162,7 +166,7 @@ export default function ComparisonGroupDetailPage() {
               <button
                 onClick={() => setChooseOfferTarget(null)}
                 disabled={choosing}
-                className="w-full rounded-xl py-3 text-sm font-medium uppercase tracking-widest text-muted transition-transform hover:bg-surface-low active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:border sm:border-line sm:py-2.5 sm:text-sm sm:font-medium sm:normal-case sm:tracking-normal"
+                className="w-full rounded-xl py-3 text-sm font-medium text-muted transition-transform hover:bg-surface-low active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:border sm:border-line sm:py-2.5"
               >
                 Anulează
               </button>
@@ -170,6 +174,49 @@ export default function ComparisonGroupDetailPage() {
           </div>
         </div>
       )}
+
+      <Drawer open={!!viewOffer} title={viewOffer?.name || "Detalii ofertă"} onClose={() => setViewOffer(null)}>
+        {viewOffer && (
+          <>
+            <div className="space-y-3">
+              <OfferGallery images={viewOffer.images} />
+
+              {viewOffer.store && <p className="text-sm font-medium text-muted">{viewOffer.store}</p>}
+
+              <div className="flex items-baseline justify-between border-t border-line pt-3">
+                <span className="font-mono text-xl font-bold text-primary">
+                  {viewOffer.unitPrice !== undefined ? formatMoney(viewOffer.unitPrice, project.currency) : "—"}
+                </span>
+                {viewOffer.quantity !== undefined && (
+                  <span className="font-mono text-sm text-muted">
+                    × {viewOffer.quantity}
+                    {viewOffer.unitPrice !== undefined &&
+                      ` = ${formatMoney(viewOffer.unitPrice * viewOffer.quantity, project.currency)}`}
+                  </span>
+                )}
+              </div>
+
+              {safeHttpUrl(viewOffer.productUrl) && (
+                <a
+                  href={safeHttpUrl(viewOffer.productUrl)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-secondary hover:underline"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                    {COMPARATOR_ICONS.externalLink}
+                  </span>
+                  Deschide produsul
+                </a>
+              )}
+
+              {viewOffer.notes && (
+                <p className="whitespace-pre-wrap border-t border-line pt-3 text-sm text-muted">{viewOffer.notes}</p>
+              )}
+            </div>
+          </>
+        )}
+      </Drawer>
     </div>
   );
 }

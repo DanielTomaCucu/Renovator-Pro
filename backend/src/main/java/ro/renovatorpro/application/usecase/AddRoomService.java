@@ -37,6 +37,8 @@ public class AddRoomService implements AddRoomUseCase {
                 .wallTiling(command.wallTiling())
                 .wallFinish(command.wallFinish())
                 .windows(command.windows())
+                .ceilingPaint(command.ceilingPaint())
+                .underfloorHeating(command.underfloorHeating())
                 .build();
         return roomRepository.insert(room, projectId);
     }

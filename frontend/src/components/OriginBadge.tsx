@@ -20,7 +20,7 @@ export default function OriginBadge({ origin }: { origin: ItemOrigin }) {
   if (origin === ItemOrigin.Comparator) {
     return (
       <span
-        className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-secondary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-secondary"
+        className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700"
         title="Ales din Comparatorul de Oferte"
       >
         <span className="material-symbols-outlined" style={{ fontSize: 10 }}>

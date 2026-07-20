@@ -114,7 +114,7 @@ class UseCasesTest {
 
     @Test
     void getProjectRoomsItemsIntoarceStareaCurenta() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
 
@@ -134,14 +134,14 @@ class UseCasesTest {
 
     @Test
     void addRoomGenereazaIdSiOSalveazaInProiect() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.DORMITOR, "Dormitor", Money.of(700), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.DORMITOR, "Dormitor", Money.of(700), null, null, null, null, null, null, null, null, null, null, null, null, null));
         assertThat(room.id()).startsWith("generated-");
         assertThat(roomRepository.findByProjectId(PROJECT_ID)).contains(room);
     }
 
     @Test
     void deleteRoomStergeSiElementeleEi() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BUCATARIE, "Bucătărie", Money.of(2000), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BUCATARIE, "Bucătărie", Money.of(2000), null, null, null, null, null, null, null, null, null, null, null, null, null));
         Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "",
                 ItemStatus.IN_ASTEPTARE, BigDecimal.TEN, Money.of(50), null, null, ItemOrigin.MANUAL));
 
@@ -153,14 +153,14 @@ class UseCasesTest {
 
     @Test
     void updateRoomFaraCampuriTehniceNuAtingeElementele() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         Item manual = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Canapea", MaterialType.MOBILA, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(800), null, null, ItemOrigin.MANUAL));
 
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
                 null, "Living Renumit", null,
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
 
         assertThat(roomRepository.findById(room.id()).orElseThrow().name()).isEqualTo("Living Renumit");
         assertThat(itemRepository.findById(manual.id())).isPresent(); // neatins
@@ -168,14 +168,14 @@ class UseCasesTest {
 
     @Test
     void updateRoomCuCampuriTehniceGenereazaElementeAutoSiLeReconciliazaLaSchimbare() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null, null, null));
 
         // Prima configurare tehnică: pardoseală Parchet Laminat 10mp, perimetru 12m.
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
                 null, null, null,
                 Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent()));
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
 
         var afterFirst = itemRepository.findByRoomId(room.id());
         assertThat(afterFirst).anyMatch(i -> i.materialType() == MaterialType.PARCHET);
@@ -186,7 +186,7 @@ class UseCasesTest {
                 null, null, null,
                 Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(20.0), Patch.of(12.0),
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent()));
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
 
         var afterSecond = itemRepository.findByRoomId(room.id());
         long parchetCount = afterSecond.stream().filter(i -> i.materialType() == MaterialType.PARCHET).count();
@@ -195,12 +195,12 @@ class UseCasesTest {
 
     @Test
     void updateRoomStergeElementeleAutoOrfaneCandMasuratoareaDispare() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null, null, null));
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
                 null, null, null,
                 Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent()));
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
         assertThat(itemRepository.findByRoomId(room.id())).isNotEmpty();
 
         // Schimbare de material — Gresie nu mai produce Plintă separată (o include în pardoseală).
@@ -208,7 +208,7 @@ class UseCasesTest {
                 null, null, null,
                 Patch.of(FlooringType.GRESIE), Patch.absent(), Patch.absent(),
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent()));
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
 
         var after = itemRepository.findByRoomId(room.id());
         assertThat(after).noneMatch(i -> i.materialType() == MaterialType.PLINTA); // orfană — ștearsă
@@ -217,12 +217,12 @@ class UseCasesTest {
     @Test
     void updateRoomStergeExplicitUnCampTehnicOptionalPrinPatchOfNull() {
         // Problema 6 din audit: PATCH cu câmp absent nu trebuie confundat cu PATCH care șterge explicit.
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null, null, null));
         updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
                 null, null, null,
                 Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.of(2.5), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent()));
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
         assertThat(roomRepository.findById(room.id()).orElseThrow().baseboardHeight()).isEqualTo(2.5);
 
         // absent() → păstrează valoarea; of(null) → șterge explicit.
@@ -230,7 +230,7 @@ class UseCasesTest {
                 null, null, null,
                 Patch.absent(), Patch.absent(), Patch.absent(),
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent()));
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
         assertThat(roomRepository.findById(room.id()).orElseThrow().baseboardHeight())
                 .as("absent() nu modifică valoarea existentă").isEqualTo(2.5);
 
@@ -238,14 +238,14 @@ class UseCasesTest {
                 null, null, null,
                 Patch.absent(), Patch.absent(), Patch.absent(),
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.of(null), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent()));
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
         assertThat(roomRepository.findById(room.id()).orElseThrow().baseboardHeight())
                 .as("of(null) șterge explicit valoarea").isNull();
     }
 
     @Test
     void addUpdateDeleteItemCrudDeBaza() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BALCON, "Balcon", Money.of(300), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BALCON, "Balcon", Money.of(300), null, null, null, null, null, null, null, null, null, null, null, null, null));
         Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "Dedeman",
                 ItemStatus.IN_ASTEPTARE, BigDecimal.TEN, Money.of(40), null, null, ItemOrigin.MANUAL));
 
@@ -261,7 +261,7 @@ class UseCasesTest {
     @Test
     void convertCurrencyConvertesteTotBugetulCamereleSiElementele() {
         // Proiect seedat: EUR, buget 1000. Adăugăm o cameră (buget 500) și un element (preț 100 EUR).
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
 
@@ -278,7 +278,7 @@ class UseCasesTest {
 
     @Test
     void summaryAgregaTotalurileCumpparatulSiDistributiile() {
-        Room baie = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room baie = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         // 2 × 100 = 200 estimat, Cumparat → cheltuit
         addItem.execute(USER, new AddItemUseCase.Command(baie.id(), "Gresie", MaterialType.GRESIE, "",
                 ItemStatus.CUMPARAT, BigDecimal.valueOf(2), Money.of(100), null, null, ItemOrigin.MANUAL));
@@ -301,7 +301,7 @@ class UseCasesTest {
     @Test
     void addItemSeteazaCreatedAtSiPurchasedAtDoarDacaEDejaCumparat() {
         timeProvider.set(Instant.parse("2026-03-01T10:00:00Z"));
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
 
         Item planificat = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
@@ -315,7 +315,7 @@ class UseCasesTest {
 
     @Test
     void updateItemSeteazaPurchasedAtDoarLaTranzitieSpreCumparat() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         timeProvider.set(Instant.parse("2026-01-10T00:00:00Z"));
         Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "",
                 ItemStatus.PLANIFICAT, BigDecimal.TEN, Money.of(50), null, null, ItemOrigin.MANUAL));
@@ -341,7 +341,7 @@ class UseCasesTest {
 
     @Test
     void spendingTimelineAgregaCumulativPeLunaCumparariiDoarElementeleCumparate() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
 
         // Ianuarie: 2 × 50 = 100 cumpărat.
         timeProvider.set(Instant.parse("2026-01-15T00:00:00Z"));
@@ -371,7 +371,7 @@ class UseCasesTest {
 
     @Test
     void spendingTimelineEsteGoalaCandNimicNuECumparat() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
 
@@ -380,7 +380,7 @@ class UseCasesTest {
 
     @Test
     void addOfferAccepaOOfertaComplectGoala() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
 
         Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(null, null, null, null, null, null, null));
@@ -393,7 +393,7 @@ class UseCasesTest {
 
     @Test
     void chooseOfferCreeazaItemDinComparatorSiMarcheazaGrupulDecis() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
         Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
                 "Gresie Tivoli 60x60", "Dedeman", Money.of(45), BigDecimal.TEN, "https://dedeman.ro/gresie",
@@ -418,7 +418,7 @@ class UseCasesTest {
 
     @Test
     void chooseOfferPeOfertaGoalaFoloseasteFallbackuri() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
         Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(null, null, null, null, null, null, null));
 
@@ -433,7 +433,7 @@ class UseCasesTest {
 
     @Test
     void deleteRoomStergeSiGrupurileDeComparatieSiOferteleLor() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
         Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
                 "Gresie", "Dedeman", Money.of(45), BigDecimal.TEN, null, List.of(), null));
@@ -446,7 +446,7 @@ class UseCasesTest {
 
     @Test
     void convertCurrencyConvertesteSiPretulOfertelor() {
-        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null));
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
         Offer cuPret = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
                 "Gresie", "Dedeman", Money.of(100), BigDecimal.ONE, null, List.of(), null));

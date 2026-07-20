@@ -26,7 +26,11 @@ public record Room(
         RoomShape wallShape,
         WallTiling wallTiling,
         WallFinish wallFinish,
-        Map<Wall, RoomWindow> windows
+        Map<Wall, RoomWindow> windows,
+        /** Zugrăvirea tavanului — activată explicit. Aria = floorArea. Disponibilă la ORICE pardoseală. */
+        Boolean ceilingPaint,
+        /** Încălzire în pardoseală — schimbă tipul foliei de sub parchet. Doar la Parchet Laminat. */
+        Boolean underfloorHeating
 ) {
 
     public Room {
@@ -43,7 +47,7 @@ public record Room(
         return new Builder(id, type, name, allocatedBudget);
     }
 
-    /** Builder pentru câmpurile tehnice opționale — evită un constructor cu 15 argumente la apel. */
+    /** Builder pentru câmpurile tehnice opționale — evită un constructor cu 17 argumente la apel. */
     public static final class Builder {
         private final String id;
         private final RoomType type;
@@ -60,6 +64,8 @@ public record Room(
         private WallTiling wallTiling;
         private WallFinish wallFinish;
         private Map<Wall, RoomWindow> windows;
+        private Boolean ceilingPaint;
+        private Boolean underfloorHeating;
 
         private Builder(String id, RoomType type, String name, Money allocatedBudget) {
             this.id = id;
@@ -79,11 +85,13 @@ public record Room(
         public Builder wallTiling(WallTiling v) { this.wallTiling = v; return this; }
         public Builder wallFinish(WallFinish v) { this.wallFinish = v; return this; }
         public Builder windows(Map<Wall, RoomWindow> v) { this.windows = v; return this; }
+        public Builder ceilingPaint(Boolean v) { this.ceilingPaint = v; return this; }
+        public Builder underfloorHeating(Boolean v) { this.underfloorHeating = v; return this; }
 
         public Room build() {
             return new Room(id, type, name, allocatedBudget, floorMaterial, floorArea, perimeter,
                     tileSize, installationType, doors, baseboardHeight, wallShape, wallTiling,
-                    wallFinish, windows);
+                    wallFinish, windows, ceilingPaint, underfloorHeating);
         }
     }
 }

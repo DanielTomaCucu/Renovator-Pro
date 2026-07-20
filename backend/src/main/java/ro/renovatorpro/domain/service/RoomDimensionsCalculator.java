@@ -11,6 +11,7 @@ import ro.renovatorpro.domain.model.WallFinish;
 import ro.renovatorpro.domain.model.WallFinishType;
 import ro.renovatorpro.domain.model.WallTiling;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +51,47 @@ public final class RoomDimensionsCalculator {
     private static final double PAINT_COVERAGE_SQM_PER_LITER = 11.0;
     /** Lungimea standard a unei bare de plintă/glaf pe piața RO — pt. cantitatea „câte bare trebuie cumpărate". */
     private static final double BASEBOARD_BAR_LENGTH_M = 2.0;
+    /** Pierdere estimată la zugrăveala tavanului — aceeași normă ca la pereți. */
+    private static final double WASTE_RATIO_CEILING = 0.10;
+    /** Consum amorsă sub zugrăveală (perete/tavan gletuit), 1 strat — sursă: fișe tehnice, 0.05-0.20 l/mp/strat. */
+    private static final double PRIMER_PAINT_L_PER_SQM = 0.10;
+    /** Consum amorsă sub adezivul de plăci (șapă/perete absorbant), 1 strat — șapa e mai absorbantă decât gletul. */
+    private static final double PRIMER_TILING_L_PER_SQM = 0.15;
+    /** Marjă de siguranță la cumpărarea adezivului de plăci (denivelări de suport). */
+    private static final double ADHESIVE_SAFETY_RATIO = 0.10;
+    /** Greutatea unui sac de adeziv cimentos (RO, standard). */
+    private static final double ADHESIVE_BAG_KG = 25;
+    /** Marjă de siguranță la cumpărarea chitului de rosturi. */
+    private static final double GROUT_SAFETY_RATIO = 0.10;
+    /** Suprapuneri la îmbinări + margini ridicate pe perete pt. folia de sub parchet. */
+    private static final double UNDERLAY_OVERLAP_RATIO = 0.05;
+
+    /**
+     * Consum adeziv de plăci (kg/mp) după mărimea plăcii — mărimea dintelui gletierei; la plăci ≥60cm
+     * include dubla încleiere (back-buttering, +20-30%) — surse: iTiles/Unimat/Rechenportal/GoTiles.
+     */
+    private static final Map<TileSize, Double> ADHESIVE_KG_PER_SQM = new EnumMap<>(TileSize.class);
+    static {
+        ADHESIVE_KG_PER_SQM.put(TileSize.MICA, 2.5);
+        ADHESIVE_KG_PER_SQM.put(TileSize.MEDIE, 3.5);
+        ADHESIVE_KG_PER_SQM.put(TileSize.MARE, 5.5);
+        ADHESIVE_KG_PER_SQM.put(TileSize.FOARTE_MARE, 7.0);
+    }
+
+    /**
+     * Consum chit de rosturi (kg/mp) precalculat per {@link TileSize}, din formula standard de industrie
+     * {@code kg/mp = ((A+B)/(A×B)) × E × R × 1.6} (A,B = laturi placă mm, E = grosime mm, R = rost mm,
+     * 1.6 = densitate chit cimentos kg/dm³ — surse Ceresit/Weber/iTiles), cu dimensiuni REPREZENTATIVE:
+     * Mică 150×150×7mm rost 3mm, Medie 330×330×8mm rost 3mm, Mare 600×600×9mm rost 2mm,
+     * FoarteMare 1200×600×10mm rost 2mm.
+     */
+    private static final Map<TileSize, Double> GROUT_KG_PER_SQM = new EnumMap<>(TileSize.class);
+    static {
+        GROUT_KG_PER_SQM.put(TileSize.MICA, 0.45);
+        GROUT_KG_PER_SQM.put(TileSize.MEDIE, 0.24);
+        GROUT_KG_PER_SQM.put(TileSize.MARE, 0.10);
+        GROUT_KG_PER_SQM.put(TileSize.FOARTE_MARE, 0.08);
+    }
 
     private static final List<Wall> WALL_ORDER = List.of(Wall.NORD, Wall.EST, Wall.SUD, Wall.VEST);
 
@@ -222,8 +264,13 @@ public final class RoomDimensionsCalculator {
         return openingsCount(room, walls) > 1 ? WASTE_RATIO_FAIANTA_GOLURI_MULTIPLE : WASTE_RATIO_FAIANTA_BAZA;
     }
 
-    /** Suprafață de faianță necesară — suma pereților placați × înălțime, minus golurile ușilor și ferestrelor, cu pierdere. Doar la Gresie. */
-    public static double wallTilingArea(Room room) {
+    /**
+     * Suprafață NETĂ de faianță (fără pierderea de tăiere) — pereții placați × înălțime, minus golurile
+     * ușilor și ferestrelor. Expusă separat de {@link #wallTilingArea} pt. că amorsa/adezivul/chitul
+     * acoperă suprafața reală, nu plăcile tăiate (B.5, C.6, C.9 din docs/cerinte-zugraveli.md) — nu se
+     * derivă prin împărțire înapoi din valoarea cu pierdere.
+     */
+    public static double netWallTilingArea(Room room) {
         WallTiling tiling = room.wallTiling();
         if (tiling == null || room.floorMaterial() != FlooringType.GRESIE) return 0;
         List<Wall> walls = tiledWalls(room);
@@ -231,7 +278,129 @@ public final class RoomDimensionsCalculator {
         double totalLength = walls.stream().mapToDouble(w -> lengths.getOrDefault(w, 0.0)).sum();
         double grossArea = totalLength * tiling.tileHeight();
         double openings = walls.stream().mapToDouble(w -> openingsArea(room, w)).sum();
-        return Math.max(0, grossArea - openings) * (1 + faiantaWasteRatio(room, walls));
+        return Math.max(0, grossArea - openings);
+    }
+
+    /** Suprafață de faianță necesară — suma pereților placați × înălțime, minus golurile ușilor și ferestrelor, cu pierdere. Doar la Gresie. */
+    public static double wallTilingArea(Room room) {
+        WallTiling tiling = room.wallTiling();
+        if (tiling == null || room.floorMaterial() != FlooringType.GRESIE) return 0;
+        return netWallTilingArea(room) * (1 + faiantaWasteRatio(room, tiledWalls(room)));
+    }
+
+    /** Suprafață NETĂ de pardoseală — doar la Gresie (amorsa/adezivul/chitul de pardoseală, fără pierderea de tăiere). */
+    public static double netFloorTilingArea(Room room) {
+        if (room.floorMaterial() != FlooringType.GRESIE || room.floorArea() == null) return 0;
+        return room.floorArea();
+    }
+
+    /**
+     * Aria zugrăvirii tavanului — {@code floorArea × 1.10}, activată explicit, disponibilă la ORICE
+     * pardoseală (A.1 din docs/cerinte-zugraveli.md).
+     */
+    public static double ceilingPaintArea(Room room) {
+        if (!Boolean.TRUE.equals(room.ceilingPaint()) || room.floorArea() == null || room.floorArea() <= 0) return 0;
+        return room.floorArea() * (1 + WASTE_RATIO_CEILING);
+    }
+
+    /**
+     * Aria vopselei de deasupra faianței — doar la Gresie, când {@code wallTiling.roomHeight > tileHeight}
+     * (A.2). Pereții PLACAȚI nu scad golurile (asumpție: ușile/ferestrele stau în zona placată); pereții
+     * NEPLACAȚI cu lungime completată scad golurile, ca la vopseaua obișnuită.
+     */
+    public static double paintAboveTilingArea(Room room) {
+        WallTiling tiling = room.wallTiling();
+        if (tiling == null || room.floorMaterial() != FlooringType.GRESIE) return 0;
+        if (tiling.roomHeight() == null || tiling.roomHeight() <= tiling.tileHeight()) return 0;
+        double extraHeight = tiling.roomHeight() - tiling.tileHeight();
+        List<Wall> tiled = tiledWalls(room);
+        Map<Wall, Double> lengths = tiling.wallLengths();
+
+        double tiledWallsArea = tiled.stream()
+                .mapToDouble(w -> lengths.getOrDefault(w, 0.0) * extraHeight)
+                .sum();
+
+        double untiledWallsArea = WALL_ORDER.stream()
+                .filter(w -> !tiled.contains(w))
+                .mapToDouble(w -> {
+                    double length = lengths.getOrDefault(w, 0.0);
+                    if (length <= 0) return 0;
+                    return Math.max(0, length * tiling.roomHeight() - openingsArea(room, w));
+                })
+                .sum();
+
+        return (tiledWallsArea + untiledWallsArea) * (1 + WASTE_RATIO_PAINT);
+    }
+
+    /**
+     * Necesar de amorsă sub zugrăveală, în litri, rotunjit în sus la litru întreg (se vinde la 1/4/10 l) —
+     * B.4. Se aplică pe toate ariile de vopsit/tapetat (tapetul cere aceeași pregătire a suportului).
+     */
+    public static double paintPrimerLiters(Room room) {
+        double area = wallFinishArea(room, WallFinishType.VOPSEA) + wallFinishArea(room, WallFinishType.TAPET)
+                + ceilingPaintArea(room) + paintAboveTilingArea(room);
+        if (area <= 0) return 0;
+        return Math.ceil(area * PRIMER_PAINT_L_PER_SQM);
+    }
+
+    /**
+     * Necesar de amorsă sub adezivul de plăci (pardoseală + faianță), în litri, rotunjit în sus la litru
+     * întreg — B.5. Arii NETE (fără pierderea de tăiere) — amorsa acoperă suprafața reală.
+     */
+    public static double tilingPrimerLiters(Room room) {
+        double area = netFloorTilingArea(room) + netWallTilingArea(room);
+        if (area <= 0) return 0;
+        return Math.ceil(area * PRIMER_TILING_L_PER_SQM);
+    }
+
+    private static double adhesiveKgPerSqm(TileSize size) {
+        return ADHESIVE_KG_PER_SQM.get(size == null ? TileSize.MEDIE : size);
+    }
+
+    private static double groutKgPerSqm(TileSize size) {
+        return GROUT_KG_PER_SQM.get(size == null ? TileSize.MEDIE : size);
+    }
+
+    /** Necesar de adeziv pentru pardoseala de gresie, în kg — C.6. Aria NETĂ (plinta lipită intră în marja de 10%). */
+    public static double floorAdhesiveKg(Room room) {
+        double area = netFloorTilingArea(room);
+        if (area <= 0) return 0;
+        return area * adhesiveKgPerSqm(room.tileSize()) * (1 + ADHESIVE_SAFETY_RATIO);
+    }
+
+    /** Necesar de adeziv pentru faianță, în kg — C.7. */
+    public static double wallAdhesiveKg(Room room) {
+        double area = netWallTilingArea(room);
+        if (area <= 0) return 0;
+        TileSize size = room.wallTiling() == null ? null : room.wallTiling().tileSize();
+        return area * adhesiveKgPerSqm(size) * (1 + ADHESIVE_SAFETY_RATIO);
+    }
+
+    /** Saci de 25kg de adeziv (pardoseală + faianță sunt același produs cimentos) — C.8. */
+    public static int adhesiveBags(Room room) {
+        double totalKg = floorAdhesiveKg(room) + wallAdhesiveKg(room);
+        if (totalKg <= 0) return 0;
+        return (int) Math.ceil(totalKg / ADHESIVE_BAG_KG);
+    }
+
+    /** Necesar de chit de rosturi (pardoseală + faianță), în kg, rotunjit în sus la kg întreg — C.9. */
+    public static double groutKg(Room room) {
+        double floorKg = netFloorTilingArea(room) * groutKgPerSqm(room.tileSize());
+        double wallKg = netWallTilingArea(room) * groutKgPerSqm(room.wallTiling() == null ? null : room.wallTiling().tileSize());
+        double total = (floorKg + wallKg) * (1 + GROUT_SAFETY_RATIO);
+        if (total <= 0) return 0;
+        return Math.ceil(total);
+    }
+
+    /**
+     * Aria de folie sub parchetul laminat, în mp, rotunjit în sus la mp întreg (se vinde la rolă, pe mp) —
+     * D.10. 0 dacă pardoseala nu e Parchet Laminat (la Mochetă nu se generează — în afara scopului).
+     */
+    public static double underlayArea(Room room) {
+        if (room.floorMaterial() != FlooringType.PARCHET_LAMINAT || room.floorArea() == null || room.floorArea() <= 0) {
+            return 0;
+        }
+        return Math.ceil(room.floorArea() * (1 + UNDERLAY_OVERLAP_RATIO));
     }
 
     /** Pereții cu finisajul cerut ({@code Vopsea} sau {@code Tapet}), din configurarea {@code wallFinish} — doar la Parchet/Mochetă. */
