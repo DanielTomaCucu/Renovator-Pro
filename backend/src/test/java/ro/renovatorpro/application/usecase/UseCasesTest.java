@@ -107,7 +107,7 @@ class UseCasesTest {
         convertCurrency = new ConvertProjectCurrencyService(projectRepository, roomRepository, itemRepository, comparisonGroupRepository, offerRepository, membershipGuard);
         getSummary = new GetProjectSummaryService(projectRepository, roomRepository, itemRepository, membershipGuard);
         getSpendingTimeline = new GetSpendingTimelineService(roomRepository, itemRepository, membershipGuard);
-        addComparisonGroup = new AddComparisonGroupService(comparisonGroupRepository, roomRepository, idGenerator, timeProvider, membershipGuard);
+        addComparisonGroup = new AddComparisonGroupService(comparisonGroupRepository, roomRepository, itemRepository, idGenerator, timeProvider, membershipGuard);
         addOffer = new AddOfferService(offerRepository, comparisonGroupRepository, roomRepository, idGenerator, timeProvider, membershipGuard);
         chooseOffer = new ChooseOfferService(comparisonGroupRepository, offerRepository, roomRepository, itemRepository, idGenerator, timeProvider, membershipGuard);
     }
@@ -381,7 +381,7 @@ class UseCasesTest {
     @Test
     void addOfferAccepaOOfertaComplectGoala() {
         Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
-        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE, null));
 
         Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(null, null, null, null, null, null, null));
 
@@ -394,7 +394,7 @@ class UseCasesTest {
     @Test
     void chooseOfferCreeazaItemDinComparatorSiMarcheazaGrupulDecis() {
         Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
-        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE, null));
         Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
                 "Gresie Tivoli 60x60", "Dedeman", Money.of(45), BigDecimal.TEN, "https://dedeman.ro/gresie",
                 List.of("https://img/1.jpg", "data:image/jpeg;base64,abc"), "Arată bine"));
@@ -419,7 +419,7 @@ class UseCasesTest {
     @Test
     void chooseOfferPeOfertaGoalaFoloseasteFallbackuri() {
         Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
-        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE, null));
         Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(null, null, null, null, null, null, null));
 
         ChooseOfferUseCase.Result result = chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer.id(), null));
@@ -432,9 +432,126 @@ class UseCasesTest {
     }
 
     @Test
+    void addComparisonGroupSeLeagaAutomatDeElementulDinConfigurareCorespunzator() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
+        Item configItem = itemRepository.findByRoomId(room.id()).stream()
+                .filter(i -> i.materialType() == MaterialType.PARCHET).findFirst().orElseThrow();
+
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Parchet dormitor", MaterialType.PARCHET, null));
+
+        assertThat(group.linkedItemId()).isEqualTo(configItem.id());
+    }
+
+    @Test
+    void addComparisonGroupFaraElementDinConfigurareRamaneNelegat() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Canapea", MaterialType.MOBILA, null));
+
+        assertThat(group.linkedItemId()).isNull();
+    }
+
+    @Test
+    void chooseOfferPeGrupLegatActualizeazaElementulExistentInLocSaCreezeUnulNou() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
+        Item configItem = itemRepository.findByRoomId(room.id()).stream()
+                .filter(i -> i.materialType() == MaterialType.PARCHET).findFirst().orElseThrow();
+        int itemCountBefore = itemRepository.findByRoomId(room.id()).size();
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Parchet baie", MaterialType.PARCHET, null));
+        Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                "Parchet Egger", "Dedeman", Money.of(60), null, "https://dedeman.ro/parchet",
+                List.of("https://img/parchet.jpg"), null));
+
+        ChooseOfferUseCase.Result result = chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer.id(), null));
+
+        // Niciun item nou — numărul de elemente ale camerei rămâne neschimbat.
+        assertThat(itemRepository.findByRoomId(room.id())).hasSize(itemCountBefore);
+        assertThat(result.item().id()).isEqualTo(configItem.id());
+        assertThat(result.item().origin()).isEqualTo(ItemOrigin.CONFIGURARE); // origin NU se schimbă
+        assertThat(result.item().name()).isEqualTo(configItem.name()); // nume păstrat (măsurătoare)
+        assertThat(result.item().quantity()).isEqualByComparingTo(configItem.quantity()); // cantitate păstrată
+        assertThat(result.item().source()).isEqualTo("Dedeman");
+        assertThat(result.item().unitPrice().amount()).isEqualByComparingTo("60.00");
+        assertThat(result.item().imageUrl()).isEqualTo("https://img/parchet.jpg");
+        assertThat(result.group().createdItemId()).isEqualTo(configItem.id());
+    }
+
+    @Test
+    void chooseOfferPeGrupLegatCuOfertaPartialaNuGolesteCampurileExistente() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Parchet baie", MaterialType.PARCHET, null));
+        // Prima ofertă completează prețul.
+        Offer offer1 = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                null, "Dedeman", Money.of(60), null, null, List.of(), null));
+        chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer1.id(), null));
+
+        // A doua ofertă (re-alegere) nu are magazin — nu trebuie să șteargă "Dedeman" deja salvat.
+        Offer offer2 = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                null, null, Money.of(65), null, null, List.of(), null));
+        ChooseOfferUseCase.Result result = chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer2.id(), null));
+
+        assertThat(result.item().source()).isEqualTo("Dedeman"); // păstrat, oferta 2 nu avea magazin
+        assertThat(result.item().unitPrice().amount()).isEqualByComparingTo("65.00"); // actualizat
+    }
+
+    @Test
+    void chooseOfferPentruMobilaCreeazaItemNouCaSiPanaAcum() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Canapea", MaterialType.MOBILA, null));
+        Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                "Canapea IKEA", "IKEA", Money.of(1200), BigDecimal.ONE, null, List.of(), null));
+
+        ChooseOfferUseCase.Result result = chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer.id(), null));
+
+        assertThat(result.item().origin()).isEqualTo(ItemOrigin.COMPARATOR);
+        assertThat(itemRepository.findByRoomId(room.id())).hasSize(1); // itemul nou, singurul din cameră
+    }
+
+    @Test
+    void reconciliereaCameraDupaChooseNuSuprascriePretulSetat() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(1200), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(10.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Parchet baie", MaterialType.PARCHET, null));
+        Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                null, "Dedeman", Money.of(60), null, null, List.of(), null));
+        ChooseOfferUseCase.Result chosen = chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer.id(), null));
+
+        // Reconciliere ulterioară (schimbare de suprafață) — prețul/sursa setate de choose trebuie păstrate.
+        updateRoom.execute(USER, room.id(), new UpdateRoomUseCase.Command(
+                null, null, null,
+                Patch.of(FlooringType.PARCHET_LAMINAT), Patch.of(20.0), Patch.of(12.0),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
+                Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent()));
+
+        Item afterReconcile = itemRepository.findById(chosen.item().id()).orElseThrow();
+        assertThat(afterReconcile.source()).isEqualTo("Dedeman"); // păstrat
+        assertThat(afterReconcile.unitPrice().amount()).isEqualByComparingTo("60.00"); // păstrat
+        assertThat(afterReconcile.quantity()).isNotEqualByComparingTo(chosen.item().quantity()); // recalculată
+    }
+
+    @Test
     void deleteRoomStergeSiGrupurileDeComparatieSiOferteleLor() {
         Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
-        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE, null));
         Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
                 "Gresie", "Dedeman", Money.of(45), BigDecimal.TEN, null, List.of(), null));
 
@@ -447,7 +564,7 @@ class UseCasesTest {
     @Test
     void convertCurrencyConvertesteSiPretulOfertelor() {
         Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
-        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Gresie baie", MaterialType.GRESIE, null));
         Offer cuPret = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
                 "Gresie", "Dedeman", Money.of(100), BigDecimal.ONE, null, List.of(), null));
         Offer faraPret = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(

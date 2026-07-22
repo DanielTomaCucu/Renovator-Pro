@@ -45,6 +45,9 @@ public class ComparisonGroupEntity {
     @Column(name = "created_item_id")
     private String createdItemId;
 
+    @Column(name = "linked_item_id")
+    private String linkedItemId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import StatusChip from "@/components/StatusChip";
 import OriginBadge from "@/components/OriginBadge";
 import DashboardSummaryCard, { SummaryProgressFooter } from "@/components/DashboardSummaryCard";
@@ -26,6 +27,7 @@ import { useSortableTable } from "@/shared/useSortableTable";
 import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { ACTION_ICONS, COMPARATOR_ICONS, ROOM_TYPE_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
 import { DeleteTarget } from "./DeleteTarget";
+import { decidedGroupForItem } from "./decidedGroupForItem";
 import { ItemDrawerState } from "./ItemDrawerState";
 import { ItemDetailsState } from "./ItemDetailsState";
 
@@ -61,7 +63,7 @@ function matchesSearch(item: Item, query: string): boolean {
 }
 
 export default function ElementePage() {
-  const { project, rooms, items, summary, addItem, deleteItem, deleteRoom } = useStore();
+  const { project, rooms, items, summary, comparisonGroups, addItem, deleteItem, deleteRoom } = useStore();
   const money = (value: number) => formatMoney(value, project.currency);
 
   const [itemDrawer, setItemDrawer] = useState<ItemDrawerState>({ open: false });
@@ -470,6 +472,21 @@ export default function ElementePage() {
                                 )}
                                 <span className="font-medium text-primary">{item.name}</span>
                                 <OriginBadge origin={item.origin} />
+                                {(() => {
+                                  const decidedGroup = decidedGroupForItem(comparisonGroups, item.id);
+                                  return decidedGroup ? (
+                                    <Link
+                                      href={`/comparator/${decidedGroup.id}`}
+                                      title="Prețul acestui element vine dintr-o ofertă aleasă în Comparator"
+                                      className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700 hover:bg-violet-200"
+                                    >
+                                      <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
+                                        {COMPARATOR_ICONS.chosen}
+                                      </span>
+                                      Ofertă aleasă
+                                    </Link>
+                                  ) : null;
+                                })()}
                               </div>
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-muted">
@@ -818,6 +835,21 @@ export default function ElementePage() {
                                     {item.name}
                                   </h4>
                                   <OriginBadge origin={item.origin} />
+                                  {(() => {
+                                    const decidedGroup = decidedGroupForItem(comparisonGroups, item.id);
+                                    return decidedGroup ? (
+                                      <Link
+                                        href={`/comparator/${decidedGroup.id}`}
+                                        title="Prețul acestui element vine dintr-o ofertă aleasă în Comparator"
+                                        className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700 hover:bg-violet-200"
+                                      >
+                                        <span className="material-symbols-outlined" style={{ fontSize: 10 }}>
+                                          {COMPARATOR_ICONS.chosen}
+                                        </span>
+                                        Ofertă aleasă
+                                      </Link>
+                                    ) : null;
+                                  })()}
                                 </div>
                                 <p className="font-mono text-sm text-muted">
                                   {item.unitPrice === 0 ? (

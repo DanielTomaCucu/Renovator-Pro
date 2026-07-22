@@ -12,6 +12,7 @@ public record ComparisonGroupResponse(
         String status,
         String chosenOfferId,
         String createdItemId,
+        String linkedItemId,
         Instant createdAt,
         List<OfferResponse> offers
 ) {

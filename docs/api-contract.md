@@ -89,7 +89,8 @@ oferte comparate. Vezi `docs/cerinte-comparator-oferte.md` pentru descrierea fun
   materialType: MaterialType;
   status: ComparisonGroupStatus;  // enum: "În analiză" | "Decis"
   chosenOfferId?: string;         // setat DOAR de POST .../choose
-  createdItemId?: string;         // idem — Item-ul creat la alegere (rămâne chiar dacă itemul e șters ulterior)
+  createdItemId?: string;         // idem — Item-ul creat/actualizat la alegere (poate fi un item „Din Configurare")
+  linkedItemId?: string;          // vezi „Sincronizare cu Configurare" mai jos — ținta pe care choose o va ACTUALIZA
   createdAt: string;              // ISO 8601, server-side
   offers: Offer[];                // nested — un singur GET pt. toată pagina /comparator
 }
@@ -114,17 +115,48 @@ multipart/BYTEA — sunt string-uri simple (URL sau data-URI), refolosind exact 
 pt. `Item.imageUrl` (validare `ItemUrlValidation`, compresie canvas client-side înainte de encodare —
 `app/comparator/[groupId]/compressImage.ts`). Mai simplu, consistent cu restul aplicației, fără infra nouă.
 
+### Sincronizare cu Configurare — `linkedItemId` (docs/cerinte-comparator-config-sync.md)
+
+Problemă rezolvată: fără această legătură, un grup de comparație pentru un material deja generat de
+`/configurare` (ex. „Gresie baie") ar produce la `choose` un **al doilea** `Item` pentru același material —
+două surse de adevăr, totaluri dublate. Soluția: comparatorul nu creează un item paralel când există deja
+unul „Din Configurare" pentru acea combinație cameră+material — îl **actualizează**.
+
+- **La `POST /api/rooms/{roomId}/comparison-groups`** și la **`PATCH .../{id}`** (dacă schimbă `roomId`/
+  `materialType`), backend-ul rezolvă `linkedItemId` = elementul `Item` cu `roomId` identic,
+  `origin: "Din Configurare"`, `materialType` identic al grupului (`AutoItemReconciler.resolveLinkedItem`,
+  primul după `createdAt` la ambiguitate — ex. „Amorsă zugrăveală" vs. „Amorsă placări", ambele
+  `MaterialType.Amorsă`). Body-ul ambelor endpoint-uri acceptă opțional `linkedItemId` explicit (userul
+  alege manual la ambiguitate în UI) — validat ca fiind un candidat real, altfel `400`.
+- **Zero candidați** (materiale care nu vin NICIODATĂ din configurator — Mobilă, Electrocasnice, Sanitare,
+  Corpuri de iluminat, Altele — sau camera încă neconfigurată) → `linkedItemId: null`, comportamentul de
+  `choose` rămâne EXACT cel de azi (creează item nou).
+
 **`POST /api/comparison-groups/{id}/choose`** — body `{offerId, quantity?}`, response `{group, item}`.
-Creează un `Item` în camera grupului: `name` = `offer.name` ?? numele grupului; `source` = `offer.store` ?? `""`;
-`unitPrice` = `offer.unitPrice` ?? 0; `quantity` = din body, altfel `offer.quantity`, altfel 1; `imageUrl` =
-prima poză de tip URL din `offer.images` (pozele data-URI nu se copiază); `origin: "Din Comparator"`.
-Re-alegerea pe un grup deja Decis creează un ALT item (nu îl suprascrie pe cel vechi) și actualizează
-`chosenOfferId`/`createdItemId`. Oferta trebuie să aparțină grupului indicat, altfel `400`.
+Comportament în DOUĂ ramuri, decis de `linkedItemId` (re-validat la fiecare choose — poate fi stale dacă
+reconcilierea camerei a șters/recreat itemul între timp; re-rezolvat automat dacă e invalid):
+
+1. **`linkedItemId` valid** (item există, `origin: "Din Configurare"`, `materialType` al grupului) →
+   **PATCH pe item-ul existent**, DOAR câmpurile `source` (= `offer.store` ?? valoarea existentă),
+   `unitPrice` (= `offer.unitPrice` ?? valoarea existentă), `productUrl`, `imageUrl` (idem, oferta parțială
+   NU golește un câmp deja completat). `name`/`quantity`/`status`/`origin`/`createdAt`/`purchasedAt` NEATINSE
+   — cantitatea rămâne cea calculată din măsurători, nu cea din ofertă/body. `origin` rămâne
+   `"Din Configurare"` (NU devine `"Din Comparator"`).
+2. **Fără `linkedItemId`** (fallback, comportament de azi neschimbat) → creează `Item` nou:
+   `name` = `offer.name` ?? numele grupului; `source` = `offer.store` ?? `""`; `unitPrice` = `offer.unitPrice`
+   ?? 0; `quantity` = din body, altfel `offer.quantity`, altfel 1; `imageUrl` = prima poză de tip URL din
+   `offer.images` (pozele data-URI nu se copiază); `origin: "Din Comparator"`.
+
+În ambele ramuri: `chosenOfferId`/`createdItemId` se actualizează pe grup, statusul devine „Decis”. Oferta
+trebuie să aparțină grupului indicat, altfel `400`. Re-alegerea pe un grup deja Decis: ramura 1 actualizează
+din nou ACELAȘI item (nu se creează dubluri); ramura 2 (fallback) creează un ALT item nou (comportament de
+azi, neschimbat) și suprascrie referințele.
 
 **Conversia de monedă** (`POST /api/projects/{id}/currency`) convertește și `offers.unitPrice` ale
 proiectului (ofertele fără preț se sar). **Ștergerea unei camere** șterge cascade și grupurile ei + ofertele.
-**Ștergerea unui grup** șterge ofertele lui, dar NU atinge `Item`-ul deja creat din el (`createdItemId` rămâne
-în istoric, poate ajunge să pointeze spre un item de mult șters — nu e problemă, e doar istoric).
+**Ștergerea unui grup** șterge ofertele lui, dar NU atinge `Item`-ul deja creat/actualizat din el
+(`createdItemId` rămâne în istoric, poate ajunge să pointeze spre un item de mult șters — nu e problemă, e
+doar istoric).
 
 ## Endpoint-uri planificate
 
@@ -147,13 +179,13 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 | `summary` (store) | `/api/projects/{id}/summary` | `GET` | Agregările calculate server-side — vezi secțiunea „Agregări server-side" |
 | `spendingTimeline` (store) | `/api/projects/{id}/spending-timeline` | `GET` | Serie temporală de cheltuieli cumulate — vezi secțiunea dedicată mai jos |
 | `comparisonGroups` (store) | `/api/projects/{id}/comparison-groups` | `GET` | `ComparisonGroup[]`, cu `offers` nested — vezi secțiunea „Comparator de Oferte" |
-| `addComparisonGroup(roomId, data)` | `/api/rooms/{roomId}/comparison-groups` | `POST` | Body: `{name, materialType}`. Response: `ComparisonGroup` (offers `[]`) |
-| `updateComparisonGroup(id, patch)` | `/api/comparison-groups/{id}` | `PATCH` | Body: `Partial<{name, materialType, roomId}>` |
-| `deleteComparisonGroup(id)` | `/api/comparison-groups/{id}` | `DELETE` | Șterge și ofertele (cascade); NU atinge `Item`-ul creat din grup |
+| `addComparisonGroup(roomId, data)` | `/api/rooms/{roomId}/comparison-groups` | `POST` | Body: `{name, materialType, linkedItemId?}`. Response: `ComparisonGroup` (offers `[]`, `linkedItemId` auto-rezolvat dacă nu e furnizat explicit) |
+| `updateComparisonGroup(id, patch)` | `/api/comparison-groups/{id}` | `PATCH` | Body: `Partial<{name, materialType, roomId, linkedItemId}>` |
+| `deleteComparisonGroup(id)` | `/api/comparison-groups/{id}` | `DELETE` | Șterge și ofertele (cascade); NU atinge `Item`-ul creat/actualizat din grup |
 | `addOffer(groupId, data)` | `/api/comparison-groups/{groupId}/offers` | `POST` | Body: `Omit<Offer, "id"\|"groupId"\|"createdAt">` — TOATE câmpurile opționale, `{}` valid |
 | `updateOffer(id, patch)` | `/api/offers/{id}` | `PATCH` | `null` explicit pe un câmp = șterge valoarea (ca la `Room`) |
 | `deleteOffer(id)` | `/api/offers/{id}` | `DELETE` | Dacă era `chosenOfferId`, referința devine `null` (statusul grupului rămâne Decis) |
-| `chooseOffer(groupId, offerId, quantity?)` | `/api/comparison-groups/{groupId}/choose` | `POST` | Creează `Item` (origin `Din Comparator`), marchează grupul Decis — vezi secțiunea dedicată |
+| `chooseOffer(groupId, offerId, quantity?)` | `/api/comparison-groups/{groupId}/choose` | `POST` | Actualizează itemul `linkedItemId` (dacă există) SAU creează unul nou (origin `Din Comparator`) — vezi secțiunea „Sincronizare cu Configurare" |
 
 ## Autentificare (Faza 5)
 

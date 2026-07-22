@@ -262,4 +262,50 @@ class AutoItemReconcilerTest {
         assertThat(reconciled).anyMatch(i -> i.id().equals("amorsa-zug"));
         assertThat(reconciled).noneMatch(i -> i.id().equals("amorsa-plac"));
     }
+
+    private static Item item(String id, String roomId, MaterialType materialType, ItemOrigin origin, Instant createdAt) {
+        return new Item(id, roomId, "Element " + id, materialType, "", ItemStatus.IN_ASTEPTARE,
+                BigDecimal.ONE, Money.zero(), null, null, origin, createdAt, null);
+    }
+
+    @Test
+    void resolveLinkedItemGasesteUnicSingurCandidat() {
+        Item parchet = item("i1", "r1", MaterialType.PARCHET, ItemOrigin.CONFIGURARE, Instant.now());
+        Item altaCamera = item("i2", "r2", MaterialType.PARCHET, ItemOrigin.CONFIGURARE, Instant.now());
+        Item alteMaterial = item("i3", "r1", MaterialType.GRESIE, ItemOrigin.CONFIGURARE, Instant.now());
+
+        Item found = AutoItemReconciler.resolveLinkedItem(List.of(parchet, altaCamera, alteMaterial), "r1", MaterialType.PARCHET);
+
+        assertThat(found.id()).isEqualTo("i1");
+    }
+
+    @Test
+    void resolveLinkedItemFaraCandidatiIntoarceNull() {
+        Item mobila = item("i1", "r1", MaterialType.MOBILA, ItemOrigin.MANUAL, Instant.now());
+
+        Item found = AutoItemReconciler.resolveLinkedItem(List.of(mobila), "r1", MaterialType.MOBILA);
+
+        assertThat(found).isNull(); // MOBILA nu vine niciodată din configurator -> item Manual nu se leagă
+    }
+
+    @Test
+    void resolveLinkedItemIgnoraElementeleDinComparatorSauManuale() {
+        Item dinComparator = item("i1", "r1", MaterialType.PARCHET, ItemOrigin.COMPARATOR, Instant.now());
+        Item manual = item("i2", "r1", MaterialType.PARCHET, ItemOrigin.MANUAL, Instant.now());
+
+        Item found = AutoItemReconciler.resolveLinkedItem(List.of(dinComparator, manual), "r1", MaterialType.PARCHET);
+
+        assertThat(found).isNull();
+    }
+
+    @Test
+    void resolveLinkedItemCuMaiMultiCandidatiAlegePrimulDupaCreatedAt() {
+        Instant t0 = Instant.parse("2026-01-01T00:00:00Z");
+        Item amorsaZugraveala = item("amorsa-zug", "r1", MaterialType.AMORSA, ItemOrigin.CONFIGURARE, t0);
+        Item amorsaPlacari = item("amorsa-plac", "r1", MaterialType.AMORSA, ItemOrigin.CONFIGURARE, t0.plusSeconds(60));
+
+        Item found = AutoItemReconciler.resolveLinkedItem(List.of(amorsaPlacari, amorsaZugraveala), "r1", MaterialType.AMORSA);
+
+        assertThat(found.id()).isEqualTo("amorsa-zug"); // creat primul
+    }
 }

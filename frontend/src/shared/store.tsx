@@ -56,6 +56,7 @@ function normalizeComparisonGroup(group: ComparisonGroup): ComparisonGroup {
     ...group,
     chosenOfferId: group.chosenOfferId ?? undefined,
     createdItemId: group.createdItemId ?? undefined,
+    linkedItemId: group.linkedItemId ?? undefined,
     offers: group.offers.map(normalizeOffer),
   };
 }
@@ -256,7 +257,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const addComparisonGroup = useCallback(
-    async (roomId: string, data: { name: string; materialType: MaterialType }) => {
+    async (roomId: string, data: { name: string; materialType: MaterialType; linkedItemId?: string }) => {
       try {
         const created = await api.post<ComparisonGroup>(`/api/rooms/${roomId}/comparison-groups`, data);
         setComparisonGroups((prev) => [...prev, normalizeComparisonGroup(created)]);
@@ -268,7 +269,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const updateComparisonGroup = useCallback(
-    async (id: string, patch: { name?: string; materialType?: MaterialType; roomId?: string }) => {
+    async (id: string, patch: { name?: string; materialType?: MaterialType; roomId?: string; linkedItemId?: string }) => {
       try {
         const updated = await api.patch<ComparisonGroup>(`/api/comparison-groups/${id}`, patch);
         setComparisonGroups((prev) => prev.map((g) => (g.id === id ? normalizeComparisonGroup(updated) : g)));
@@ -340,7 +341,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setComparisonGroups((prev) =>
           prev.map((g) => (g.id === groupId ? normalizeComparisonGroup(result.group) : g))
         );
-        setItems((prev) => [...prev, result.item]);
+        // Ramura „legată" ACTUALIZEAZĂ un item existent (Din Configurare) — nu-l duplica local; doar
+        // ramura fallback creează unul chiar nou (id absent din starea curentă).
+        setItems((prev) =>
+          prev.some((i) => i.id === result.item.id)
+            ? prev.map((i) => (i.id === result.item.id ? result.item : i))
+            : [...prev, result.item]
+        );
         await reloadAggregates();
       } catch (err) {
         setError(toErrorMessage(err));

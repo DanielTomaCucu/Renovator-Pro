@@ -8,6 +8,7 @@ package ro.renovatorpro.adapter.in.web.dto;
 public record ComparisonGroupUpdateRequest(
         String name,
         String materialType,
-        String roomId
+        String roomId,
+        String linkedItemId
 ) {
 }

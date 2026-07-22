@@ -57,6 +57,8 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `cheapestOfferId(offers)` | `app/comparator/[groupId]/offerCompare.ts` (local) | id-ul ofertei cu cel mai mic preț, doar între cele CU preț | `/comparator/[groupId]` (badge „Cel mai bun preț") |
 | `compressImage(file, maxSide?, quality?)` | `app/comparator/[groupId]/compressImage.ts` (local) | comprimă o poză (canvas, redimensionare + reencodare JPEG) înainte de a o encoda ca data URI | `OfferFormDrawer` |
 | `detectStoreName()` | `app/comparator/[groupId]/detectStore.ts` (local) | geolocation → reverse-geocoding Nominatim, best-effort (null la refuz/timeout) | `OfferFormDrawer` (buton „Detectează magazinul") |
+| `configuredItemCandidates(items, roomId, materialType)` | `app/comparator/configuredItemCandidates.ts` (local) | elementele „Din Configurare" candidate pt. legarea unui grup (oglindă client-side a `AutoItemReconciler.resolveLinkedItem`) | `GroupFormDrawer` (panou țintă legătură) |
+| `decidedGroupForItem(groups, itemId)` | `app/elemente/decidedGroupForItem.ts` (local) | grupul Decis al cărui `createdItemId` e acest element — pt. chip-ul „Ofertă aleasă" | `elemente/page.tsx` (lângă `OriginBadge`) |
 
 _(`dimensions.ts` a fost promovat în `shared/functions/` de îndată ce a devenit necesar și din `store.tsx`, nu doar din pagina `configurare`)_
 
@@ -1292,3 +1294,54 @@ noile câmpuri); frontend — `shared/types/{Room,WallTiling,RoomDimensions,Mate
 `app/centralizator/page.tsx` (badge-uri culoare pt. cele 4 `MaterialType` noi); `docs/api-contract.md`.
 
 **Branch:** `042-cerinte-zugraveli-consumabile`.
+
+---
+
+### 2026-07-20 — Sincronizare Comparator ↔ Configurare (o singură sursă de adevăr per material)
+
+Implementat `docs/cerinte-comparator-config-sync.md` complet (backend + frontend). **Problema:** un grup de
+comparație pentru un material deja generat de `/configurare` (ex. „Parchet Laminat (Pardoseală)") producea
+la „Alege ofertă" un element NOU `Din Comparator`, în paralel cu cel `Din Configurare` deja existent —
+două rânduri pentru același material fizic, totaluri dublate, fără să fie clar care preț e „cel adevărat".
+
+**Soluție:** `ComparisonGroup` primește `linkedItemId?` — elementul `Din Configurare` pe care „choose" îl
+ACTUALIZEAZĂ (preț/sursă/link/poză) în loc să creeze un item nou. Rezolvat automat la creare/mutare de
+grup (`AutoItemReconciler.resolveLinkedItem(items, roomId, materialType)` — candidați: `roomId` +
+`origin Configurare` + `materialType` identic; 0 candidați → `null`, comportament fallback NESCHIMBAT
+pt. categorii care nu vin niciodată din configurator: Mobilă, Electrocasnice, Sanitare, Corpuri de
+iluminat, Altele). La ambiguitate (≥2 candidați, ex. „Amorsă zugrăveală" vs. „Amorsă placări", ambele
+`MaterialType.Amorsa`) userul alege explicit în `GroupFormDrawer` (`linkedItemId` trimis în request,
+validat server-side). Legătura se RE-VALIDEAZĂ la fiecare `choose` (poate fi stale — reconcilierea
+camerei șterge/recreează elementele „Din Configurare" la fiecare `PATCH /rooms/{id}`).
+
+**`ChooseOfferService`** (backend): două ramuri. Legătură validă → PATCH pe itemul existent, DOAR
+`source`/`unitPrice`/`productUrl`/`imageUrl` (fallback pe valoarea existentă dacă oferta e parțială —
+nu golește un câmp deja completat); `name`/`quantity`/`status`/`origin`/`createdAt`/`purchasedAt` NEATINSE
+(cantitatea rămâne cea din măsurători, nu din ofertă). Fără legătură → comportamentul de azi, neschimbat
+(item nou `Din Comparator`).
+
+**Bug prins în `store.tsx` înainte de verificarea vizuală:** `chooseOffer` făcea `setItems((prev) =>
+[...prev, result.item])` necondiționat — pe ramura „legată" (update, nu create), asta ar fi ADĂUGAT un
+duplicat local al itemului deja existent în stare (backend-ul întorcea corect un singur item actualizat,
+dar frontend-ul l-ar fi arătat de două ori până la următorul reload). Fix: `setItems` verifică dacă
+`result.item.id` există deja în listă și îl înlocuiește în loc să adauge.
+
+**Verificat manual în browser** (creat grup nou „Parchet" pt. camera „dormitoe" cu pardoseală Parchet
+Laminat deja configurată → panoul din formular a arătat corect ținta „Parchet Laminat (Pardoseală) —
+23.6"; ales o ofertă Dedeman/77 EUR → elementul din `/elemente` a rămas UN SINGUR rând, `Din Configurare`,
+cantitate 23.6 neschimbată, preț/sursă actualizate, chip nou „Ofertă aleasă" lângă `OriginBadge`; testat și
+cazurile 0 candidați — Mobilă — și ≥2 candidați — Amorsă în baie).
+
+**Fișiere atinse:** backend — `V8__comparator_linked_item.sql`,
+`domain/model/ComparisonGroup.java`, `domain/service/AutoItemReconciler.java` (+ `resolveLinkedItem`),
+`adapter/out/persistence/entity/ComparisonGroupEntity.java`,
+`adapter/in/web/dto/{ComparisonGroupResponse,ComparisonGroupCreateRequest,ComparisonGroupUpdateRequest}.java`,
+`application/port/in/{AddComparisonGroupUseCase,UpdateComparisonGroupUseCase}.java`,
+`application/usecase/{AddComparisonGroupService,UpdateComparisonGroupService,ChooseOfferService,DeleteOfferService}.java`,
+teste (`AutoItemReconcilerTest`, `UseCasesTest`, `ComparisonGroupControllerTest`); frontend —
+`shared/types/{ComparisonGroup,RenovationStore}.ts`, `shared/store.tsx`,
+`app/comparator/{GroupFormDrawer.tsx,configuredItemCandidates.ts}` (nou),
+`app/comparator/[groupId]/page.tsx`, `app/elemente/{page.tsx,decidedGroupForItem.ts}` (nou);
+`docs/api-contract.md`.
+
+**Branch:** `043-comparator-config-sync`.
