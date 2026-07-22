@@ -34,10 +34,11 @@ public class SessionIssuer {
     @Value("${app.auth.refresh-token-ttl-days}")
     private long refreshTokenTtlDays;
 
+    /** {@code project} = proiectul activ al noii sesiuni (V11) — comutarea de proiect reemite prin aceeași metodă, cu alt {@code project}. */
     public AuthResult issue(User user, Project project, ProjectRole role) {
         String accessToken = tokenIssuer.issueAccessToken(user.id(), user.username());
         String rawRefreshToken = secureTokenGenerator.generate();
-        refreshTokenRepository.insert(idGenerator.newId(), user.id(), tokenHasher.hash(rawRefreshToken),
+        refreshTokenRepository.insert(idGenerator.newId(), user.id(), project.id(), tokenHasher.hash(rawRefreshToken),
                 timeProvider.now().plus(Duration.ofDays(refreshTokenTtlDays)));
         return new AuthResult(user, project, role, accessToken, rawRefreshToken);
     }

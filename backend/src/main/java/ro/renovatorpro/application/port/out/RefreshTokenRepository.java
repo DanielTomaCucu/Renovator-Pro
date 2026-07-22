@@ -5,10 +5,11 @@ import java.util.Optional;
 
 public interface RefreshTokenRepository {
 
-    record StoredToken(String id, String userId, String tokenHash, Instant expiresAt, Instant revokedAt) {
+    record StoredToken(String id, String userId, String projectId, String tokenHash, Instant expiresAt, Instant revokedAt) {
     }
 
-    void insert(String id, String userId, String tokenHash, Instant expiresAt);
+    /** {@code projectId} = proiectul activ al acestei sesiuni (V11) — o comutare de proiect rotește tokenul, nu userul. */
+    void insert(String id, String userId, String projectId, String tokenHash, Instant expiresAt);
 
     Optional<StoredToken> findByTokenHash(String tokenHash);
 

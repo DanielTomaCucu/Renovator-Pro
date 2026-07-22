@@ -4,6 +4,7 @@ import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Spinner from "@/components/Spinner";
 import ProjectSharingCard from "@/components/ProjectSharingCard";
+import ProjectSwitcherCard from "@/components/ProjectSwitcherCard";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
@@ -318,6 +319,7 @@ export default function SetariPage() {
         </div>
 
         <ProjectSharingCard />
+        <ProjectSwitcherCard />
       </main>
 
       <ConfirmDialog

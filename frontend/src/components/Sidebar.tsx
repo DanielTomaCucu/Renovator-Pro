@@ -36,7 +36,7 @@ export default function Sidebar() {
           onClick={() => setMobileOpen((v) => !v)}
           aria-label={mobileOpen ? "Închide meniul" : "Deschide meniul"}
           aria-expanded={mobileOpen}
-          className="shrink-0 rounded-lg p-2 text-primary hover:bg-surface"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-surface"
         >
           <span className="material-symbols-outlined">
             {mobileOpen ? ACTION_ICONS.close : NAV_ICONS.mobileMenu}
@@ -112,7 +112,7 @@ export default function Sidebar() {
                 onClick={handleLogout}
                 disabled={loggingOut}
                 aria-label="Ieși din cont"
-                className="shrink-0 rounded-lg p-1 text-muted hover:bg-surface-low hover:text-tertiary disabled:opacity-50"
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-low hover:text-tertiary disabled:opacity-50"
               >
                 {loggingOut ? <Spinner /> : (
                   <span className="material-symbols-outlined text-[20px]">{ACTION_ICONS.logout}</span>
@@ -200,7 +200,7 @@ export default function Sidebar() {
               disabled={loggingOut}
               title={collapsed ? `${session.user.username} — Ieși din cont` : "Ieși din cont"}
               aria-label="Ieși din cont"
-              className="shrink-0 rounded-lg p-1 text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-tertiary disabled:opacity-50"
             >
               {loggingOut ? <Spinner /> : (
                 <span className="material-symbols-outlined text-[20px]">{ACTION_ICONS.logout}</span>

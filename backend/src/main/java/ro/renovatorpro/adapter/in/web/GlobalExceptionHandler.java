@@ -11,13 +11,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ro.renovatorpro.domain.exception.AccountLockedException;
 import ro.renovatorpro.domain.exception.ComparisonGroupNotFoundException;
 import ro.renovatorpro.domain.exception.DomainException;
+import ro.renovatorpro.domain.exception.DuplicateEmailException;
 import ro.renovatorpro.domain.exception.DuplicateUsernameException;
 import ro.renovatorpro.domain.exception.InvalidCredentialsException;
 import ro.renovatorpro.domain.exception.InvalidInviteCodeException;
 import ro.renovatorpro.domain.exception.InvalidRefreshTokenException;
+import ro.renovatorpro.domain.exception.InspirationImageNotFoundException;
+import ro.renovatorpro.domain.exception.InvalidPasswordResetTokenException;
 import ro.renovatorpro.domain.exception.InvalidRegistrationException;
 import ro.renovatorpro.domain.exception.ItemNotFoundException;
 import ro.renovatorpro.domain.exception.OfferNotFoundException;
+import ro.renovatorpro.domain.exception.PasswordResetAccountNotFoundException;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.exception.RoomNotFoundException;
 
@@ -34,13 +38,14 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler({ProjectNotFoundException.class, RoomNotFoundException.class, ItemNotFoundException.class,
-            ComparisonGroupNotFoundException.class, OfferNotFoundException.class, InvalidInviteCodeException.class})
+            ComparisonGroupNotFoundException.class, OfferNotFoundException.class, InvalidInviteCodeException.class,
+            InspirationImageNotFoundException.class, PasswordResetAccountNotFoundException.class})
     public ProblemDetail handleNotFound(DomainException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler(DuplicateUsernameException.class)
-    public ProblemDetail handleDuplicateUsername(DuplicateUsernameException ex) {
+    @ExceptionHandler({DuplicateUsernameException.class, DuplicateEmailException.class})
+    public ProblemDetail handleDuplicateUsername(DomainException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
@@ -55,8 +60,8 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
     }
 
-    @ExceptionHandler(InvalidRegistrationException.class)
-    public ProblemDetail handleInvalidRegistration(InvalidRegistrationException ex) {
+    @ExceptionHandler({InvalidRegistrationException.class, InvalidPasswordResetTokenException.class})
+    public ProblemDetail handleInvalidRegistration(DomainException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 

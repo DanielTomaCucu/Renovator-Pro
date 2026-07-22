@@ -19,19 +19,31 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ro.renovatorpro.adapter.in.web.dto.AuthResponse;
 import ro.renovatorpro.adapter.in.web.dto.CurrentUserResponse;
+import ro.renovatorpro.adapter.in.web.dto.ForgotPasswordRequest;
+import ro.renovatorpro.adapter.in.web.dto.ForgotPasswordResponse;
+import ro.renovatorpro.adapter.in.web.dto.JoinProjectRequest;
 import ro.renovatorpro.adapter.in.web.dto.LoginRequest;
+import ro.renovatorpro.adapter.in.web.dto.MyProjectResponse;
 import ro.renovatorpro.adapter.in.web.dto.RefreshResponse;
 import ro.renovatorpro.adapter.in.web.dto.RegisterRequest;
+import ro.renovatorpro.adapter.in.web.dto.ResetPasswordRequest;
+import ro.renovatorpro.adapter.in.web.dto.SwitchProjectRequest;
 import ro.renovatorpro.adapter.in.web.mapper.AuthDtoMapper;
 import ro.renovatorpro.adapter.in.web.mapper.ProjectDtoMapper;
 import ro.renovatorpro.application.port.in.AuthResult;
 import ro.renovatorpro.application.port.in.GetCurrentUserUseCase;
+import ro.renovatorpro.application.port.in.JoinProjectUseCase;
+import ro.renovatorpro.application.port.in.ListMyProjectsUseCase;
 import ro.renovatorpro.application.port.in.LoginUseCase;
 import ro.renovatorpro.application.port.in.LogoutUseCase;
 import ro.renovatorpro.application.port.in.RefreshTokenUseCase;
 import ro.renovatorpro.application.port.in.RegisterUserUseCase;
+import ro.renovatorpro.application.port.in.RequestPasswordResetUseCase;
+import ro.renovatorpro.application.port.in.ResetPasswordUseCase;
+import ro.renovatorpro.application.port.in.SwitchProjectUseCase;
 
 import java.time.Duration;
+import java.util.List;
 
 /** `/api/auth/**` — public (SecurityConfig); restul rutelor cer JWT valid. Vezi docs/cerinte-autentificare.md AUTH-1. */
 @RestController
@@ -44,6 +56,11 @@ public class AuthController {
     private final RefreshTokenUseCase refreshTokenUseCase;
     private final LogoutUseCase logoutUseCase;
     private final GetCurrentUserUseCase getCurrentUserUseCase;
+    private final RequestPasswordResetUseCase requestPasswordResetUseCase;
+    private final ResetPasswordUseCase resetPasswordUseCase;
+    private final JoinProjectUseCase joinProjectUseCase;
+    private final SwitchProjectUseCase switchProjectUseCase;
+    private final ListMyProjectsUseCase listMyProjectsUseCase;
     private final ProjectDtoMapper projectDtoMapper;
     private final AuthDtoMapper authDtoMapper;
 
@@ -60,7 +77,7 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
         RegisterUserUseCase.Command command = new RegisterUserUseCase.Command(
-                request.username(), request.password(), request.projectName(), request.inviteCode());
+                request.username(), request.email(), request.password(), request.projectName(), request.inviteCode());
         AuthResult result = registerUserUseCase.execute(command);
         setRefreshCookie(response, result.refreshToken());
         return toAuthResponse(result);
@@ -89,13 +106,47 @@ public class AuthController {
         clearRefreshCookie(response);
     }
 
+    @PostMapping("/forgot-password")
+    public ForgotPasswordResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return new ForgotPasswordResponse(requestPasswordResetUseCase.execute(request.email()));
+    }
+
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        resetPasswordUseCase.execute(request.token(), request.newPassword());
+    }
+
     @GetMapping("/me")
-    public CurrentUserResponse me() {
-        GetCurrentUserUseCase.Result result = getCurrentUserUseCase.execute(CurrentUser.id());
+    public CurrentUserResponse me(HttpServletRequest request) {
+        GetCurrentUserUseCase.Result result = getCurrentUserUseCase.execute(CurrentUser.id(), readRefreshCookie(request));
         return new CurrentUserResponse(
                 authDtoMapper.toUserResponse(result.user()),
                 projectDtoMapper.toResponse(result.project()),
                 result.role().name());
+    }
+
+    @GetMapping("/me/projects")
+    public List<MyProjectResponse> myProjects() {
+        return listMyProjectsUseCase.execute(CurrentUser.id()).stream()
+                .map(r -> new MyProjectResponse(projectDtoMapper.toResponse(r.project()), r.role().name()))
+                .toList();
+    }
+
+    /** Alăturare la un alt proiect (user deja autentificat) — comută sesiunea pe proiectul nou. */
+    @PostMapping("/join-project")
+    public AuthResponse joinProject(@Valid @RequestBody JoinProjectRequest request, HttpServletResponse response) {
+        AuthResult result = joinProjectUseCase.execute(CurrentUser.id(), request.inviteCode());
+        setRefreshCookie(response, result.refreshToken());
+        return toAuthResponse(result);
+    }
+
+    /** Comută proiectul activ al sesiunii pe unul la care userul e deja membru. */
+    @PostMapping("/switch-project")
+    public AuthResponse switchProject(@Valid @RequestBody SwitchProjectRequest request, HttpServletRequest httpRequest, HttpServletResponse response) {
+        AuthResult result = switchProjectUseCase.execute(CurrentUser.id(), readRefreshCookie(httpRequest), request.projectId());
+        setRefreshCookie(response, result.refreshToken());
+        return toAuthResponse(result);
     }
 
     private AuthResponse toAuthResponse(AuthResult result) {

@@ -19,8 +19,8 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
     private final TimeProvider timeProvider;
 
     @Override
-    public void insert(String id, String userId, String tokenHash, Instant expiresAt) {
-        jpaRepository.save(new RefreshTokenEntity(id, userId, tokenHash, expiresAt, null, timeProvider.now()));
+    public void insert(String id, String userId, String projectId, String tokenHash, Instant expiresAt) {
+        jpaRepository.save(new RefreshTokenEntity(id, userId, projectId, tokenHash, expiresAt, null, timeProvider.now()));
     }
 
     @Override
@@ -45,6 +45,6 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
     }
 
     private StoredToken toStoredToken(RefreshTokenEntity entity) {
-        return new StoredToken(entity.getId(), entity.getUserId(), entity.getTokenHash(), entity.getExpiresAt(), entity.getRevokedAt());
+        return new StoredToken(entity.getId(), entity.getUserId(), entity.getProjectId(), entity.getTokenHash(), entity.getExpiresAt(), entity.getRevokedAt());
     }
 }

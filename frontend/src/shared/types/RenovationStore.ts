@@ -1,5 +1,7 @@
 import { ComparisonGroup } from "./ComparisonGroup";
 import { Currency } from "./Currency";
+import { InspirationImage } from "./InspirationImage";
+import { InspirationType } from "./InspirationType";
 import { Item } from "./Item";
 import { MaterialType } from "./MaterialType";
 import { Offer } from "./Offer";
@@ -26,6 +28,8 @@ export interface RenovationStore {
   spendingTimeline: SpendingTimelinePoint[];
   /** Grupurile de comparație ale proiectului (Comparator de Oferte), cu ofertele lor nested — reîncărcate după fiecare mutație. */
   comparisonGroups: ComparisonGroup[];
+  /** Pozele Galeriei de Inspirație ale proiectului (poze proprii/randări/inspirație online), opțional legate de o cameră. */
+  inspirationImages: InspirationImage[];
   /**
    * Mesajul ultimei erori de mutație (request API eșuat — validare, rețea, server jos), sau `null` dacă
    * nimic nu a eșuat. Mutațiile NU aruncă — starea locală nu se schimbă dacă requestul eșuează, iar
@@ -70,4 +74,10 @@ export interface RenovationStore {
    * creează un item nou ca înainte. Marchează grupul „Decis" în ambele cazuri.
    */
   chooseOffer: (groupId: string, offerId: string, quantity?: number) => Promise<void>;
+
+  /** `roomId` opțional — poză „generală", neasignată unei camere. */
+  addInspirationImage: (data: { roomId?: string; type: InspirationType; image: string; caption?: string; sourceUrl?: string }) => Promise<void>;
+  /** `null` explicit pe `roomId` = mută poza la „General". */
+  updateInspirationImage: (id: string, patch: { [K in keyof InspirationImage]?: InspirationImage[K] | null }) => Promise<void>;
+  deleteInspirationImage: (id: string) => Promise<void>;
 }

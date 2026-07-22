@@ -8,7 +8,7 @@
  * singur loc de adevăr — restul aplicației importă din acest fișier, nu hardcodează.
  */
 
-import { FlooringType, InstallationType, ItemStatus, RoomType, TileSize } from "./types";
+import { FlooringType, InspirationType, InstallationType, ItemStatus, RoomType, TileSize } from "./types";
 
 export const NAV_ICONS = {
   logo: "architecture",
@@ -17,6 +17,7 @@ export const NAV_ICONS = {
   centralizator: "table_chart",
   analiza: "leaderboard",
   comparator: "compare_arrows",
+  galerie: "auto_awesome",
   setari: "settings",
   collapseSidebar: "menu_open",
   sidebarAddRoom: "add_circle",
@@ -141,6 +142,7 @@ export const TECHNICAL_ICONS = {
 export const SETTINGS_ICONS = {
   currencyExchange: "currency_exchange",
   verifiedUser: "verified_user",
+  switchProject: "swap_horiz",
 } as const;
 
 /** Iconițe pentru Comparatorul de Oferte (pagina listă + pagina de comparare). */
@@ -155,3 +157,17 @@ export const COMPARATOR_ICONS = {
   emptyState: "compare_arrows",
   externalLink: "open_in_new",
 } as const;
+
+/** Iconițe pentru Galeria de Inspirație (poze proprii/randări/inspirație online, pe cameră). */
+export const GALLERY_ICONS = {
+  emptyState: NAV_ICONS.galerie,
+  addImage: "add_photo_alternate",
+  unassigned: "layers_clear",
+  externalLink: "open_in_new",
+} as const;
+
+export const INSPIRATION_TYPE_ICONS: Record<InspirationType, string> = {
+  [InspirationType.PozaProprie]: "photo_camera",
+  [InspirationType.Randare]: "view_in_ar",
+  [InspirationType.InspiratieOnline]: "travel_explore",
+};

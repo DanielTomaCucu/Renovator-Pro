@@ -17,6 +17,7 @@ import ro.renovatorpro.domain.model.Project;
 import ro.renovatorpro.domain.model.user.ProjectMember;
 import ro.renovatorpro.domain.model.user.User;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -48,10 +49,14 @@ public class LoginService implements LoginUseCase {
             throw new InvalidCredentialsException();
         }
         User user = maybeUser.get();
-        // Membership, nu ownership (D6/D7): un EDITOR alăturat printr-un cod trebuie să primească
-        // proiectul la care s-a alăturat, nu unul deținut de el (nu deține niciunul).
-        ProjectMember membership = projectMemberRepository.findByUserId(user.id())
-                .orElseThrow(InvalidCredentialsException::new);
+        // Multi-proiect (V11): userul poate avea mai multe apartenențe — implicit la login se alege cea
+        // mai VECHE (`findAllByUserId` e ordonată după `joinedAt` ascendent), adică „proiectul de-acasă".
+        // Restul apar în selectorul de proiecte din UI (`/api/auth/me/projects`), o comutare explicită.
+        List<ProjectMember> memberships = projectMemberRepository.findAllByUserId(user.id());
+        if (memberships.isEmpty()) {
+            throw new InvalidCredentialsException();
+        }
+        ProjectMember membership = memberships.get(0);
         Project project = projectRepository.findById(membership.projectId())
                 .orElseThrow(() -> new ProjectNotFoundException(membership.projectId()));
         loginLockoutGuard.recordSuccess(normalizedUsername);

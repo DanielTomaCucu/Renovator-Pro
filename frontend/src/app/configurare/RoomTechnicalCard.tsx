@@ -595,7 +595,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               e.stopPropagation();
               setEditOpen(true);
             }}
-            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-primary"
             aria-label={`Editează camera ${room.name}`}
           >
             <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.editItem}</span>
@@ -607,7 +607,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               e.stopPropagation();
               setConfirmDelete(true);
             }}
-            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
             aria-label="Șterge camera"
           >
             <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
@@ -1003,7 +1003,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       <button
                         type="button"
                         onClick={() => removeWindow(w)}
-                        className="rounded-lg p-3 text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
                         aria-label={`Elimină fereastra de pe peretele ${w}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
@@ -1099,7 +1099,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       <button
                         type="button"
                         onClick={() => removeDoor(w)}
-                        className="rounded-lg p-3 text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
                         aria-label={`Elimină ușa de pe peretele ${w}`}
                       >
                         <span className="material-symbols-outlined icon-btn">

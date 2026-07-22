@@ -94,7 +94,7 @@ export default function OfferCard({
           type="button"
           onClick={onViewDetails}
           aria-label="Vezi detaliile ofertei"
-          className="rounded-md p-2 text-muted hover:bg-surface-low"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-low"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
             {ACTION_ICONS.viewDetails}
@@ -104,7 +104,7 @@ export default function OfferCard({
           type="button"
           onClick={onEdit}
           aria-label="Editează oferta"
-          className="icon-btn rounded-md p-2 text-muted hover:bg-surface-low"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-low"
         >
           <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.editInline}</span>
         </button>
@@ -112,7 +112,7 @@ export default function OfferCard({
           type="button"
           onClick={onDelete}
           aria-label="Șterge oferta"
-          className="icon-btn rounded-md p-2 text-muted hover:bg-surface-low hover:text-tertiary"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-low hover:text-tertiary"
         >
           <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
         </button>

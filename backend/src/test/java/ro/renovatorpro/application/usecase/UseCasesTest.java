@@ -24,6 +24,8 @@ import ro.renovatorpro.domain.model.ComparisonGroup;
 import ro.renovatorpro.domain.model.ComparisonGroupStatus;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.FlooringType;
+import ro.renovatorpro.domain.model.InspirationImage;
+import ro.renovatorpro.domain.model.InspirationType;
 import ro.renovatorpro.domain.model.Item;
 import ro.renovatorpro.domain.model.ItemOrigin;
 import ro.renovatorpro.domain.model.ItemStatus;
@@ -56,6 +58,7 @@ class UseCasesTest {
     private FakeItemRepository itemRepository;
     private FakeComparisonGroupRepository comparisonGroupRepository;
     private FakeOfferRepository offerRepository;
+    private FakeInspirationImageRepository inspirationImageRepository;
     private FakeProjectMemberRepository projectMemberRepository;
     private FakeIdGenerator idGenerator;
     private FakeTimeProvider timeProvider;
@@ -84,6 +87,7 @@ class UseCasesTest {
         itemRepository = new FakeItemRepository();
         comparisonGroupRepository = new FakeComparisonGroupRepository();
         offerRepository = new FakeOfferRepository(comparisonGroupRepository);
+        inspirationImageRepository = new FakeInspirationImageRepository();
         projectMemberRepository = new FakeProjectMemberRepository();
         idGenerator = new FakeIdGenerator();
         timeProvider = new FakeTimeProvider();
@@ -100,7 +104,7 @@ class UseCasesTest {
         updateProject = new UpdateProjectService(projectRepository, membershipGuard);
         addRoom = new AddRoomService(roomRepository, idGenerator, membershipGuard);
         updateRoom = new UpdateRoomService(roomRepository, itemRepository, idGenerator, timeProvider, membershipGuard);
-        deleteRoom = new DeleteRoomService(roomRepository, itemRepository, comparisonGroupRepository, offerRepository, membershipGuard);
+        deleteRoom = new DeleteRoomService(roomRepository, itemRepository, comparisonGroupRepository, offerRepository, inspirationImageRepository, membershipGuard);
         addItem = new AddItemService(itemRepository, roomRepository, idGenerator, timeProvider, membershipGuard);
         updateItem = new UpdateItemService(itemRepository, roomRepository, timeProvider, membershipGuard);
         deleteItem = new DeleteItemService(itemRepository, roomRepository, membershipGuard);
@@ -149,6 +153,19 @@ class UseCasesTest {
 
         assertThat(roomRepository.findById(room.id())).isEmpty();
         assertThat(itemRepository.findById(item.id())).isEmpty();
+    }
+
+    @Test
+    void deleteRoomDezasigneazaDarNuStergePozeleDinGalerie() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        InspirationImage saved = inspirationImageRepository.save(new InspirationImage(
+                "img1", PROJECT_ID, room.id(), InspirationType.RANDARE, "https://example.com/poza.jpg",
+                null, null, timeProvider.now()));
+
+        deleteRoom.execute(USER, room.id());
+
+        InspirationImage after = inspirationImageRepository.findById(saved.id()).orElseThrow();
+        assertThat(after.roomId()).isNull(); // rămâne în galerie, doar dezasignată
     }
 
     @Test
@@ -293,8 +310,8 @@ class UseCasesTest {
         assertThat(s.budgetRemaining()).isEqualByComparingTo("800.00");         // 1000 buget − 200 cheltuit
         assertThat(s.boughtCount()).isEqualTo(1);
         assertThat(s.purchaseProgress()).isEqualTo(50);                          // 1 din 2 elemente
-        assertThat(s.costPerRoom()).singleElement()
-                .satisfies(rc -> assertThat(rc.total().amount()).isEqualByComparingTo("500.00"));
+        assertThat(s.costPerRoom()).singleElement() // doar Cumparat (200), NU totalul estimat (500)
+                .satisfies(rc -> assertThat(rc.total().amount()).isEqualByComparingTo("200.00"));
         assertThat(s.costPerCategory()).containsKey(MaterialType.GRESIE).containsKey(MaterialType.SANITARE);
     }
 
@@ -340,20 +357,20 @@ class UseCasesTest {
     }
 
     @Test
-    void spendingTimelineAgregaCumulativPeLunaCumparariiDoarElementeleCumparate() {
+    void spendingTimelineAgregaCumulativPeLunaCumparariiSiSeparatPeLunaAdaugarii() {
         Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
 
-        // Ianuarie: 2 × 50 = 100 cumpărat.
+        // Ianuarie: 2 × 50 = 100 cumpărat (createdAt = purchasedAt = ianuarie, creat direct Cumparat).
         timeProvider.set(Instant.parse("2026-01-15T00:00:00Z"));
         Item ian = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "",
                 ItemStatus.CUMPARAT, BigDecimal.valueOf(2), Money.of(50), null, null, ItemOrigin.MANUAL));
 
-        // Februarie: 1 × 300 = 300 cumpărat → cumulativ 400.
+        // Februarie: 1 × 300 = 300 cumpărat → cumulativSpent 400.
         timeProvider.set(Instant.parse("2026-02-10T00:00:00Z"));
         addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
                 ItemStatus.CUMPARAT, BigDecimal.ONE, Money.of(300), null, null, ItemOrigin.MANUAL));
 
-        // Element NEcumpărat — ignorat de serie.
+        // Element NEcumpărat, tot februarie — ignorat de cumulativeSpent, dar INTRĂ în cumulativeTotal.
         addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Oglindă", MaterialType.ALTELE, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(999), null, null, ItemOrigin.MANUAL));
 
@@ -362,18 +379,32 @@ class UseCasesTest {
         assertThat(timeline).hasSize(2);
         assertThat(timeline.get(0).month()).isEqualTo(YearMonth.of(2026, 1));
         assertThat(timeline.get(0).cumulativeSpent().amount()).isEqualByComparingTo("100.00");
+        assertThat(timeline.get(0).cumulativeTotal().amount()).isEqualByComparingTo("100.00");
         assertThat(timeline.get(1).month()).isEqualTo(YearMonth.of(2026, 2));
-        assertThat(timeline.get(1).cumulativeSpent().amount()).isEqualByComparingTo("400.00"); // cumulativ
+        assertThat(timeline.get(1).cumulativeSpent().amount()).isEqualByComparingTo("400.00"); // cumulativ, doar Cumparat
+        assertThat(timeline.get(1).cumulativeTotal().amount()).isEqualByComparingTo("1399.00"); // cumulativ, TOATE (100+300+999)
 
         // Sanity: elementul din ianuarie chiar există și e Cumparat (evită un test fals-pozitiv).
         assertThat(ian.status()).isEqualTo(ItemStatus.CUMPARAT);
     }
 
     @Test
-    void spendingTimelineEsteGoalaCandNimicNuECumparat() {
+    void spendingTimelineAratatCumulativeTotalChiarDacaNimicNuECumparat() {
         Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
         addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
                 ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
+
+        var timeline = getSpendingTimeline.execute(USER, PROJECT_ID);
+
+        assertThat(timeline).singleElement().satisfies(p -> {
+            assertThat(p.cumulativeSpent().amount()).isEqualByComparingTo("0.00"); // nimic cumpărat
+            assertThat(p.cumulativeTotal().amount()).isEqualByComparingTo("100.00"); // dar linia de total tot crește
+        });
+    }
+
+    @Test
+    void spendingTimelineEsteGoalaCandProiectulNuAreNiciUnElement() {
+        addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
 
         assertThat(getSpendingTimeline.execute(USER, PROJECT_ID)).isEmpty();
     }

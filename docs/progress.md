@@ -46,9 +46,10 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 | `groutKg(room)` | `shared/functions/dimensions.ts` | chit de rosturi (pardoseală+faianță), kg rotunjit ↑ — C.9 | `computeRoomDimensions`, `roomCalcRows.ts` |
 | `underlayArea(room)` | `shared/functions/dimensions.ts` | folie sub parchet laminat (mp, ceil), doar `FlooringType.ParchetLaminat` — D.10 | `computeRoomDimensions`, `roomCalcRows.ts` |
 | `buildRoomCalcRows(room, dims)` | `app/configurare/roomCalcRows.ts` (local) | rândurile din „Calcule Detaliate" (label/valoare/formulă/math) din `dims` (server sau preview) | `RoomTechnicalCard`, `ApartmentPdfDocument` |
-| `timelinePoints(data)` | `shared/functions/charts.ts` | normalizează `SpendingTimelinePoint[]` (din `spending-timeline`) în puncte {x,y}∈[0,1] pt. graficul de evoluție — geometrie de prezentare | `analiza` |
+| `timelinePoints(data)` | `shared/functions/charts.ts` | normalizează `SpendingTimelinePoint[]` (din `spending-timeline`, 2 serii: cumulativeSpent + cumulativeTotal) în puncte {x,ySpent,yTotal}∈[0,1] pe ACEEAȘI scală — geometrie de prezentare | `analiza` (`SpendingTimelineChart`) |
 | `useAsyncAction(action)` | `shared/useAsyncAction.ts` | hook — rulează o acțiune (mutație de store), expune `{ run, pending }` pt. spinner-ul din butoane; ignoră apeluri re-entrante, guard de unmount | `ItemFormDrawer`, `RoomFormDrawer`, `ConfirmDialog`, `elemente/page.tsx` (Adăugare Rapidă), `RoomTechnicalCard` (Salvează), `setari/page.tsx` (ambele butoane) |
 | `formatMonthLabel(month)` | `app/analiza/dates.ts` (local) | formatează "yyyy-MM" într-o etichetă scurtă RO ("Ian", "Ian 2025" dacă anul diferă de cel curent) | `analiza` (axa graficului de evoluție) |
+| `compressImage(file, maxSide?, quality?)` | `shared/functions/image.ts` | comprimă o poză (canvas, redimensionare + reencodare JPEG) înainte de a o encoda ca data URI | `comparator/[groupId]/OfferFormDrawer`, `galerie/GalleryFormDrawer` — promovată din local în shared când a doua pagină a avut nevoie de ea |
 
 ### Funcții locale de pagină
 
@@ -56,7 +57,6 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 |---|---|---|---|
 | `offerPriceRange(offers)` | `app/comparator/groupOffers.ts` (local) | interval min–max al ofertelor CU preț completat (null dacă niciuna) | `/comparator` (carduri de grup) |
 | `cheapestOfferId(offers)` | `app/comparator/[groupId]/offerCompare.ts` (local) | id-ul ofertei cu cel mai mic preț, doar între cele CU preț | `/comparator/[groupId]` (badge „Cel mai bun preț") |
-| `compressImage(file, maxSide?, quality?)` | `app/comparator/[groupId]/compressImage.ts` (local) | comprimă o poză (canvas, redimensionare + reencodare JPEG) înainte de a o encoda ca data URI | `OfferFormDrawer` |
 | `detectStoreName()` | `app/comparator/[groupId]/detectStore.ts` (local) | geolocation → reverse-geocoding Nominatim, best-effort (null la refuz/timeout) | `OfferFormDrawer` (buton „Detectează magazinul") |
 | `configuredItemCandidates(items, roomId, materialType)` | `app/comparator/configuredItemCandidates.ts` (local) | elementele „Din Configurare" candidate pt. legarea unui grup (oglindă client-side a `AutoItemReconciler.resolveLinkedItem`) | `GroupFormDrawer` (panou țintă legătură) |
 | `decidedGroupForItem(groups, itemId)` | `app/elemente/decidedGroupForItem.ts` (local) | grupul Decis al cărui `createdItemId` e acest element — pt. chip-ul „Ofertă aleasă" | `elemente/page.tsx` (lângă `OriginBadge`) |
@@ -88,11 +88,13 @@ _(`dimensions.ts` a fost promovat în `shared/functions/` de îndată ce a deven
 | `Project` | `Project.ts` | interface (extins cu `totalArea?: number`) |
 | `ProjectSummary` | `ProjectSummary.ts` | interface (agregări server-side: `totalEstimated`, `totalSpent`, `budgetRemaining`, `purchaseProgress`, `boughtCount`, `costPerRoom: RoomCost[]`, `costPerCategory: CategoryCost[]`, `technical: TechnicalSummary`) |
 | `SpendingTimelinePoint` | `SpendingTimelinePoint.ts` | interface (`month: string` "yyyy-MM", `cumulativeSpent: number`) — serie cumulativă pe luna cumpărării |
-| `RenovationStore` | `RenovationStore.ts` | interface (extins cu `comparisonGroups` + 7 mutații ale Comparatorului de Oferte) |
+| `RenovationStore` | `RenovationStore.ts` | interface (extins cu `comparisonGroups` + 7 mutații ale Comparatorului de Oferte, `inspirationImages` + 3 mutații ale Galeriei de Inspirație) |
 | `DonutSegment` | `DonutSegment.ts` | interface |
 | `ComparisonGroupStatus` | `ComparisonGroupStatus.ts` | enum (În analiză / Decis) |
 | `Offer` | `Offer.ts` | interface (o ofertă dintr-un grup de comparație — TOATE câmpurile descriptive opționale; `images: string[]`, URL sau data-URI, ca `Item.imageUrl`) |
 | `ComparisonGroup` | `ComparisonGroup.ts` | interface (grup de comparație pt. o cameră, cu `offers: Offer[]` nested) |
+| `InspirationType` | `InspirationType.ts` | enum (Poză Proprie / Randare / Inspirație Online) |
+| `InspirationImage` | `InspirationImage.ts` | interface (o poză din Galeria de Inspirație, `roomId?` opțional, `image: string` URL sau data-URI ca `Item.imageUrl`) |
 
 Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur loc):
 
@@ -100,6 +102,7 @@ Tipuri locale de pagină (nu în `shared/`, deocamdată folosite într-un singur
 |---|---|---|
 | `DeleteTarget` | `src/app/elemente/DeleteTarget.ts` | `/elemente` |
 | `ItemDrawerState` | `src/app/elemente/ItemDrawerState.ts` | `/elemente` |
+| `GalleryDrawerState` | `src/app/galerie/GalleryDrawerState.ts` | `/galerie` |
 
 ## Jurnal cronologic
 
@@ -1490,3 +1493,199 @@ salvat, totalul recalculat corect (3×20=60 EUR).
 (unitate pe candidați), `shared/functions/items.ts` (`materialUnit`, nou).
 
 **Branch:** `046-fix-bugs-audit`.
+
+---
+
+### 2026-07-22 — Pagină nouă „Galerie Inspirație" (poze/randări/inspirație, pe cameră)
+
+Implementat backlog item #4 din `CLAUDE.md` (existent în design Stitch, neimplementat până acum), la
+cererea userului: „vreau să-mi adaug poze, randări, inspirații, pe camere". Feature full-stack, pattern-ul
+urmat e cel mai apropiat existent — Comparatorul de Oferte (poze ca string, URL http(s) sau `data:image/...
+;base64,...` comprimată client-side, fără upload real de fișiere/tabel `BYTEA` separat).
+
+**Model:** `InspirationImage` — id, `projectId`, `roomId?` (opțional — poze „generale", neasignate),
+`type: InspirationType` (Poză Proprie / Randare / Inspirație Online), `image` (URL/data-URI, obligatoriu),
+`caption?`, `sourceUrl?`, `createdAt`. Decizie cheie: **ștergerea unei camere NU șterge pozele ei** — doar
+le dezasignează (`roomId → null`, mută-le la „General"), spre deosebire de `Item`/`ComparisonGroup` (cascade
+de ștergere). Motiv: pozele sunt conținut al userului (poze proprii de telefon, randări plătite), nu date
+derivate din configurarea tehnică a camerei — pierderea lor la o simplă redenumire/refacere de cameră ar fi
+un regres de UX, nu o curățare așteptată.
+
+**Backend** (arhitectură hexagonală, ca la Item/Offer): migrare `V9__inspiration_gallery.sql` (tabel
+`inspiration_images`, `project_id` FK direct — nu doar prin `room_id` — cu `ON DELETE CASCADE`; `room_id`
+nullable cu `ON DELETE SET NULL`, backup de schemă pt. regula de mai sus). Model domeniu pur
+(`InspirationImage`/`InspirationType`), porturi in/out, 4 use cases (`Get`/`Add`/`Update`/`Delete`,
+autorizare `MembershipGuard` VIEWER/EDITOR ca peste tot), `roomId` validat să aparțină aceluiași proiect la
+add/update (altfel IDOR — cameră din alt proiect). `DeleteRoomService` extins cu apelul de dezasignare
+(`inspirationImageRepository.clearRoomId`) lângă cascade-urile existente. Endpoint-uri: `GET`/`POST
+/api/projects/{id}/inspiration-images`, `PATCH`/`DELETE /api/inspiration-images/{id}` (semantică `Patch`
+cu `null` explicit = șterge, ca la `Offer`). Teste noi: `InspirationImageControllerTest` (7 teste),
+`EnumLabelTest` extins, `UseCasesTest` (test dedicat „dezasignează, nu șterge" la ștergere de cameră).
+**`mvn verify`: 167/167 teste verzi**, inclusiv `SchemaMigrationTest` (migrarea V9 rulează curat pe Postgres
+real via Testcontainers).
+
+**Frontend:** tipuri noi (`InspirationType.ts`, `InspirationImage.ts`) + `RenovationStore` extins
+(`inspirationImages` + `addInspirationImage`/`updateInspirationImage`/`deleteInspirationImage`) +
+`store.tsx` (încărcat la boot cu restul snapshotului; `deleteRoom` dezasignează local, nu filtrează, ca să
+oglindească exact comportamentul serverului). Pagina **`/galerie`**: grid Pinterest-style (pătrate uniforme,
+NU masonry — mai robust cross-breakpoint), grupat pe cameră ca la `/comparator` + secțiune „General" pt.
+poze neasignate, filtre pe cameră (chips), `DashboardSummaryCard` (Total poze / Camere ilustrate /
+Neasignate), `GalleryFormDrawer` (upload cu compresie canvas SAU URL, selector tip cu 3 butoane, select
+cameră opțional, notiță, link sursă), `Lightbox` local (poză mărită full-screen). `compressImage` **promovată
+din local (`comparator/[groupId]/`) în `shared/functions/image.ts`** — a doua pagină avea nevoie de ea
+(regula din `CLAUDE.md`). Intrare nouă în `secondaryNav` (iconiță `auto_awesome`, deja documentată în
+`CLAUDE.md` ca rezervată pt. Galerie Inspirație) — NU în bottom nav mobil (4 tab-uri fixe, ca Comparatorul).
+
+**Verificat:** `npm run build && npm run lint && npx tsc --noEmit` — toate curate. Verificare vizuală completă
+în browser (cu backend real): adăugare poză cu URL + notiță + cameră, card apărut corect în secțiunea camerei,
+sumar actualizat (1/1/0), lightbox cu notiță, ștergere cu `ConfirmDialog` → empty state, responsive 375px
+(grid 2 coloane, bottom nav neschimbat, meniu hamburger cu „Galerie Inspirație" activ), zero erori în consolă.
+Notă operațională: backend-ul de dev rula cu clase compilate ÎNAINTE de această sesiune (proces pornit la
+12:31) — a trebuit repornit ca să preia `InspirationImageController` (altfel 401 doar pe rutele noi, restul
+API-ului răspundea normal cu același token — semnal clar de proces stale, nu bug de autorizare).
+
+**Fișiere atinse (highlights):** backend — `V9__inspiration_gallery.sql`, `domain/model/InspirationImage.java`
++ `InspirationType.java`, `application/{port,usecase}/*Inspiration*`, `adapter/**/InspirationImage*`,
+`DeleteRoomService.java`, `GlobalExceptionHandler.java`, `DtoConversionSupport.java`; frontend —
+`shared/types/InspirationImage.ts` + `InspirationType.ts`, `shared/types/RenovationStore.ts`, `shared/store.tsx`,
+`shared/icons.ts` (`GALLERY_ICONS`, `INSPIRATION_TYPE_ICONS`, `NAV_ICONS.galerie`), `shared/nav.ts`,
+`shared/functions/image.ts` (nou, mutat), `app/galerie/` (nou: `page.tsx`, `GalleryFormDrawer.tsx`,
+`GalleryDrawerState.ts`, `Lightbox.tsx`).
+
+**Branch:** `047-galerie-inspiratie`.
+
+---
+
+### 2026-07-22 — Fix sistemic butoane rotunde + grafic „Evoluția Cheltuielilor" cu 2 linii interactive
+
+**1. Fix UI la cererea userului: butoane-iconiță „ovale" care se suprapun peste text.** Cauza: butoane
+dimensionate DOAR din `padding` + `rounded-full`/`rounded-lg`/`rounded-md`, fără `h-*`/`w-*` egal explicit —
+glifele Material Symbols nu au o cutie perfect pătrată, deci padding-box-ul rezultat nu era pătrat
+(`rounded-full` desena un oval, nu un cerc), vizibil grav pe cardurile din Galerie (edit/delete peste
+badge-ul de tip). Găsit sistemic în toată aplicația (19 locuri, nu doar Galeria): overlay-uri `rounded-full`
+(galerie, `Lightbox`, `OfferGallery`), `Sidebar` (logout ×2, toggle mobil), `/elemente` (5 butoane),
+`/comparator` (listă + `OfferCard`, 4 butoane), `/configurare` (`RoomTechnicalCard`, 4 butoane), X-ul desktop
+din `Drawer`. Fix uniform: `inline-flex h-N w-N shrink-0 items-center justify-center` (N proporțional cu
+padding-ul vechi: p-1→h-7, p-1.5→h-8, p-2→h-9, p-3→h-10), păstrând culorile/hover-urile existente.
+
+**2. `costPerRoom` (donut „Cost per Cameră" din `/analiza`) folosea total estimat, nu cheltuit.** Bug real,
+găsit la cererea userului („doar cumpărate"): `BudgetCalculator.costPerRoom` apela `roomSubtotal` (toate
+elementele, orice status) în loc de `roomSpent` (doar `ItemStatus.Cumparat`), amestecând planificat cu
+cumpărat în donut. Fix: o linie în `BudgetCalculator.java` (`roomSubtotal` → `roomSpent`) — `RoomCost` nu
+mai apare deloc pentru o cameră fără NIMIC cumpărat (poate avea elemente planificate, tot dispare din donut).
+Nicio cameră existentă nu folosea `costPerRoom` altundeva (verificat cu grep) — schimbare sigură, izolată.
+
+**3. Grafic „Evoluția Cheltuielilor" — 2 linii + interactivitate reală (cerere userului).** Linia principală
+(„Cheltuit cumulat", solidă, proeminentă) exista deja corect (doar `Cumparat`, pe luna `purchasedAt`); adăugată
+linia secundară („Total", punctată, mai puțin vizibilă) — TOATE elementele indiferent de status, pe luna
+`createdAt`, pe ACEEAȘI axă de luni (reuniunea lunilor din ambele serii, `cumulativeTotal >= cumulativeSpent`
+garantat structural). Backend: `GetSpendingTimelineService` calculează acum ambele cumulative aliniate;
+`TimelinePoint`/DTO/mapper extinse cu `cumulativeTotal`. **Empty state schimbat**: goală DOAR dacă proiectul
+n-are NICIUN element (înainte: goală dacă nimic cumpărat — dar linia de total are nevoie de elementele
+neachiziționate ca să crească, deci un proiect cu elemente dar 0 cumpărate acum arată graficul, cu linia de
+cheltuit la 0 și linia de total crescând).
+
+Interactivitate (cerere explicită: hover cu linie punctată verticală + snap pe lună + sumă, pe desktop ȘI
+echivalent pe mobil): componentă nouă `app/analiza/SpendingTimelineChart.tsx`, folosită IDENTIC pe desktop
+și mobil (înlocuiește vechiul bar-chart mobil separat — un singur cod de întreținut). Un singur handler
+`onPointerMove` (Pointer Events) servește ambele cazuri: pentru mouse se declanșează la orice mișcare
+deasupra graficului (hover clasic), pentru touch doar cât timp degetul atinge ecranul (glisare = echivalentul
+„hover" pe mobil) — nu există cod separat mouse/touch. Linia verticală punctată face „snap" pe cea mai
+apropiată lună (nu urmărește cursorul pixel cu pixel); tooltip-ul arată ambele sume ale lunii, cu poziție
+orizontală clamped (8–92%) ca să nu iasă din card lângă margini — verificat manual la ambele capete ale
+graficului.
+
+**Date mock pentru testare** (doar local, DB dev): 2 camere noi + 12 elemente cu prețuri/statusuri variate,
+`created_at`/`purchased_at` distribuite manual (SQL direct, `docker exec renovatorpro-db psql`) pe 5 luni
+(martie–iulie 2026) — API-ul nu acceptă timestamp-uri istorice la creare (setate server-side), deci backdatarea
+s-a făcut direct în DB, doar pentru verificare vizuală locală, nu cod de producție.
+
+**Verificat:** `mvn verify` 169/169 (10 teste noi/actualizate: `costPerRoomIgnoraElementeleNeachizitionate`,
+`spendingTimelineAgregaCumulativPeLunaCumparariiSiSeparatPeLunaAdaugarii` actualizat,
+`spendingTimelineAratatCumulativeTotalChiarDacaNimicNuECumparat` nou, `spendingTimelineEsteGoalaCandProiectulNuAreNiciUnElement`
+redenumit); `npm run build && npm run lint && npx tsc --noEmit` curate; verificat vizual complet în browser cu
+date reale (backend repornit ca să preia codul nou) — hover desktop la 3 puncte diferite (stânga/mijloc/dreapta,
+inclusiv clamp la margini), drag touch pe mobil (identic ca UX), donut arată doar Bucătărie+Living+Baie cu
+sumele cheltuite corecte, butoanele rotunde verificate pe `/galerie` și `/elemente` (cercuri/pătrate perfecte,
+măsurate exact prin JS: 28–36px, egal pe ambele axe).
+
+**Fișiere atinse (highlights):** backend — `BudgetCalculator.java` (`costPerRoom`), `GetSpendingTimelineService.java`
+(2 serii unificate), `GetSpendingTimelineUseCase.java`, `SpendingTimelinePointResponse.java`,
+`SpendingTimelineDtoMapper.java`, teste (`BudgetCalculatorTest`, `UseCasesTest`, `ProjectControllerTest`);
+frontend — `shared/types/SpendingTimelinePoint.ts`, `shared/functions/charts.ts` (`timelinePoints`),
+`app/analiza/page.tsx` (rescris, cod de grafic mutat în componentă), `app/analiza/SpendingTimelineChart.tsx`
+(nou), plus cele 19 fixuri de butoane (`components/Sidebar.tsx`, `components/Drawer.tsx`, `app/elemente/page.tsx`,
+`app/comparator/page.tsx`, `app/comparator/[groupId]/OfferCard.tsx`, `app/comparator/[groupId]/OfferGallery.tsx`,
+`app/configurare/RoomTechnicalCard.tsx`, `app/galerie/page.tsx`, `app/galerie/GalleryFormDrawer.tsx`,
+`app/galerie/Lightbox.tsx`).
+
+**Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).
+
+---
+
+### 2026-07-22 — Autentificare: email + resetare parolă (mod dev) + multi-proiect
+
+Set de 4 cereri explicite ale userului, toate implementate în aceeași sesiune (vezi `docs/cerinte-autentificare.md`
+D1/D2/D4/D6/D8 revizuite pt. deciziile complete): (1) email obligatoriu la register, (2) resetare parolă,
+(3) confirmare parolă la register + reset, (4) alăturare la alt proiect pentru un cont DEJA existent, nu
+doar la înregistrare — ceea ce a cerut o revizuire reală de arhitectură (D4 originalul zicea explicit
+„single-project per user").
+
+**Decizie cheie — multi-proiect fără JWT nou:** `MembershipGuard` verifica DEJA `projectId`-ul din
+URL/body la fiecare request (nu din JWT) — asta a însemnat că backend-ul era deja „multi-proiect-agnostic"
+per-request; singura limitare reală era `ProjectMemberRepository.findByUserId` (Optional, presupunea o
+singură apartenență) folosită de login/refresh/`/me`. Soluție: `refresh_tokens` capătă `project_id` (V11) —
+proiectul „activ" e al SESIUNII (tokenul de refresh), nu al userului. Comutarea de proiect
+(`POST /api/auth/switch-project`) doar rotește refresh token-ul spre alt proiect unde userul e deja membru,
+fără să atingă schema JWT-ului de access (rămâne `sub`+`username`, neschimbat). Alăturarea unui user
+EXISTENT (`POST /api/auth/join-project`, spre deosebire de calea „register cu cod") creează apartenența
+(dacă nu exista deja — idempotent) și comută automat. `project_members` a primit `joinedAt` (ordonare
+determinist㠗 login-ul alege implicit cel mai vechi proiect, „de-acasă"; `GET /api/auth/me/projects` le
+listează pe toate pt. selectorul din UI).
+
+**Resetare parolă — mod dev, ales explicit de user** (fără infra de email reală pe proiect): tabel nou
+`password_reset_tokens` (V10, pattern identic `refresh_tokens` — token opac, hash SHA, expirare 30 min,
+single-use). `POST /api/auth/forgot-password` expune tokenul BRUT direct în răspuns (nu-l trimite pe email)
+— deviere asumată de la practica standard „răspuns uniform indiferent dacă emailul există" (`PasswordResetAccountNotFoundException`,
+404 dacă nu găsește contul — documentată explicit ca simplificare de dev, nu practică de producție).
+`POST /api/auth/reset-password` schimbă parola și revocă TOATE refresh token-urile userului (relogare
+obligatorie peste tot, apărare dacă cineva avea deja acces cu parola veche).
+
+**Email la register:** `users.email` exista deja în schemă (NULLABLE de la Faza 5/D1, login rămâne strict
+username+parolă) — nicio migrare nouă, doar `RegisterRequest`/`RegisterUserService` extinse (`@Email`,
+unicitate verificată cu `findByEmail`, normalizat la lowercase ca username-ul). `DuplicateEmailException` nouă,
+409.
+
+**Confirmare parolă:** câmp `confirmPassword` (register + reset-password) verificat STRICT client-side —
+nu ajunge în request-ul către backend (nu e regulă de business, doar plasă de siguranță la tastare).
+
+**Backend — fișiere noi:** migrări `V10__password_reset_tokens.sql`, `V11__multi_project_membership.sql`;
+`PasswordResetTokenRepository` (port+entity+JPA+adapter), `RequestPasswordResetService`, `ResetPasswordService`,
+`JoinProjectService`, `SwitchProjectService`, `ListMyProjectsService` (+ use case-uri/DTO-uri corespunzătoare),
+`DuplicateEmailException`, `InvalidPasswordResetTokenException`, `PasswordResetAccountNotFoundException`.
+**Modificate:** `User`/`UserRepository`/`UserRepositoryAdapter` (`findByEmail`, `updatePasswordHash`),
+`ProjectMember` (+ `joinedAt`), `ProjectMemberRepository` (`findByUserId` → `findAllByUserId`),
+`RefreshTokenRepository`/`RefreshTokenEntity` (+ `projectId`), `SessionIssuer` (stochează `projectId` pe
+sesiune), `RefreshTokenService`/`GetCurrentUserService`/`LoginService` (rescrise pt. multi-proiect),
+`RegisterUserService` (email), `AuthController` (5 endpoint-uri noi), `GlobalExceptionHandler`.
+
+**Frontend — fișiere noi:** `shared/types/MyProject.ts`, `app/forgot-password/page.tsx`,
+`app/reset-password/page.tsx`, `components/ProjectSwitcherCard.tsx`. **Modificate:** `shared/types/User.ts`
+(+`email`), `shared/api-client.ts` (`authApi` extins: `forgotPassword`, `resetPassword`, `joinProject`,
+`switchProject`, `listMyProjects`; `registerNewProject`/`registerWithInviteCode` cu `email`),
+`shared/AuthProvider.tsx` (+`projects`, `joinProject`, `switchProject`), `app/register/page.tsx` (câmpuri
+email + confirmare parolă), `app/login/page.tsx` (link „Ai uitat parola?"), `components/AppShell.tsx`
+(rute publice noi), `components/ProjectSharingCard.tsx` (text actualizat), `app/setari/page.tsx`
+(`ProjectSwitcherCard` adăugat), `shared/icons.ts` (`SETTINGS_ICONS.switchProject`).
+
+**Verificat:** `mvn verify` **175/175** (teste noi: flux complet reset parolă în `AuthFlowIntegrationTest`
+inclusiv „token single-use eșuează a doua oară”, `userExistentSeAlaturaAltuiProiectSiComutaIntreEle` în
+`IdorAuthorizationIntegrationTest` inclusiv „switch pe proiect străin → 404”); `npm run build && npm run lint
+&& npx tsc --noEmit` curate. Testat end-to-end în browser (backend repornit): register cu parole diferite →
+eroare „Parolele nu coincid” blocează submit-ul; register valid → cont creat; forgot-password → link de
+resetare afișat; reset-password prin link → succes; login cu parola veche → `401`; login cu parola nouă →
+succes; cont B creat separat, cod de invitație obținut; din Setări (cont A, deja logat), „Alătură-te” cu
+codul lui B → comutare automată pe proiectul B (rol Editor), „Proiectele mele” arată ambele proiecte;
+„Comută” înapoi pe proiectul A → date reîncărcate corect; zero erori în consolă.
+
+**Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).

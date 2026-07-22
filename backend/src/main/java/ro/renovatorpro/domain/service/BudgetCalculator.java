@@ -96,12 +96,14 @@ public final class BudgetCalculator {
     }
 
     /**
-     * Distribuția costurilor pe camere, sortată descrescător, fără camerele goale.
-     * Folosită de donut chart-ul din /analiza (formula rămâne aici — doar randarea SVG e client-side).
+     * Distribuția costurilor pe camere, sortată descrescător, fără camerele goale. DOAR elemente
+     * {@link ItemStatus#CUMPARAT} (ca {@link #roomSpent}) — donut chart-ul din /analiza arată cât s-a
+     * cheltuit efectiv per cameră, nu totalul estimat (care ar amesteca elemente neachiziționate încă).
+     * Formula rămâne aici — doar randarea SVG e client-side.
      */
     public static List<RoomCost> costPerRoom(List<Room> rooms, List<Item> items) {
         return rooms.stream()
-                .map(r -> new RoomCost(r.name(), roomSubtotal(items, r.id())))
+                .map(r -> new RoomCost(r.name(), roomSpent(items, r.id())))
                 .filter(rc -> rc.total().amount().signum() > 0)
                 .sorted((a, b) -> b.total().compareTo(a.total()))
                 .toList();

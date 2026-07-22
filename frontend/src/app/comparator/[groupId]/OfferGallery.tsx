@@ -46,7 +46,7 @@ export default function OfferGallery({ images }: { images: string[] }) {
             type="button"
             onClick={() => setLightboxOpen(false)}
             aria-label="Închide"
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            className="absolute right-4 top-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
           >
             <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.close}</span>
           </button>

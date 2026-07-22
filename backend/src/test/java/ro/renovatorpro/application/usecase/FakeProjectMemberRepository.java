@@ -4,7 +4,9 @@ import ro.renovatorpro.application.port.out.ProjectMemberRepository;
 import ro.renovatorpro.domain.model.user.ProjectMember;
 import ro.renovatorpro.domain.model.user.ProjectRole;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,9 +16,11 @@ import java.util.Optional;
 class FakeProjectMemberRepository implements ProjectMemberRepository {
 
     private final Map<String, ProjectMember> membersByProjectAndUser = new HashMap<>();
+    // Contor determinist pt. joinedAt — ordinea apelurilor `grant` contează pt. teste (proiectul „de-acasă" e primul).
+    private int joinCounter = 0;
 
     void grant(String projectId, String userId, ProjectRole role) {
-        save(new ProjectMember(projectId, userId, role));
+        save(new ProjectMember(projectId, userId, role, Instant.EPOCH.plusSeconds(joinCounter++)));
     }
 
     @Override
@@ -41,8 +45,11 @@ class FakeProjectMemberRepository implements ProjectMemberRepository {
     }
 
     @Override
-    public Optional<ProjectMember> findByUserId(String userId) {
-        return membersByProjectAndUser.values().stream().filter(m -> m.userId().equals(userId)).findFirst();
+    public List<ProjectMember> findAllByUserId(String userId) {
+        return membersByProjectAndUser.values().stream()
+                .filter(m -> m.userId().equals(userId))
+                .sorted(Comparator.comparing(ProjectMember::joinedAt))
+                .toList();
     }
 
     @Override

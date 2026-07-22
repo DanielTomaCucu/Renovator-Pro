@@ -25,6 +25,9 @@ public class RefreshTokenEntity {
     @Column(name = "user_id", nullable = false)
     private String userId;
 
+    @Column(name = "project_id", nullable = false)
+    private String projectId;
+
     @Column(name = "token_hash", nullable = false, unique = true)
     private String tokenHash;
 

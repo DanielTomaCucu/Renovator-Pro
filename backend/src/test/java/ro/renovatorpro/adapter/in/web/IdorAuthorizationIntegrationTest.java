@@ -47,10 +47,14 @@ class IdorAuthorizationIntegrationTest {
     private record Session(String username, String userId, String accessToken, String projectId, String refreshCookie) {
     }
 
+    private static String uniqueEmail() {
+        return "user-" + UUID.randomUUID().toString().substring(0, 8) + "@example.com";
+    }
+
     private Session registerWithNewProject() {
         String username = "user-" + UUID.randomUUID().toString().substring(0, 8);
         ResponseEntity<Map> response = restTemplate.postForEntity("/api/auth/register",
-                Map.of("username", username, "password", "parola-buna-12345", "projectName", "Proiect " + username),
+                Map.of("username", username, "email", uniqueEmail(), "password", "parola-buna-12345", "projectName", "Proiect " + username),
                 Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String accessToken = (String) response.getBody().get("accessToken");
@@ -63,7 +67,7 @@ class IdorAuthorizationIntegrationTest {
     private Session joinWithInviteCode(String inviteCode) {
         String username = "user-" + UUID.randomUUID().toString().substring(0, 8);
         ResponseEntity<Map> response = restTemplate.postForEntity("/api/auth/register",
-                Map.of("username", username, "password", "parola-buna-12345", "inviteCode", inviteCode), Map.class);
+                Map.of("username", username, "email", uniqueEmail(), "password", "parola-buna-12345", "inviteCode", inviteCode), Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String accessToken = (String) response.getBody().get("accessToken");
         String projectId = (String) ((Map) response.getBody().get("project")).get("id");
@@ -176,7 +180,7 @@ class IdorAuthorizationIntegrationTest {
 
         ResponseEntity<Map> registerWithOldCode = restTemplate.postForEntity("/api/auth/register",
                 Map.of("username", "late-" + UUID.randomUUID().toString().substring(0, 8),
-                        "password", "parola-buna-12345", "inviteCode", inviteCode), Map.class);
+                        "email", uniqueEmail(), "password", "parola-buna-12345", "inviteCode", inviteCode), Map.class);
         assertThat(registerWithOldCode.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
         // OWNER șterge membrul EDITOR — accesul lui e tăiat (refresh-ul revocat eșuează).
@@ -195,5 +199,41 @@ class IdorAuthorizationIntegrationTest {
         ResponseEntity<Map> selfRemoval = call(HttpMethod.DELETE,
                 "/api/projects/" + owner.projectId() + "/members/" + owner.userId(), owner.accessToken(), null, Map.class);
         assertThat(selfRemoval.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void userExistentSeAlaturaAltuiProiectSiComutaIntreEle() {
+        Session ownerA = registerWithNewProject();
+        Session ownerB = registerWithNewProject();
+
+        ResponseEntity<Map> inviteResponse = call(HttpMethod.GET, "/api/projects/" + ownerB.projectId() + "/invite-code",
+                ownerB.accessToken(), null, Map.class);
+        assertThat(inviteResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String inviteCodeB = (String) inviteResponse.getBody().get("inviteCode");
+
+        // A e deja autentificat pe propriul proiect — se alătură ȘI proiectului lui B, fără cont nou.
+        ResponseEntity<Map> joinResponse = call(HttpMethod.POST, "/api/auth/join-project", ownerA.accessToken(),
+                Map.of("inviteCode", inviteCodeB), Map.class);
+        assertThat(joinResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(((Map) joinResponse.getBody().get("project")).get("id")).isEqualTo(ownerB.projectId());
+        assertThat(joinResponse.getBody().get("role")).isEqualTo("EDITOR");
+        String newAccessToken = (String) joinResponse.getBody().get("accessToken");
+
+        // /me/projects arată AMBELE proiecte ale lui A acum.
+        ResponseEntity<List> myProjects = call(HttpMethod.GET, "/api/auth/me/projects", newAccessToken, null, List.class);
+        assertThat(myProjects.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(myProjects.getBody()).hasSize(2);
+
+        // Comută înapoi pe propriul proiect — funcționează, era deja membru (OWNER).
+        ResponseEntity<Map> switchBack = call(HttpMethod.POST, "/api/auth/switch-project", newAccessToken,
+                Map.of("projectId", ownerA.projectId()), Map.class);
+        assertThat(switchBack.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(switchBack.getBody().get("role")).isEqualTo("OWNER");
+
+        // Comutare pe un proiect unde NU e membru → 404 (IDOR, nu 403).
+        Session strangerC = registerWithNewProject();
+        ResponseEntity<Map> switchToForeign = call(HttpMethod.POST, "/api/auth/switch-project",
+                (String) switchBack.getBody().get("accessToken"), Map.of("projectId", strangerC.projectId()), Map.class);
+        assertThat(switchToForeign.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 }

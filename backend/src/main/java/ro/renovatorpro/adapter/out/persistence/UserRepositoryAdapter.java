@@ -27,7 +27,20 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByEmail(String email) {
+        return jpaRepository.findByEmail(email).map(mapper::toDomain);
+    }
+
+    @Override
     public User insert(User user) {
         return mapper.toDomain(jpaRepository.save(mapper.toEntity(user)));
+    }
+
+    @Override
+    public void updatePasswordHash(String userId, String newPasswordHash) {
+        jpaRepository.findById(userId).ifPresent(entity -> {
+            entity.setPasswordHash(newPasswordHash);
+            jpaRepository.save(entity);
+        });
     }
 }

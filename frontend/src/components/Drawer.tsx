@@ -51,7 +51,7 @@ export default function Drawer({
           <h2 className="font-heading text-lg font-semibold">{title}</h2>
           <button
             onClick={onClose}
-            className="hidden rounded p-1 text-muted hover:bg-surface-low md:block"
+            className="hidden h-7 w-7 shrink-0 items-center justify-center rounded text-muted hover:bg-surface-low md:inline-flex"
             aria-label="Închide"
           >
             ✕

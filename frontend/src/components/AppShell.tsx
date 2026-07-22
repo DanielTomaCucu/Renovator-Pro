@@ -8,7 +8,7 @@ import PageSkeleton from "./PageSkeleton";
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 
-const AUTH_ROUTES = ["/login", "/register"];
+const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 /**
  * Gardă de rute client-side (AUTH-5): fără sesiune → redirect `/login`; cu sesiune pe `/login`/`/register`

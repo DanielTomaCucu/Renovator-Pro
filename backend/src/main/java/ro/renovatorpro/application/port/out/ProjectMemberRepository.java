@@ -14,8 +14,8 @@ public interface ProjectMemberRepository {
 
     List<ProjectMember> findByProjectId(String projectId);
 
-    /** Proiectul la care e membru un user — Faza 5 e single-project per user (D4), deci cel mult un rezultat. */
-    Optional<ProjectMember> findByUserId(String userId);
+    /** Multi-proiect (V11): toate apartenențele unui user, cea mai veche (proiectul „de-acasă") întâi. */
+    List<ProjectMember> findAllByUserId(String userId);
 
     void deleteMember(String projectId, String userId);
 }

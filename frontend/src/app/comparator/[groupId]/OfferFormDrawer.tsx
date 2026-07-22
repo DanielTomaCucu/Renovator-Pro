@@ -7,8 +7,8 @@ import { Field, PrimaryButton, inputCls } from "@/components/forms";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import { ACTION_ICONS, COMPARATOR_ICONS } from "@/shared/icons";
+import { compressImage } from "@/shared/functions";
 import { OfferDrawerState } from "./OfferDrawerState";
-import { compressImage } from "./compressImage";
 import { detectStoreName } from "./detectStore";
 
 const MAX_IMAGES = 8;

@@ -14,6 +14,7 @@ class EnumLabelTest {
         assertThat(RoomType.BUCATARIE.label()).isEqualTo("Bucătărie");
         assertThat(MaterialType.FAIANTA.label()).isEqualTo("Faianță");
         assertThat(ItemOrigin.CONFIGURARE.label()).isEqualTo("Din Configurare");
+        assertThat(InspirationType.INSPIRATIE_ONLINE.label()).isEqualTo("Inspirație Online");
     }
 
     @Test

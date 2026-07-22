@@ -82,11 +82,22 @@ class BudgetCalculatorTest {
         Room r2 = Room.builder("r2", RoomType.DORMITOR, "Dormitor", Money.of(1000)).build();
         Room r3 = Room.builder("r3", RoomType.LIVING, "Living gol", Money.of(1000)).build();
         List<Item> items = List.of(
-                item("r1", ItemStatus.PLANIFICAT, 1, 50, MaterialType.ALTELE),
-                item("r2", ItemStatus.PLANIFICAT, 1, 200, MaterialType.ALTELE)
+                item("r1", ItemStatus.CUMPARAT, 1, 50, MaterialType.ALTELE),
+                item("r2", ItemStatus.CUMPARAT, 1, 200, MaterialType.ALTELE)
         );
         List<BudgetCalculator.RoomCost> result = BudgetCalculator.costPerRoom(List.of(r1, r2, r3), items);
         assertThat(result).extracting(BudgetCalculator.RoomCost::name).containsExactly("Dormitor", "Baie");
+    }
+
+    @Test
+    void costPerRoomIgnoraElementeleNeachizitionate() {
+        Room r1 = Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1000)).build();
+        List<Item> items = List.of(
+                item("r1", ItemStatus.PLANIFICAT, 1, 500, MaterialType.ALTELE),
+                item("r1", ItemStatus.IN_ASTEPTARE, 1, 500, MaterialType.ALTELE)
+        );
+        List<BudgetCalculator.RoomCost> result = BudgetCalculator.costPerRoom(List.of(r1), items);
+        assertThat(result).isEmpty(); // nimic cumpărat încă în cameră → camera nu apare în donut
     }
 
     @Test

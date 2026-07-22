@@ -25,7 +25,7 @@ public class ProjectMemberRepositoryAdapter implements ProjectMemberRepository {
 
     @Override
     public void save(ProjectMember member) {
-        jpaRepository.save(new ProjectMemberEntity(member.projectId(), member.userId(), member.role().name()));
+        jpaRepository.save(new ProjectMemberEntity(member.projectId(), member.userId(), member.role().name(), member.joinedAt()));
     }
 
     @Override
@@ -34,8 +34,8 @@ public class ProjectMemberRepositoryAdapter implements ProjectMemberRepository {
     }
 
     @Override
-    public Optional<ProjectMember> findByUserId(String userId) {
-        return jpaRepository.findFirstByUserId(userId).map(this::toDomain);
+    public List<ProjectMember> findAllByUserId(String userId) {
+        return jpaRepository.findByUserIdOrderByJoinedAtAsc(userId).stream().map(this::toDomain).toList();
     }
 
     @Override
@@ -44,6 +44,6 @@ public class ProjectMemberRepositoryAdapter implements ProjectMemberRepository {
     }
 
     private ProjectMember toDomain(ProjectMemberEntity entity) {
-        return new ProjectMember(entity.getProjectId(), entity.getUserId(), ProjectRole.valueOf(entity.getRole()));
+        return new ProjectMember(entity.getProjectId(), entity.getUserId(), ProjectRole.valueOf(entity.getRole()), entity.getJoinedAt());
     }
 }

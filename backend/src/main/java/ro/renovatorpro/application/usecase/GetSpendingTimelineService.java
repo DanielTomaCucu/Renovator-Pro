@@ -21,12 +21,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
- * Grupează elementele Cumpărate pe luna calendaristică a lui {@code purchasedAt} (UTC — DB-ul rulează
- * cu {@code hibernate.jdbc.time_zone: UTC}), însumează {@code itemTotal} per lună, apoi calculează suma
- * cumulativă crescătoare. Elementele fără {@code purchasedAt} (niciodată cumpărate, sau cumpărate înainte
- * de migrarea V3) sunt ignorate — nu pot fi plasate pe axa temporală.
+ * Grupează elementele pe luna calendaristică (UTC — DB-ul rulează cu {@code hibernate.jdbc.time_zone: UTC})
+ * a lui {@code purchasedAt} (serie „cheltuit", doar {@code ItemStatus.CUMPARAT}) ȘI separat a lui
+ * {@code createdAt} (serie „total", toate elementele), apoi calculează sumele cumulative crescătoare pe
+ * fiecare serie, aliniate pe reuniunea lunilor din ambele. {@code purchasedAt >= createdAt} întotdeauna
+ * (nu poți cumpăra un element înainte să existe) — de-asta {@code cumulativeTotal >= cumulativeSpent} în
+ * fiecare punct, garantat structural, nu doar din date „curate".
  */
 @Service
 @RequiredArgsConstructor
@@ -45,19 +48,30 @@ public class GetSpendingTimelineService implements GetSpendingTimelineUseCase {
         List<String> roomIds = roomRepository.findByProjectId(projectId).stream().map(Room::id).toList();
         List<Item> items = roomIds.isEmpty() ? List.of() : itemRepository.findByRoomIds(roomIds);
 
-        // TreeMap: YearMonth e Comparable, deci iterarea de mai jos e deja cronologică ascendentă.
-        Map<YearMonth, Money> perMonth = new TreeMap<>();
+        Map<YearMonth, Money> spentPerMonth = new TreeMap<>();
+        Map<YearMonth, Money> totalPerMonth = new TreeMap<>();
         for (Item item : items) {
-            if (item.status() != ItemStatus.CUMPARAT || item.purchasedAt() == null) continue;
-            YearMonth month = YearMonth.from(item.purchasedAt().atZone(ZoneOffset.UTC));
-            perMonth.merge(month, BudgetCalculator.itemTotal(item), Money::add);
+            YearMonth createdMonth = YearMonth.from(item.createdAt().atZone(ZoneOffset.UTC));
+            totalPerMonth.merge(createdMonth, BudgetCalculator.itemTotal(item), Money::add);
+            if (item.status() == ItemStatus.CUMPARAT && item.purchasedAt() != null) {
+                YearMonth spentMonth = YearMonth.from(item.purchasedAt().atZone(ZoneOffset.UTC));
+                spentPerMonth.merge(spentMonth, BudgetCalculator.itemTotal(item), Money::add);
+            }
         }
 
+        // Reuniunea lunilor din ambele serii, cronologic (TreeSet) — o lună poate avea activitate DOAR
+        // pe una din serii (ex. o lună cu cumpărături dar fără elemente noi adăugate).
+        TreeSet<YearMonth> months = new TreeSet<>();
+        months.addAll(spentPerMonth.keySet());
+        months.addAll(totalPerMonth.keySet());
+
         List<TimelinePoint> result = new ArrayList<>();
-        Money cumulative = Money.zero();
-        for (Map.Entry<YearMonth, Money> entry : perMonth.entrySet()) {
-            cumulative = cumulative.add(entry.getValue());
-            result.add(new TimelinePoint(entry.getKey(), cumulative));
+        Money cumulativeSpent = Money.zero();
+        Money cumulativeTotal = Money.zero();
+        for (YearMonth month : months) {
+            cumulativeSpent = cumulativeSpent.add(spentPerMonth.getOrDefault(month, Money.zero()));
+            cumulativeTotal = cumulativeTotal.add(totalPerMonth.getOrDefault(month, Money.zero()));
+            result.add(new TimelinePoint(month, cumulativeSpent, cumulativeTotal));
         }
         return result;
     }
