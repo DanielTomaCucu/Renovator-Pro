@@ -1345,3 +1345,26 @@ teste (`AutoItemReconcilerTest`, `UseCasesTest`, `ComparisonGroupControllerTest`
 `docs/api-contract.md`.
 
 **Branch:** `043-comparator-config-sync`.
+
+---
+
+### 2026-07-22 — Comparator: carduri grupate pe cameră + banner „Ofertă aleasă” mai subtil
+
+Feedback vizual pe `/comparator`: eticheta „cameră · material" de pe fiecare card era prea mică (11px,
+`text-muted`) — greu de citit din care cameră e fiecare grup la un scan rapid al listei.
+
+**Fix:** cardurile se randează acum grupate pe secțiuni per cameră (`roomSections` — camera + numărul de
+grupuri, ordinea camerelor din apartament; grupurile orfane — cameră ștearsă — într-o secțiune finală).
+Fiecare secțiune are un header de secțiune standard (iconiță + nume cameră, uppercase 12px bold, regula
+de design existentă). Cardul individual (extras în componenta locală `GroupCard`) nu mai repetă numele
+camerei (spus deja de secțiune) — arată doar `materialType`, acum vizibil (`text-xs font-semibold
+text-secondary`, nu `text-[11px] text-muted`).
+
+Separat, bannerul verde „Ofertă aleasă → element creat" din `/comparator/[groupId]` era prea proeminent
+pentru un mesaj informativ non-critic — micșorat (padding, font, iconiță 14px) și culoare mai discretă
+(`bg-emerald-50/60`, `border-emerald-100`).
+
+**Fișiere atinse:** frontend — `app/comparator/page.tsx` (`roomSections`/`orphanGroups`, componenta locală
+`GroupCard`), `app/comparator/[groupId]/page.tsx` (banner).
+
+**Branch:** `044-comparator-ui-polish`.

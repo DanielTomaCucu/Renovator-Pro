@@ -9,7 +9,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import ComparisonGroupStatusChip from "@/components/ComparisonGroupStatusChip";
 import { useStore } from "@/shared/store";
 import { formatMoney } from "@/shared/functions";
-import { ComparisonGroupStatus } from "@/shared/types";
+import { ComparisonGroup, ComparisonGroupStatus } from "@/shared/types";
 import { ACTION_ICONS, COMPARATOR_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 import GroupFormDrawer from "./GroupFormDrawer";
 import { GroupDrawerState } from "./GroupDrawerState";
@@ -28,6 +28,13 @@ export default function ComparatorPage() {
     .filter((g) => roomFilter === "all" || g.roomId === roomFilter)
     .filter((g) => g.name.toLowerCase().includes(search.trim().toLowerCase()))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Secțiuni per cameră (ordinea camerelor din apartament) — userul trebuie să vadă dintr-o privire
+  // pentru ce cameră e fiecare grup, nu doar dintr-o etichetă mică pe card.
+  const roomSections = rooms
+    .map((room) => ({ room, groups: visibleGroups.filter((g) => g.roomId === room.id) }))
+    .filter((section) => section.groups.length > 0);
+  const orphanGroups = visibleGroups.filter((g) => !rooms.some((r) => r.id === g.roomId));
 
   const inAnalizaCount = comparisonGroups.filter((g) => g.status === ComparisonGroupStatus.InAnaliza).length;
   const decisCount = comparisonGroups.filter((g) => g.status === ComparisonGroupStatus.Decis).length;
@@ -119,63 +126,46 @@ export default function ComparatorPage() {
                 onAction={() => setDrawer({ open: true })}
               />
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {visibleGroups.map((group) => {
-                  const room = rooms.find((r) => r.id === group.roomId);
-                  const range = offerPriceRange(group.offers);
-                  return (
-                    <div
-                      key={group.id}
-                      className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm transition-shadow hover:shadow-md"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-1 text-[11px] font-medium text-muted">
-                            {room && (
-                              <span className="material-symbols-outlined shrink-0" style={{ fontSize: 13 }}>
-                                {ROOM_TYPE_ICONS[room.type]}
-                              </span>
-                            )}
-                            <span className="truncate">{room?.name ?? "Cameră ștearsă"} · {group.materialType}</span>
-                          </p>
-                          <h3 className="truncate font-heading text-base font-bold text-primary">
-                            {group.name}
-                          </h3>
-                        </div>
-                        <ComparisonGroupStatusChip status={group.status} size="sm" />
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
-                        <span className="shrink-0 text-xs font-medium text-muted">
-                          {group.offers.length} {group.offers.length === 1 ? "ofertă" : "oferte"}
-                        </span>
-                        <span className="text-right font-mono text-sm font-bold text-primary">
-                          {range ? (range.min === range.max ? money(range.min) : `${money(range.min)} – ${money(range.max)}`) : "—"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/comparator/${group.id}`}
-                          className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-line py-1.5 text-xs font-semibold text-secondary transition-colors hover:bg-surface-low"
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
-                            {ACTION_ICONS.viewDetails}
-                          </span>
-                          Vezi detalii
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTargetId(group.id)}
-                          aria-label="Șterge grupul"
-                          className="icon-btn shrink-0 rounded-md p-2 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
-                        >
-                          <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
-                        </button>
-                      </div>
+              <div className="space-y-6">
+                {roomSections.map(({ room, groups }) => (
+                  <section key={room.id} className="space-y-3">
+                    <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted">
+                      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+                        {ROOM_TYPE_ICONS[room.type]}
+                      </span>
+                      {room.name}
+                      <span className="font-mono normal-case text-muted/70">({groups.length})</span>
+                    </h2>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {groups.map((group) => (
+                        <GroupCard
+                          key={group.id}
+                          group={group}
+                          money={money}
+                          onDelete={() => setDeleteTargetId(group.id)}
+                        />
+                      ))}
                     </div>
-                  );
-                })}
+                  </section>
+                ))}
+
+                {orphanGroups.length > 0 && (
+                  <section className="space-y-3">
+                    <h2 className="text-xs font-bold uppercase tracking-wide text-muted">
+                      Cameră ștearsă <span className="font-mono normal-case text-muted/70">({orphanGroups.length})</span>
+                    </h2>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {orphanGroups.map((group) => (
+                        <GroupCard
+                          key={group.id}
+                          group={group}
+                          money={money}
+                          onDelete={() => setDeleteTargetId(group.id)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
             )}
           </>
@@ -195,6 +185,61 @@ export default function ComparatorPage() {
           setDeleteTargetId(null);
         }}
       />
+    </div>
+  );
+}
+
+/** Cardul unui grup de comparație — camera e deja spusă de secțiunea care înconjoară cardul (`ComparatorPage`). */
+function GroupCard({
+  group,
+  money,
+  onDelete,
+}: {
+  group: ComparisonGroup;
+  money: (value: number) => string;
+  onDelete: () => void;
+}) {
+  const range = offerPriceRange(group.offers);
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold uppercase tracking-wide text-secondary">
+            {group.materialType}
+          </p>
+          <h3 className="truncate font-heading text-base font-bold text-primary">{group.name}</h3>
+        </div>
+        <ComparisonGroupStatusChip status={group.status} size="sm" />
+      </div>
+
+      <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
+        <span className="shrink-0 text-xs font-medium text-muted">
+          {group.offers.length} {group.offers.length === 1 ? "ofertă" : "oferte"}
+        </span>
+        <span className="text-right font-mono text-sm font-bold text-primary">
+          {range ? (range.min === range.max ? money(range.min) : `${money(range.min)} – ${money(range.max)}`) : "—"}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Link
+          href={`/comparator/${group.id}`}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-line py-1.5 text-xs font-semibold text-secondary transition-colors hover:bg-surface-low"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+            {ACTION_ICONS.viewDetails}
+          </span>
+          Vezi detalii
+        </Link>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label="Șterge grupul"
+          className="icon-btn shrink-0 rounded-md p-2 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
+        >
+          <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
+        </button>
+      </div>
     </div>
   );
 }
