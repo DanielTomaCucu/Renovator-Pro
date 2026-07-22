@@ -1,4 +1,4 @@
-import { FlooringType, Room, RoomDimensions } from "@/shared/types";
+import { FlooringType, Room, RoomDimensions, Wall } from "@/shared/types";
 import {
   groutKgPerSqm,
   netFloorTilingArea,
@@ -14,6 +14,19 @@ export type RoomCalcRow = { label: string; value: string; formula: string; math:
 
 /** Formatează un factor (0.15) ca procent întreg pt. afișare în formule ("15%"). */
 const pct = (ratio: number) => `${Math.round(ratio * 100)}%`;
+
+/**
+ * `true` dacă perimetrul afișat la Plintă e o ESTIMARE (cameră presupusă pătrată, 4×√mp) — userul n-a
+ * completat nici perimetrul explicit, nici toate cele 4 lungimi de perete (`roomPerimeter` din
+ * `shared/functions/dimensions.ts`, aceeași prioritate). Pur informativ pt. panoul „Calcule Detaliate" —
+ * nu schimbă calculul, doar avertizează că plinta poate fi subestimată la camere alungite/neregulate.
+ */
+function isPerimeterEstimated(room: Room): boolean {
+  if (room.perimeter) return false;
+  const lengths = room.wallTiling?.wallLengths ?? room.wallFinish?.wallLengths;
+  if (!lengths) return true;
+  return !Object.values(Wall).every((w) => (lengths[w] ?? 0) > 0);
+}
 
 /**
  * Rândurile din panoul „Calcule Detaliate" al unui card de cameră — extrase într-o funcție pură ca să
@@ -61,12 +74,16 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
 
   const perimeter = roomPerimeter(room);
   if (!isGresie && perimeter > 0) {
+    const barsNote = dims.baseboardBars > 0 ? `≈ ${dims.baseboardBars} bare de 2 ml.` : "";
+    const estimateNote = isPerimeterEstimated(room)
+      ? " Perimetru ESTIMAT presupunând camera pătrată (4×√suprafață) — la camere alungite/neregulate, completează lungimile celor 4 pereți (secțiunea Pereți) pentru o valoare exactă."
+      : "";
     rows.push({
       label: "Plintă",
       value: `${baseboard.toFixed(2)} ml`,
       formula: "(Perimetru − Σ lățime uși) + 5% pierdere",
       math: `(${perimeter.toFixed(2)} − ${dims.totalDoorWidth.toFixed(2)}) × 1.05 = ${baseboard.toFixed(2)} ml`,
-      note: dims.baseboardBars > 0 ? `≈ ${dims.baseboardBars} bare de 2 ml` : undefined,
+      note: barsNote || estimateNote ? `${barsNote}${estimateNote}` : undefined,
     });
   }
 
@@ -75,7 +92,7 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
     rows.push({
       label: `Faianță (${room.wallTiling.tiledWallsCount} pereți)`,
       value: `${tilingArea.toFixed(2)} mp`,
-      formula: `(Σ lungime pereți placați × înălțime − gol ușă) + ${pct(tilingWaste)} pierdere`,
+      formula: `(Σ lungime pereți placați × înălțime − goluri uși/ferestre) + ${pct(tilingWaste)} pierdere`,
       math: `${mp(netTilingArea)} × ${(1 + tilingWaste).toFixed(2)} = ${tilingArea.toFixed(2)} mp`,
       note:
         tilingWaste > 0.1
@@ -89,7 +106,7 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
     rows.push({
       label: "Vopsea Pereți",
       value: `${paintArea.toFixed(2)} mp`,
-      formula: "(Σ lungime pereți cu vopsea × înălțime − gol ușă) + 10% pierdere",
+      formula: "(Σ lungime pereți cu vopsea × înălțime − goluri uși/ferestre) + 10% pierdere",
       math: `${mp(netPaintArea)} × 1.10 = ${paintArea.toFixed(2)} mp`,
     });
   }
@@ -116,22 +133,24 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
 
   const totalPaintArea = paintArea + dims.ceilingPaintArea + dims.paintAboveTilingArea;
   if (dims.paintLiters > 0) {
+    const rawPaintLiters = (totalPaintArea * 2) / 11;
     rows.push({
       label: "Vopsea Total",
       value: `${dims.paintLiters.toFixed(1)} l`,
       formula: "Suprafață totală (pereți + tavan + deasupra faianței) × 2 straturi ÷ 11 mp/l",
-      math: `${mp(totalPaintArea)} mp × 2 straturi ÷ 11 mp/l = ${dims.paintLiters.toFixed(1)} l`,
+      math: `${mp(totalPaintArea)} mp × 2 straturi ÷ 11 mp/l = ${rawPaintLiters.toFixed(2)} → ${dims.paintLiters.toFixed(1)} l`,
       note: "Rotunjit în sus la 0.5 litri — se vinde în ambalaje standard.",
     });
   }
 
   const totalPrimerPaintArea = paintArea + wallpaperArea + dims.ceilingPaintArea + dims.paintAboveTilingArea;
   if (dims.paintPrimerLiters > 0) {
+    const rawPrimerPaintLiters = totalPrimerPaintArea * 0.1;
     rows.push({
       label: "Amorsă Zugrăveală",
       value: `${dims.paintPrimerLiters.toFixed(0)} l`,
       formula: "Σ arii de vopsit/tapetat (pereți + tavan + deasupra faianței) × 0.10 l/mp",
-      math: `${mp(totalPrimerPaintArea)} mp × 0.10 = ${dims.paintPrimerLiters.toFixed(0)} l`,
+      math: `${mp(totalPrimerPaintArea)} mp × 0.10 = ${rawPrimerPaintLiters.toFixed(2)} → ${dims.paintPrimerLiters.toFixed(0)} l`,
       note: "Rotunjit în sus la litru întreg — se vinde la 1/4/10 l.",
     });
   }
@@ -139,11 +158,12 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
   if (dims.tilingPrimerLiters > 0) {
     const netFloor = netFloorTilingArea(room);
     const netWall = netWallTilingArea(room);
+    const rawTilingPrimerLiters = (netFloor + netWall) * 0.15;
     rows.push({
       label: "Amorsă Placări",
       value: `${dims.tilingPrimerLiters.toFixed(0)} l`,
       formula: "(arie netă pardoseală gresie + arie netă faianță) × 0.15 l/mp",
-      math: `(${mp(netFloor)} + ${mp(netWall)}) × 0.15 = ${dims.tilingPrimerLiters.toFixed(0)} l`,
+      math: `(${mp(netFloor)} + ${mp(netWall)}) × 0.15 = ${rawTilingPrimerLiters.toFixed(2)} → ${dims.tilingPrimerLiters.toFixed(0)} l`,
       note: "Arii NETE, fără pierderea de tăiere — amorsa acoperă suprafața reală, nu plăcile tăiate.",
     });
   }
@@ -163,23 +183,26 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
     const netWall = netWallTilingArea(room);
     const floorRate = groutKgPerSqm(room.tileSize);
     const wallRate = groutKgPerSqm(room.wallTiling?.tileSize);
+    const rawGroutKg = (netFloor * floorRate + netWall * wallRate) * 1.1;
     rows.push({
       label: "Chit de Rosturi",
       value: `${mp(dims.groutKg)} kg`,
       formula: "(arie netă pardoseală × kg/mp + arie netă faianță × kg/mp) + 10% marjă",
-      math: `(${mp(netFloor)} × ${floorRate} + ${mp(netWall)} × ${wallRate}) × 1.10 = ${mp(dims.groutKg)} kg`,
+      math: `(${mp(netFloor)} × ${floorRate} + ${mp(netWall)} × ${wallRate}) × 1.10 = ${rawGroutKg.toFixed(2)} → ${mp(dims.groutKg)} kg`,
       note: "Rotunjit în sus la kg întreg.",
     });
   }
 
   if (dims.underlayArea > 0 && room.floorMaterial === FlooringType.ParchetLaminat) {
+    const rawUnderlayArea = (room.floorArea ?? 0) * 1.05;
     rows.push({
       label: room.underfloorHeating
         ? "Folie Parchet — Încălzire în Pardoseală"
         : "Folie Parchet — XPS 3 mm",
       value: `${dims.underlayArea.toFixed(0)} mp`,
       formula: "Suprafață pardoseală + 5% suprapuneri la îmbinări",
-      math: `${mp(room.floorArea ?? 0)} × 1.05 = ${dims.underlayArea.toFixed(0)} mp`,
+      math: `${mp(room.floorArea ?? 0)} × 1.05 = ${rawUnderlayArea.toFixed(2)} → ${dims.underlayArea.toFixed(0)} mp`,
+      note: "Rotunjit în sus la mp întreg.",
     });
   }
 
@@ -188,7 +211,7 @@ export function buildRoomCalcRows(room: Room, dims: RoomDimensions): RoomCalcRow
     rows.push({
       label: "Tapet",
       value: `${wallpaperArea.toFixed(2)} mp`,
-      formula: "(Σ lungime pereți cu tapet × înălțime − gol ușă) + 15% pierdere",
+      formula: "(Σ lungime pereți cu tapet × înălțime − goluri uși/ferestre) + 15% pierdere",
       math: `${mp(netWallpaperArea)} × 1.15 = ${wallpaperArea.toFixed(2)} mp`,
       note: "15% e o estimare medie (model cu potrivire dreaptă). La modele cu raport mare (>26 cm) sau potrivire „half-drop”, comandă 20-25%.",
     });
