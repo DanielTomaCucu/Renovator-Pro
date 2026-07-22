@@ -1722,3 +1722,35 @@ test nou pt. cazul „email inexistent" verifică răspuns uniform `204` (nu mai
 **Rămâne manual:** cont Resend + `RESEND_API_KEY` pe Render (prod), `APP_FRONTEND_URL` = domeniul Vercel real.
 
 **Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).
+
+## 2026-07-22 — Suită extinsă de teste (frontend + backend) + fix bug virgulă zecimală
+
+Bug raportat de user: la editarea/adăugarea unui element, prețul cu virgulă (separator zecimal RO,
+ex. "12,50") nu se salva corect. Cauză: toate input-urile `type="number"` din aplicație resping virgula
+indiferent de `lang="ro"` (spec HTML — formatul e mereu cu punct), lăsând câmpul invalid/gol la tastare,
+deci prețul/cantitatea salvate deveneau tăcut 0.
+
+**Fix:** componentă nouă `DecimalInput` (`frontend/src/components/forms.tsx`) — `type="text"
+inputMode="decimal"`, acceptă virgulă SAU punct, normalizează intern la punct, respinge litere/al doilea
+separator, păstrează stări intermediare valide de tastare ("", "12."). Ține un `draft` local resincronizat
+din prop DOAR când valoarea numerică s-a schimbat cu adevărat din afară (nu ecoul propriului `onChange`)
+— altfel câmpurile care fac round-trip prin `Number()` la fiecare tastă (ex. `RoomTechnicalCard`) pierdeau
+punctul zecimal în timpul tastării caracter-cu-caracter. Aplicată pe toate cele 21 de input-uri numerice
+zecimale din aplicație (`ItemFormDrawer`, `OfferFormDrawer`, `RoomFormDrawer`, `RoomShapeWallsEditor`,
+`RoomTechnicalCard`, `elemente/page.tsx`, `setari/page.tsx`, `configurare/page.tsx`).
+
+**Infra de testare frontend adăugată de la zero** (nu exista deloc): Vitest + Testing Library
+(`vitest.config.mts`, `vitest.setup.ts`, environment `happy-dom`), `npm test`/`npm run test:watch`.
+
+**Teste noi:**
+- Frontend: 243 teste — toate funcțiile pure din `shared/functions/` (money, items, budget, charts,
+  dimensions, image), `DecimalInput` (inclusiv tastare caracter-cu-caracter), migrarea la `DecimalInput`
+  în toate fișierele atinse.
+- Backend: +34 teste peste cele deja existente (231 → 265) — validare URL/XSS pe `productUrl`/`imageUrl`
+  (SEC-2), matrice completă de autorizare pe rol (VIEWER/EDITOR/OWNER) peste rooms/items/proiect/comparator,
+  edge cases `BudgetCalculator` (proiect fără camere, buget 0, toate elementele necumpărate).
+
+**Verificat:** `npm test` (243/243), `npx tsc --noEmit`, `npm run lint`, `npm run build` — toate curate;
+`mvn verify` — BUILD SUCCESS, toate testele verzi (Testcontainers/Docker disponibil în mediu).
+
+**Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).
