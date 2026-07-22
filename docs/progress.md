@@ -14,6 +14,7 @@ promovare în shared dacă mai apare nevoie de ea în altă parte) sau deja part
 |---|---|---|---|
 | `formatMoney(value, currency?)` | `shared/functions/money.ts` | formatare Intl ro-RO, 2 zecimale, implicit `Currency.EUR` | peste tot unde se afișează bani |
 | `itemTotal(item)` | `shared/functions/items.ts` | cantitate × preț unitar (randare per-rând) | `elemente`, `centralizator`, intern în `items.ts` |
+| `materialUnit(materialType)` | `shared/functions/items.ts` | unitatea de măsură după categoria de material (mp/ml/l/kg/saci/buc) | `elemente`, `centralizator`, `ItemFormDrawer`, `ItemDetailsDrawer`, `CentralizatorPdfDocument`, `comparator/GroupFormDrawer` |
 | `totalEstimated(items)` | `shared/functions/items.ts` | suma unei liste (indiferent de status) — subtotaluri ad-hoc; totalul de proiect vine din `summary` | `analiza` (pendingTotal), intern (`totalSpent`, `roomSubtotal`) |
 | `totalSpent(items)` | `shared/functions/items.ts` | suma elementelor cu status `ItemStatus.Cumparat` | intern (`roomSpent`) — totalul de proiect vine din `summary` |
 | `boughtCount(items)` | `shared/functions/items.ts` | număr elemente `ItemStatus.Cumparat` (per-cameră) | `elemente` (per-cameră) — totalul de proiect vine din `summary` |
@@ -1439,3 +1440,53 @@ test `RoomDimensionsCalculatorTest`; frontend — `app/configurare/roomCalcRows.
 (`isPerimeterEstimated`, rotunjiri afișate, text goluri).
 
 **Branch:** `045-fix-calcule-configurator` (peste `044-comparator-ui-polish`, nemergeuit încă).
+
+---
+
+### 2026-07-22 — Audit de UX: 4 bug-uri reparate (căutare moartă, cameră needitabilă, unitate greșită, coerciție silențioasă)
+
+Audit exhaustiv al aplicației (la cererea userului) a găsit 4 probleme reale, toate reparate în această sesiune:
+
+**1. Căutare moartă pe `/configurare` și `/analiza`.** Ambele pagini afișau o bară de căutare vizibilă
+fără `searchValue`/`onSearchChange` — scriai în ea și nu se întâmpla nimic. Fix: `/configurare` filtrează
+acum camerele după nume (`visibleRooms`, cu empty-state dedicat „Nicio cameră găsită"); `/analiza` nu are
+nicio listă filtrabilă (doar grafice/agregări), deci bara de căutare a fost eliminată (`showSearch={false}`,
+ca la `/setari`) — nu are rost un input care nu poate face nimic.
+
+**2. Camerele nu puteau fi editate după creare** — nici nume, nici tip, nici `allocatedBudget` (afișat
+peste tot ca „Buget utilizat X / Y", dar Y era blocat pe valoarea de la creare). `RoomFormDrawer` primește
+acum un prop opțional `room` (ca `ItemFormDrawer`/`GroupFormDrawer`): dacă e dat, editează camera
+(`updateRoom`) în loc să creeze una nouă. Buton nou „Editează" (iconiță `edit_square`, lângă „Șterge") pe
+header-ul `RoomTechnicalCard` (`/configurare`) și pe header-ul de cameră din `/elemente` (desktop + mobil).
+
+**3. Cantitatea elementelor era mereu afișată ca „buc"**, chiar și pentru materiale în mp/ml/l/kg (ex.
+„23.6 buc" de parchet, în loc de „23.6 mp"). Funcție nouă partajată `materialUnit(materialType)`
+(`shared/functions/items.ts`) — mapează fiecare `MaterialType` pe unitatea lui reală (mp: Gresie/Faianță/
+Parchet/Tapet/FolieParchet; ml: Plintă/GlafFereastră; l: Vopsea/Amorsă; kg: ChitRosturi; saci: AdezivPlacari;
+buc: restul — Mobilă/Electrocasnice/Sanitare/CorpuriIluminat/Altele, adăugate manual). Folosită peste tot
+unde apare cantitatea: `/elemente` (header „Cant." în loc de „Buc" + celulă), `/centralizator` (desktop +
+mobil), `ItemDetailsDrawer`, `CentralizatorPdfDocument`, `GroupFormDrawer` (panoul de candidați din
+Comparator). Eticheta din `ItemFormDrawer` („Cantitate (mp)" etc.) e acum reactivă la `materialType`-ul ales.
+
+**4. `Number(quantity) || 1` transforma silențios 0 (sau câmp gol) în 1**, fără nicio explicație — userul
+nu-și dădea seama că valoarea introdusă a fost ignorată. `ItemFormDrawer`: validare explicită înainte de
+submit (cantitate goală/0/negativă/NaN → eroare „Cantitatea trebuie să fie un număr strict pozitiv.",
+afișată lângă butonul de salvare, submit blocat) în loc de coerciție tăcută; `min`/`step` ale inputului
+devin dinamice (`step="1"` la „buc", `"0.01"` altfel; `min={0}` — cantitățile fracționare <1 sunt valide
+la mp/l/kg). Cantitatea implicită la un element NOU e „1" (nu gol), ca fluxul comun să rămână fricțiune-zero.
+
+**Verificat manual în browser** (end-to-end, cu backend real): căutare „baie" pe `/configurare` filtrează
+corect la o singură cameră; editat bugetul camerei „dormitoe" din 0 în 1500 EUR, persistat după reload;
+toate cantitățile din `/elemente` arată unitatea corectă („23.6 mp", „17.09 ml", „1 saci", „2 kg", „1 buc");
+setat cantitatea unui element la 0 → eroare afișată, drawer rămas deschis, nimic salvat; corectat la 3 →
+salvat, totalul recalculat corect (3×20=60 EUR).
+
+**Fișiere atinse:** frontend — `components/RoomFormDrawer.tsx` (mod editare), `components/ItemFormDrawer.tsx`
+(validare + unitate + min/step dinamice), `components/ItemDetailsDrawer.tsx`, `app/configurare/page.tsx`
+(căutare cameră), `app/configurare/RoomTechnicalCard.tsx` (buton editare + drawer), `app/analiza/page.tsx`
+(căutare eliminată), `app/elemente/page.tsx` (buton editare cameră ×2, unitate cantitate),
+`app/elemente/RoomDrawerState.ts` (nou), `app/centralizator/page.tsx` (unitate cantitate ×2),
+`app/centralizator/CentralizatorPdfDocument.tsx` (unitate cantitate), `app/comparator/GroupFormDrawer.tsx`
+(unitate pe candidați), `shared/functions/items.ts` (`materialUnit`, nou).
+
+**Branch:** `046-fix-bugs-audit`.

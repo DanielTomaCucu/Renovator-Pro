@@ -106,7 +106,8 @@ export default function AnalizaPage() {
 
   return (
     <div>
-      <PageHeader title="Analiză Bugetară" searchPlaceholder="Caută date..." />
+      {/* Fără căutare — pagina e integral grafice/agregări, nu o listă filtrabilă (nimic de căutat). */}
+      <PageHeader title="Analiză Bugetară" showSearch={false} />
 
       {/* Sumar — card unic cu gradient închis, identic pe mobil și desktop (design „Dashboard Premium Consolidat"). */}
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-10">

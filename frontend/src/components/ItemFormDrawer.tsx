@@ -6,6 +6,7 @@ import { Field, PrimaryButton, inputCls } from "./forms";
 import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
+import { materialUnit } from "@/shared/functions";
 
 const materialTypes = Object.values(MaterialType);
 const statuses = Object.values(ItemStatus);
@@ -28,11 +29,12 @@ export default function ItemFormDrawer({
   const [source, setSource] = useState("");
   const [status, setStatus] = useState<ItemStatus>(ItemStatus.InAsteptare);
   const [materialType, setMaterialType] = useState<MaterialType>(MaterialType.Altele);
-  const [quantity, setQuantity] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [unitPrice, setUnitPrice] = useState("");
   const [productUrl, setProductUrl] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [room, setRoom] = useState(roomId ?? "");
+  const [quantityError, setQuantityError] = useState<string | null>(null);
 
   // Resetează/populează formularul de fiecare dată când drawerul se deschide.
   // Pattern React: "adjusting state during render" (nu useEffect) —
@@ -45,22 +47,31 @@ export default function ItemFormDrawer({
       setSource(item?.source ?? "");
       setStatus(item?.status ?? ItemStatus.InAsteptare);
       setMaterialType(item?.materialType ?? MaterialType.Altele);
-      setQuantity(item ? String(item.quantity) : "");
+      setQuantity(item ? String(item.quantity) : "1");
       setUnitPrice(item ? String(item.unitPrice) : "");
       setProductUrl(item?.productUrl ?? "");
       setImageUrl(item?.imageUrl ?? "");
       setRoom(item?.roomId ?? roomId ?? rooms[0]?.id ?? "");
+      setQuantityError(null);
     }
   }
 
   const { run: submit, pending } = useAsyncAction(async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validare explicită în loc de coerciție silențioasă (`Number(quantity) || 1`) — un câmp gol sau
+    // 0 arăta userului cantitatea 1 salvată fără nicio explicație. Acum blocăm submit-ul cu un mesaj clar.
+    const parsedQuantity = Number(quantity);
+    if (quantity.trim() === "" || !Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+      setQuantityError("Cantitatea trebuie să fie un număr strict pozitiv.");
+      return;
+    }
+    setQuantityError(null);
     const data = {
       name,
       source,
       status,
       materialType,
-      quantity: Number(quantity) || 1,
+      quantity: parsedQuantity,
       unitPrice: Number(unitPrice) || 0,
       productUrl: productUrl || undefined,
       imageUrl: imageUrl || undefined,
@@ -80,6 +91,7 @@ export default function ItemFormDrawer({
       title={editing ? "Editează Element" : "Adaugă Element Nou"}
       footer={
         <div className="space-y-3">
+          {quantityError && <p className="text-xs font-bold text-tertiary">{quantityError}</p>}
           <PrimaryButton type="submit" form={formId} pending={pending}>
             {editing ? "Salvează Modificările" : "Adaugă Element"}
           </PrimaryButton>
@@ -155,10 +167,11 @@ export default function ItemFormDrawer({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Cantitate (buc)">
+          <Field label={`Cantitate (${materialUnit(materialType)})`}>
             <input
               type="number"
-              min={1}
+              min={0}
+              step={materialUnit(materialType) === "buc" ? "1" : "0.01"}
               placeholder="ex: 1"
               className={`${inputCls} font-mono`}
               value={quantity}

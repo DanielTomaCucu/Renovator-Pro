@@ -18,6 +18,8 @@ export default function ConfigurarePage() {
   const { project, rooms, summary, updateProject } = useStore();
   const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [search, setSearch] = useState("");
+  const visibleRooms = rooms.filter((r) => r.name.toLowerCase().includes(search.trim().toLowerCase()));
   // Sumarul tehnic vine din agregarea server-side (Problema 2 din audit), nu recalculat client-side.
   const technical = summary.technical;
   const progressPct = Math.round(technical.configuredRoomsRatio * 100);
@@ -56,7 +58,12 @@ export default function ConfigurarePage() {
 
   return (
     <div>
-      <PageHeader title="Configurare Apartament" searchPlaceholder="Caută cameră..." />
+      <PageHeader
+        title="Configurare Apartament"
+        searchPlaceholder="Caută cameră..."
+        searchValue={search}
+        onSearchChange={setSearch}
+      />
 
       <main className="mx-auto max-w-7xl space-y-6 px-4 pt-6 sm:px-6 lg:px-10">
         {/* Sumar tehnic global — card unic cu gradient închis, identic pe mobil și desktop.
@@ -161,8 +168,14 @@ export default function ConfigurarePage() {
               actionLabel="+ Adaugă Cameră"
               onAction={() => setRoomDrawerOpen(true)}
             />
+          ) : visibleRooms.length === 0 ? (
+            <EmptyState
+              icon={TECHNICAL_ICONS.addRoomEmpty}
+              title="Nicio cameră găsită"
+              description={`Nicio cameră nu se potrivește cu „${search}”. Încearcă alt termen de căutare.`}
+            />
           ) : (
-            rooms.map((room) => <RoomTechnicalCard key={room.id} room={room} />)
+            visibleRooms.map((room) => <RoomTechnicalCard key={room.id} room={room} />)
           )}
         </section>
       </main>

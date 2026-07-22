@@ -6,6 +6,7 @@ import { Field, PrimaryButton, inputCls } from "@/components/forms";
 import { MaterialType } from "@/shared/types";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
+import { materialUnit } from "@/shared/functions";
 import { ACTION_ICONS } from "@/shared/icons";
 import { GroupDrawerState } from "./GroupDrawerState";
 import { configuredItemCandidates } from "./configuredItemCandidates";
@@ -148,7 +149,8 @@ export default function GroupFormDrawer({
             <span>
               La alegerea unei oferte se va completa elementul{" "}
               <strong className="text-primary">«{candidates[0].name}»</strong> — {candidates[0].quantity}{" "}
-              din configurare (preț, magazin, link, poză). Cantitatea rămâne cea calculată din măsurători.
+              {materialUnit(candidates[0].materialType)} din configurare (preț, magazin, link, poză).
+              Cantitatea rămâne cea calculată din măsurători.
             </span>
           </div>
         )}
@@ -162,7 +164,7 @@ export default function GroupFormDrawer({
             >
               {candidates.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — {c.quantity}
+                  {c.name} — {c.quantity} {materialUnit(c.materialType)}
                 </option>
               ))}
             </select>

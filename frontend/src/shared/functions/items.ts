@@ -1,4 +1,33 @@
-import { Item, ItemStatus } from "../types";
+import { Item, ItemStatus, MaterialType } from "../types";
+
+/**
+ * Unitatea de măsură a cantității, după categoria de material — elementele generate din configurare
+ * (`AutoItemReconciler`, backend) exprimă cantitatea în mp/ml/l/kg/saci, nu bucăți; fără această mapare,
+ * „23.6 mp de parchet" apărea ca „23.6 buc" peste tot în UI. Categoriile fără unitate fizică fixă
+ * (Mobilă, Electrocasnice, Corpuri de iluminat, Sanitare, Altele — adăugate manual de user) rămân „buc".
+ */
+export const materialUnit = (materialType: MaterialType): string => {
+  switch (materialType) {
+    case MaterialType.Gresie:
+    case MaterialType.Faianta:
+    case MaterialType.Parchet:
+    case MaterialType.Tapet:
+    case MaterialType.FolieParchet:
+      return "mp";
+    case MaterialType.Plinta:
+    case MaterialType.GlafFereastra:
+      return "ml";
+    case MaterialType.Vopsea:
+    case MaterialType.Amorsa:
+      return "l";
+    case MaterialType.ChitRosturi:
+      return "kg";
+    case MaterialType.AdezivPlacari:
+      return "saci";
+    default:
+      return "buc";
+  }
+};
 
 /** Totalul unui element: cantitate × preț unitar. */
 export const itemTotal = (i: Item): number => i.quantity * i.unitPrice;
