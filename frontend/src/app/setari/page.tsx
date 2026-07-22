@@ -6,6 +6,7 @@ import Spinner from "@/components/Spinner";
 import ProjectSharingCard from "@/components/ProjectSharingCard";
 import ProjectSwitcherCard from "@/components/ProjectSwitcherCard";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { DecimalInput } from "@/components/forms";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import { Currency } from "@/shared/types";
@@ -151,12 +152,9 @@ export default function SetariPage() {
               <label className="text-[10px] font-bold uppercase text-muted">
                 Buget total ({project.currency})
               </label>
-              <input
-                type="number"
-                min="0"
-                step="100"
+              <DecimalInput
                 value={totalBudget}
-                onChange={(e) => setTotalBudget(e.target.value)}
+                onChange={setTotalBudget}
                 placeholder="ex: 12500"
                 className="w-full rounded-lg border border-line bg-surface-low px-4 py-3 font-mono text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
               />
@@ -233,12 +231,10 @@ export default function SetariPage() {
                     </span>
                   </label>
                   <div className="relative">
-                    <input
-                      type="number"
-                      step="0.01"
+                    <DecimalInput
                       placeholder="4.97"
                       value={exchangeRate}
-                      onChange={(e) => setExchangeRate(e.target.value)}
+                      onChange={setExchangeRate}
                       className="w-full rounded-lg border border-line bg-surface-low px-4 py-3 font-mono text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-[10px] uppercase text-muted">

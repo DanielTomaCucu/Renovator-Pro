@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Drawer from "./Drawer";
-import { Field, PrimaryButton, inputCls } from "./forms";
+import { DecimalInput, Field, PrimaryButton, inputCls } from "./forms";
 import { Item, ItemOrigin, ItemStatus, MaterialType } from "@/shared/types";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
@@ -168,26 +168,10 @@ export default function ItemFormDrawer({
 
         <div className="grid grid-cols-2 gap-4">
           <Field label={`Cantitate (${materialUnit(materialType)})`}>
-            <input
-              type="number"
-              min={0}
-              step={materialUnit(materialType) === "buc" ? "1" : "0.01"}
-              placeholder="ex: 1"
-              className={`${inputCls} font-mono`}
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
+            <DecimalInput placeholder="ex: 1" value={quantity} onChange={setQuantity} />
           </Field>
           <Field label="Preț unitar (€)">
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="ex: 0.00"
-              className={`${inputCls} font-mono`}
-              value={unitPrice}
-              onChange={(e) => setUnitPrice(e.target.value)}
-            />
+            <DecimalInput placeholder="ex: 0.00" value={unitPrice} onChange={setUnitPrice} />
           </Field>
         </div>
 

@@ -1,5 +1,6 @@
 import { RoomShape, Wall } from "@/shared/types";
 import { TECHNICAL_ICONS } from "@/shared/icons";
+import { DecimalInput } from "@/components/forms";
 import { IconSelectField, WALL_LABELS, labelCls, inputCls } from "./RoomTechnicalCard";
 
 const walls = Object.values(Wall);
@@ -135,15 +136,11 @@ export function RoomShapeLengthInputs({
       <div className="max-w-xs space-y-1">
         <label className="space-y-1">
           <span className={labelCls}>Latura camerei (m)</span>
-          <input
-            type="number"
-            step="0.01"
-            min={0}
-            max={maxSide}
+          <DecimalInput
             placeholder="ex: 2.40"
             className={inputCls}
-            value={side || ""}
-            onChange={(e) => changeSide(Number(e.target.value) || 0)}
+            value={side ? String(side) : ""}
+            onChange={(v) => changeSide(Number(v) || 0)}
           />
         </label>
         {maxSide &&
@@ -169,26 +166,20 @@ export function RoomShapeLengthInputs({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="space-y-1">
             <span className={labelCls}>Lungime N–S (m)</span>
-            <input
-              type="number"
-              step="0.01"
-              min={0}
+            <DecimalInput
               placeholder="ex: 3.00"
               className={inputCls}
-              value={lungime || ""}
-              onChange={(e) => changeLungime(Number(e.target.value) || 0)}
+              value={lungime ? String(lungime) : ""}
+              onChange={(v) => changeLungime(Number(v) || 0)}
             />
           </label>
           <label className="space-y-1">
             <span className={labelCls}>Lățime E–V (m)</span>
-            <input
-              type="number"
-              step="0.01"
-              min={0}
+            <DecimalInput
               placeholder="ex: 2.20"
               className={inputCls}
-              value={latime || ""}
-              onChange={(e) => changeLatime(Number(e.target.value) || 0)}
+              value={latime ? String(latime) : ""}
+              onChange={(v) => changeLatime(Number(v) || 0)}
             />
           </label>
         </div>
@@ -214,14 +205,11 @@ export function RoomShapeLengthInputs({
       {walls.map((w) => (
         <label key={w} className="space-y-1">
           <span className={labelCls}>{WALL_LABELS[w]} — Lungime (m)</span>
-          <input
-            type="number"
-            step="0.01"
-            min={0}
+          <DecimalInput
             placeholder="ex: 2.25"
             className={inputCls}
-            value={wallLengths[w] || ""}
-            onChange={(e) => onChangeLengths({ ...wallLengths, [w]: Number(e.target.value) || 0 })}
+            value={wallLengths[w] ? String(wallLengths[w]) : ""}
+            onChange={(v) => onChangeLengths({ ...wallLengths, [w]: Number(v) || 0 })}
           />
         </label>
       ))}

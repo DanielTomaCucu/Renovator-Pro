@@ -8,7 +8,9 @@ import ro.renovatorpro.application.port.in.AddOfferUseCase;
 import ro.renovatorpro.application.port.in.AddRoomUseCase;
 import ro.renovatorpro.application.port.in.ChooseOfferUseCase;
 import ro.renovatorpro.application.port.in.ConvertProjectCurrencyUseCase;
+import ro.renovatorpro.application.port.in.DeleteComparisonGroupUseCase;
 import ro.renovatorpro.application.port.in.DeleteItemUseCase;
+import ro.renovatorpro.application.port.in.GetComparisonGroupsUseCase;
 import ro.renovatorpro.application.port.in.GetProjectSummaryUseCase;
 import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
 import ro.renovatorpro.application.port.in.GetItemsUseCase;
@@ -16,10 +18,14 @@ import ro.renovatorpro.application.port.in.GetProjectUseCase;
 import ro.renovatorpro.application.port.in.GetRoomsUseCase;
 import ro.renovatorpro.application.port.in.GetSpendingTimelineUseCase;
 import ro.renovatorpro.application.port.in.Patch;
+import ro.renovatorpro.application.port.in.UpdateComparisonGroupUseCase;
 import ro.renovatorpro.application.port.in.UpdateItemUseCase;
 import ro.renovatorpro.application.port.in.UpdateProjectUseCase;
 import ro.renovatorpro.application.port.in.UpdateRoomUseCase;
 import ro.renovatorpro.application.security.MembershipGuard;
+import ro.renovatorpro.domain.exception.ComparisonGroupNotFoundException;
+import ro.renovatorpro.domain.exception.ItemNotFoundException;
+import ro.renovatorpro.domain.exception.RoomNotFoundException;
 import ro.renovatorpro.domain.model.ComparisonGroup;
 import ro.renovatorpro.domain.model.ComparisonGroupStatus;
 import ro.renovatorpro.domain.model.Currency;
@@ -43,6 +49,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Teste de use case cu repository-uri FAKE (in-memory, fără Spring/DB) — DoD Task 3.2:
@@ -79,6 +86,8 @@ class UseCasesTest {
     private AddComparisonGroupUseCase addComparisonGroup;
     private AddOfferUseCase addOffer;
     private ChooseOfferUseCase chooseOffer;
+    private DeleteComparisonGroupUseCase deleteComparisonGroup;
+    private UpdateComparisonGroupUseCase updateComparisonGroup;
 
     @BeforeEach
     void setUp() {
@@ -114,6 +123,8 @@ class UseCasesTest {
         addComparisonGroup = new AddComparisonGroupService(comparisonGroupRepository, roomRepository, itemRepository, idGenerator, timeProvider, membershipGuard);
         addOffer = new AddOfferService(offerRepository, comparisonGroupRepository, roomRepository, idGenerator, timeProvider, membershipGuard);
         chooseOffer = new ChooseOfferService(comparisonGroupRepository, offerRepository, roomRepository, itemRepository, idGenerator, timeProvider, membershipGuard);
+        deleteComparisonGroup = new DeleteComparisonGroupService(comparisonGroupRepository, offerRepository, roomRepository, membershipGuard);
+        updateComparisonGroup = new UpdateComparisonGroupService(comparisonGroupRepository, offerRepository, roomRepository, itemRepository, membershipGuard);
     }
 
     @Test
@@ -605,5 +616,150 @@ class UseCasesTest {
 
         assertThat(offerRepository.findById(cuPret.id()).orElseThrow().unitPrice().amount()).isEqualByComparingTo("500.00");
         assertThat(offerRepository.findById(faraPret.id()).orElseThrow().unitPrice()).isNull(); // fără preț — sărită
+    }
+
+    @Test
+    void deleteComparisonGroupStergeSiOferteleDarPastreazaItemulCreat() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Canapea", MaterialType.MOBILA, null));
+        Offer offer = addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                "Canapea IKEA", "IKEA", Money.of(1200), BigDecimal.ONE, null, List.of(), null));
+        ChooseOfferUseCase.Result chosen = chooseOffer.execute(USER, group.id(), new ChooseOfferUseCase.Command(offer.id(), null));
+
+        deleteComparisonGroup.execute(USER, group.id());
+
+        assertThat(comparisonGroupRepository.findById(group.id())).isEmpty();
+        assertThat(offerRepository.findById(offer.id())).isEmpty();
+        // Elementul de cumpărat creat din alegerea ofertei rămâne — ștergerea grupului nu îl atinge.
+        assertThat(itemRepository.findById(chosen.item().id())).isPresent();
+    }
+
+    @Test
+    void deleteComparisonGroupInexistentAruncaNotFound() {
+        assertThatThrownBy(() -> deleteComparisonGroup.execute(USER, "grup-inexistent"))
+                .isInstanceOf(ComparisonGroupNotFoundException.class);
+    }
+
+    @Test
+    void updateComparisonGroupPatcheazaNumeleFaraSaAtingaOfertele() {
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, room.id(), new AddComparisonGroupUseCase.Command("Canapea", MaterialType.MOBILA, null));
+        addOffer.execute(USER, group.id(), new AddOfferUseCase.Command(
+                "Canapea IKEA", "IKEA", Money.of(1200), BigDecimal.ONE, null, List.of(), null));
+
+        GetComparisonGroupsUseCase.GroupWithOffers result = updateComparisonGroup.execute(USER, group.id(),
+                new UpdateComparisonGroupUseCase.Command("Canapea Living Redenumită", null, null, null));
+
+        assertThat(result.group().name()).isEqualTo("Canapea Living Redenumită");
+        assertThat(result.group().materialType()).isEqualTo(MaterialType.MOBILA); // neschimbat
+        assertThat(result.offers()).hasSize(1); // ofertele rămân neatinse
+    }
+
+    @Test
+    void updateComparisonGroupMutaGrupulInAltaCameraDinAcelasiProiect() {
+        Room sursa = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        Room destinatie = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.DORMITOR, "Dormitor", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, sursa.id(), new AddComparisonGroupUseCase.Command("Canapea", MaterialType.MOBILA, null));
+
+        GetComparisonGroupsUseCase.GroupWithOffers result = updateComparisonGroup.execute(USER, group.id(),
+                new UpdateComparisonGroupUseCase.Command(null, null, destinatie.id(), null));
+
+        assertThat(result.group().roomId()).isEqualTo(destinatie.id());
+    }
+
+    @Test
+    void updateComparisonGroupMutareaSpreOCameraDinAltProiectEsteRespinsaCaIdor() {
+        Room sursa = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(1500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        ComparisonGroup group = addComparisonGroup.execute(USER, sursa.id(), new AddComparisonGroupUseCase.Command("Canapea", MaterialType.MOBILA, null));
+
+        // Cameră dintr-un alt proiect, creată direct prin repository (nu prin use case, ca să nu depindă
+        // de membership-ul USER pe un al doilea proiect).
+        Room altProiectRoom = roomRepository.insert(
+                Room.builder(idGenerator.newId(), RoomType.BAIE, "Baie Alt Proiect", Money.of(500)).build(), "alt-proiect");
+
+        assertThatThrownBy(() -> updateComparisonGroup.execute(USER, group.id(),
+                new UpdateComparisonGroupUseCase.Command(null, null, altProiectRoom.id(), null)))
+                .isInstanceOf(RoomNotFoundException.class);
+    }
+
+    @Test
+    void updateComparisonGroupInexistentAruncaNotFound() {
+        assertThatThrownBy(() -> updateComparisonGroup.execute(USER, "grup-inexistent",
+                new UpdateComparisonGroupUseCase.Command("Nume", null, null, null)))
+                .isInstanceOf(ComparisonGroupNotFoundException.class);
+    }
+
+    @Test
+    void editorAlProiectuluiPoateCrudCamereSiElementeDarNuVedeCamereleAltuiProiect() {
+        // EDITOR (nu OWNER) pe același proiect — verifică rolul minim necesar pt. operațiile de scriere
+        // de bază, dincolo de ce acoperă deja IdorAuthorizationIntegrationTest la nivel HTTP.
+        String editorId = "editor-user";
+        projectMemberRepository.grant(PROJECT_ID, editorId, ProjectRole.EDITOR);
+
+        Room room = addRoom.execute(editorId, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        Item item = addItem.execute(editorId, new AddItemUseCase.Command(room.id(), "Robinet", MaterialType.SANITARE, "",
+                ItemStatus.PLANIFICAT, BigDecimal.ONE, Money.of(100), null, null, ItemOrigin.MANUAL));
+        assertThat(item).isNotNull();
+
+        // VIEWER (rol insuficient pt. scriere) nu poate adăuga camere — tratat ca proiect inexistent (IDOR).
+        String viewerId = "viewer-user";
+        projectMemberRepository.grant(PROJECT_ID, viewerId, ProjectRole.VIEWER);
+        assertThatThrownBy(() -> addRoom.execute(viewerId, PROJECT_ID,
+                new AddRoomUseCase.Command(RoomType.LIVING, "Living", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null)))
+                .isInstanceOf(ro.renovatorpro.domain.exception.ProjectNotFoundException.class);
+
+        // VIEWER poate totuși citi.
+        assertThat(getRooms.execute(viewerId, PROJECT_ID)).contains(room);
+
+        // Un user fără NICIUN rol pe proiect nu poate șterge camera — 404 „mascat" (IDOR).
+        String strangerId = "stranger-user";
+        assertThatThrownBy(() -> deleteRoom.execute(strangerId, room.id()))
+                .isInstanceOf(RoomNotFoundException.class);
+        assertThat(roomRepository.findById(room.id())).isPresent(); // camera n-a fost atinsă
+    }
+
+    @Test
+    void updateItemCuCampAbsentVersusExplicitNullAmbeleNuModificaFiindcaCommandNuFolosestePatch() {
+        // Spre deosebire de UpdateRoomUseCase.Command (care folosește Patch<T> pt. „absent" vs „null explicit"),
+        // UpdateItemUseCase.Command foloseste verificări simple de null — un DTO care trimite explicit
+        // câmpul cu valoarea null NU poate șterge productUrl/imageUrl, se comportă identic cu „absent".
+        Room room = addRoom.execute(USER, PROJECT_ID, new AddRoomUseCase.Command(RoomType.BAIE, "Baie", Money.of(500), null, null, null, null, null, null, null, null, null, null, null, null, null));
+        Item item = addItem.execute(USER, new AddItemUseCase.Command(room.id(), "Gresie", MaterialType.GRESIE, "Dedeman",
+                ItemStatus.IN_ASTEPTARE, BigDecimal.TEN, Money.of(40), "https://link.ro/produs", "https://img.ro/poza.jpg", ItemOrigin.MANUAL));
+
+        Item updated = updateItem.execute(USER, item.id(), new UpdateItemUseCase.Command(
+                null, null, null, null, null, null, null, null));
+
+        assertThat(updated.productUrl()).isEqualTo("https://link.ro/produs"); // neschimbat — null = "nu modifica"
+        assertThat(updated.imageUrl()).isEqualTo("https://img.ro/poza.jpg");
+    }
+
+    @Test
+    void updateItemInexistentAruncaNotFound() {
+        assertThatThrownBy(() -> updateItem.execute(USER, "item-inexistent",
+                new UpdateItemUseCase.Command("Nume nou", null, null, null, null, null, null, null)))
+                .isInstanceOf(ItemNotFoundException.class);
+    }
+
+    @Test
+    void addItemUnuiRoomInexistentAruncaRoomNotFound() {
+        assertThatThrownBy(() -> addItem.execute(USER, new AddItemUseCase.Command(
+                "room-inexistent", "Gresie", MaterialType.GRESIE, "", ItemStatus.IN_ASTEPTARE,
+                BigDecimal.ONE, Money.of(10), null, null, ItemOrigin.MANUAL)))
+                .isInstanceOf(RoomNotFoundException.class);
+    }
+
+    @Test
+    void budgetProiectuluiRamaneNeschimbatCandNuAreNiciOCamera() {
+        // Proiect fără camere/elemente — sumarul de buget nu trebuie să eșueze, doar să reflecte zero.
+        GetProjectSummaryUseCase.ProjectSummary s = getSummary.execute(USER, PROJECT_ID);
+
+        assertThat(s.totalEstimated().amount()).isEqualByComparingTo("0.00");
+        assertThat(s.totalSpent().amount()).isEqualByComparingTo("0.00");
+        assertThat(s.budgetRemaining()).isEqualByComparingTo("1000.00"); // tot bugetul proiectului, nimic cheltuit
+        assertThat(s.boughtCount()).isZero();
+        assertThat(s.purchaseProgress()).isZero();
+        assertThat(s.costPerRoom()).isEmpty();
+        assertThat(s.costPerCategory()).isEmpty();
     }
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Drawer from "./Drawer";
-import { Field, PrimaryButton, inputCls } from "./forms";
+import { DecimalInput, Field, PrimaryButton, inputCls } from "./forms";
 import { Room, RoomType } from "@/shared/types";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
@@ -114,14 +114,10 @@ export default function RoomFormDrawer({
         </Field>
 
         <Field label="Buget alocat (€)">
-          <input
-            type="number"
-            min={0}
-            step="0.01"
+          <DecimalInput
             placeholder="ex: 1200"
-            className={`${inputCls} font-mono`}
             value={budget}
-            onChange={(e) => setBudget(e.target.value)}
+            onChange={setBudget}
           />
         </Field>
       </form>

@@ -9,6 +9,7 @@ import DashboardSummaryCard, {
 } from "@/components/DashboardSummaryCard";
 import Spinner from "@/components/Spinner";
 import EmptyState from "@/components/EmptyState";
+import { DecimalInput } from "@/components/forms";
 import { useStore } from "@/shared/store";
 import { formatMoney } from "@/shared/functions";
 import { TECHNICAL_ICONS, DOCUMENT_ICONS } from "@/shared/icons";
@@ -106,14 +107,11 @@ export default function ConfigurarePage() {
             </div>
           </div>
           <div className="w-full md:w-48">
-            <input
-              type="number"
-              step="0.01"
-              min={0}
+            <DecimalInput
               placeholder="0.00"
-              value={project.totalArea ?? ""}
-              onChange={(e) =>
-                updateProject({ totalArea: e.target.value ? Number(e.target.value) : undefined })
+              value={project.totalArea !== undefined ? String(project.totalArea) : ""}
+              onChange={(v) =>
+                updateProject({ totalArea: v ? Number(v) : undefined })
               }
               className="w-full rounded-lg border border-line bg-surface px-4 py-3 font-mono text-sm outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
             />

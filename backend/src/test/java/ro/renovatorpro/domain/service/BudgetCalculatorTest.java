@@ -101,6 +101,49 @@ class BudgetCalculatorTest {
     }
 
     @Test
+    void costPerRoomCuProiectFaraCamereIntoarceListaGoala() {
+        assertThat(BudgetCalculator.costPerRoom(List.of(), List.of())).isEmpty();
+    }
+
+    @Test
+    void roomSubtotalSiRoomSpentPentruOCameraFaraElementeSuntZero() {
+        assertThat(BudgetCalculator.roomSubtotal(List.of(), "r-inexistent").amount()).isEqualByComparingTo("0.00");
+        assertThat(BudgetCalculator.roomSpent(List.of(), "r-inexistent").amount()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void totalSpentEsteZeroCandNimicNuECumparat() {
+        List<Item> items = List.of(
+                item("r1", ItemStatus.PLANIFICAT, 1, 100, MaterialType.GRESIE),
+                item("r1", ItemStatus.IN_ASTEPTARE, 1, 50, MaterialType.GRESIE)
+        );
+        assertThat(BudgetCalculator.totalSpent(items).amount()).isEqualByComparingTo("0.00");
+        assertThat(BudgetCalculator.boughtCount(items)).isZero();
+        assertThat(BudgetCalculator.purchaseProgress(items)).isZero();
+    }
+
+    @Test
+    void budgetRemainingCuBugetZeroEgaleazaMinusCheltuit() {
+        List<Item> items = List.of(item("r1", ItemStatus.CUMPARAT, 1, 50, MaterialType.ALTELE));
+        assertThat(BudgetCalculator.budgetRemaining(Money.zero(), items)).isEqualByComparingTo("-50.00");
+    }
+
+    @Test
+    void budgetRemainingCuBugetZeroSiNimicCheltuitEsteZero() {
+        assertThat(BudgetCalculator.budgetRemaining(Money.zero(), List.of())).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void budgetEfficiencyCuEstimatPozitivDarNimicCheltuitEsteZero() {
+        assertThat(BudgetCalculator.budgetEfficiency(Money.of(500), Money.zero())).isZero();
+    }
+
+    @Test
+    void costPerCategoryCuListaGoalaIntoarceMapGoala() {
+        assertThat(BudgetCalculator.costPerCategory(List.of())).isEmpty();
+    }
+
+    @Test
     void costPerCategoryAgregaTotalSiSpentPerCategorie() {
         List<Item> items = List.of(
                 item("r1", ItemStatus.CUMPARAT, 1, 100, MaterialType.GRESIE),
@@ -111,5 +154,33 @@ class BudgetCalculatorTest {
         assertThat(result.get(MaterialType.GRESIE).total().amount()).isEqualByComparingTo("150.00");
         assertThat(result.get(MaterialType.GRESIE).spent().amount()).isEqualByComparingTo("100.00");
         assertThat(result.get(MaterialType.VOPSEA).spent().amount()).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void proiectFaraCamereProduceAgregariGoaleFaraSaEsueze() {
+        assertThat(BudgetCalculator.costPerRoom(List.of(), List.of())).isEmpty();
+        assertThat(BudgetCalculator.costPerCategory(List.of())).isEmpty();
+        assertThat(BudgetCalculator.totalEstimated(List.of()).amount()).isEqualByComparingTo("0.00");
+        assertThat(BudgetCalculator.totalSpent(List.of()).amount()).isEqualByComparingTo("0.00");
+        assertThat(BudgetCalculator.boughtCount(List.of())).isZero();
+    }
+
+    @Test
+    void bugetRemainingCuBugetZeroSiNimicCheltuitEsteZero() {
+        BigDecimal remaining = BudgetCalculator.budgetRemaining(Money.zero(), List.of());
+        assertThat(remaining).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void bugetRemainingCuBugetZeroSiCevaCheltuitEsteNegativ() {
+        List<Item> items = List.of(item("r1", ItemStatus.CUMPARAT, 1, 50, MaterialType.ALTELE));
+        BigDecimal remaining = BudgetCalculator.budgetRemaining(Money.zero(), items);
+        assertThat(remaining).isEqualByComparingTo("-50.00");
+    }
+
+    @Test
+    void costPerRoomCuCamereDarFaraElementeEsteGol() {
+        Room r1 = Room.builder("r1", RoomType.BAIE, "Baie", Money.of(1000)).build();
+        assertThat(BudgetCalculator.costPerRoom(List.of(r1), List.of())).isEmpty();
     }
 }

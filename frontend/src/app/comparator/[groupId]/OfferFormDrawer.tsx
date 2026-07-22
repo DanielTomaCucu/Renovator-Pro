@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Drawer from "@/components/Drawer";
 import Spinner from "@/components/Spinner";
-import { Field, PrimaryButton, inputCls } from "@/components/forms";
+import { DecimalInput, Field, PrimaryButton, inputCls } from "@/components/forms";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import { ACTION_ICONS, COMPARATOR_ICONS } from "@/shared/icons";
@@ -225,26 +225,10 @@ export default function OfferFormDrawer({
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Preț unitar (opțional)">
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="ex: 45.00"
-              className={`${inputCls} font-mono`}
-              value={unitPrice}
-              onChange={(e) => setUnitPrice(e.target.value)}
-            />
+            <DecimalInput placeholder="ex: 45.00" value={unitPrice} onChange={setUnitPrice} />
           </Field>
           <Field label="Cantitate (opțional)">
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="ex: 1"
-              className={`${inputCls} font-mono`}
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
+            <DecimalInput placeholder="ex: 1" value={quantity} onChange={setQuantity} />
           </Field>
         </div>
 

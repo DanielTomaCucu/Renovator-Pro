@@ -14,6 +14,7 @@ import PageHeader from "@/components/PageHeader";
 import SortableTh from "@/components/SortableTh";
 import Spinner from "@/components/Spinner";
 import EmptyState from "@/components/EmptyState";
+import { DecimalInput } from "@/components/forms";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import {
@@ -263,12 +264,9 @@ export default function ElementePage() {
                 <label className="block text-[9px] font-bold uppercase tracking-widest text-white/70">
                   Preț estimat (€)
                 </label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                <DecimalInput
                   value={qaPrice}
-                  onChange={(e) => setQaPrice(e.target.value)}
+                  onChange={setQaPrice}
                   placeholder="0,00"
                   className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-mono text-sm text-white outline-none transition-all focus:bg-white/20"
                 />
@@ -663,12 +661,9 @@ export default function ElementePage() {
                   <label className="mb-1 block text-[11px] font-bold uppercase text-muted">
                     Preț estimat
                   </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
+                  <DecimalInput
                     value={qaPrice}
-                    onChange={(e) => setQaPrice(e.target.value)}
+                    onChange={setQaPrice}
                     placeholder="0,00"
                     className="w-full rounded border border-line bg-surface-low p-3 font-mono text-sm outline-none focus:border-secondary"
                   />
