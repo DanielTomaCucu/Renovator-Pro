@@ -91,12 +91,16 @@ export default function ComparisonGroupDetailPage() {
         )}
 
         {group.status === ComparisonGroupStatus.Decis && (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.chosen}</span>
-            Ofertă aleasă → element creat.{" "}
-            <Link href="/elemente" className="font-bold underline underline-offset-2">
-              Vezi în Elemente de Cumpărat
-            </Link>
+          <div className="flex items-center gap-1.5 rounded-md border border-emerald-100 bg-emerald-50/60 px-3 py-1.5 text-xs text-emerald-800">
+            <span className="material-symbols-outlined shrink-0" style={{ fontSize: 14 }}>
+              {COMPARATOR_ICONS.chosen}
+            </span>
+            <span>
+              Ofertă aleasă → element creat.{" "}
+              <Link href="/elemente" className="font-semibold underline underline-offset-2">
+                Vezi în Elemente de Cumpărat
+              </Link>
+            </span>
           </div>
         )}
 

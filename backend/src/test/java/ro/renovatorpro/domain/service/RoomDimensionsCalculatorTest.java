@@ -397,4 +397,21 @@ class RoomDimensionsCalculatorTest {
         assertThat(groutKg(room)).isZero();
         assertThat(underlayArea(room)).isZero();
     }
+
+    @Test
+    void projectTechnicalSummaryConsideraCameraConfigurataDoarDupaPardoseala() {
+        // Regresie: condiția veche cerea și `perimeter() != null` — câmp eliminat din UI, deci progresul
+        // rămânea 0% permanent pentru orice cameră configurată prin fluxul actual (fără uși/perimetru explicit).
+        Room configurataFaraUsi = Room.builder("r1", RoomType.DORMITOR, "Dormitor", Money.of(1000))
+                .floorMaterial(FlooringType.PARCHET_LAMINAT)
+                .floorArea(20.0)
+                .build();
+        Room neconfigurata = Room.builder("r2", RoomType.BAIE, "Baie", Money.of(1000)).build();
+
+        RoomDimensionsCalculator.ProjectTechnicalSummary summary =
+                RoomDimensionsCalculator.projectTechnicalSummary(java.util.List.of(configurataFaraUsi, neconfigurata));
+
+        assertThat(summary.totalFloorArea()).isCloseTo(20.0, within(0.001));
+        assertThat(summary.configuredRoomsRatio()).isCloseTo(0.5, within(0.001));
+    }
 }

@@ -334,7 +334,8 @@ function adhesiveKgPerSqm(size?: TileSize): number {
   return ADHESIVE_KG_PER_SQM[size ?? TileSize.Medie];
 }
 
-function groutKgPerSqm(size?: TileSize): number {
+/** Consum chit de rosturi (kg/mp) după mărimea plăcii — expus (nu doar intern) pt. afișarea calculului real în „Calcule Detaliate". */
+export function groutKgPerSqm(size?: TileSize): number {
   return GROUT_KG_PER_SQM[size ?? TileSize.Medie];
 }
 

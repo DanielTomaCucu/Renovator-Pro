@@ -428,11 +428,16 @@ public final class RoomDimensionsCalculator {
     public record ProjectTechnicalSummary(double totalFloorArea, double configuredRoomsRatio) {
     }
 
+    /**
+     * O cameră contează drept „configurată" dacă are pardoseală completată — {@code perimeter} explicit
+     * NU mai e cerut (câmpul a fost eliminat din UI, perimetrul se derivă azi din lungimile pereților
+     * sau din suprafață — {@link #roomPerimeter}), iar o cameră fără uși e un caz valid (garsonieră/hol
+     * fără ușă interioară), nu „neconfigurată". Condiția veche (`!doors().isEmpty() && perimeter() != null`)
+     * bloca progresul la 0% permanent pentru orice cameră configurată prin UI-ul actual.
+     */
     public static ProjectTechnicalSummary projectTechnicalSummary(List<Room> rooms) {
         double totalFloorArea = rooms.stream().mapToDouble(r -> r.floorArea() == null ? 0 : r.floorArea()).sum();
-        long configuredCount = rooms.stream()
-                .filter(r -> hasFloorConfig(r) && !r.doors().isEmpty() && r.perimeter() != null)
-                .count();
+        long configuredCount = rooms.stream().filter(RoomDimensionsCalculator::hasFloorConfig).count();
         double ratio = rooms.isEmpty() ? 0 : (double) configuredCount / rooms.size();
         return new ProjectTechnicalSummary(totalFloorArea, ratio);
     }

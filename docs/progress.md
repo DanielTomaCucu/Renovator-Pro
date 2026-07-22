@@ -1345,3 +1345,97 @@ teste (`AutoItemReconcilerTest`, `UseCasesTest`, `ComparisonGroupControllerTest`
 `docs/api-contract.md`.
 
 **Branch:** `043-comparator-config-sync`.
+
+---
+
+### 2026-07-22 — Comparator: carduri grupate pe cameră + banner „Ofertă aleasă” mai subtil
+
+Feedback vizual pe `/comparator`: eticheta „cameră · material" de pe fiecare card era prea mică (11px,
+`text-muted`) — greu de citit din care cameră e fiecare grup la un scan rapid al listei.
+
+**Fix:** cardurile se randează acum grupate pe secțiuni per cameră (`roomSections` — camera + numărul de
+grupuri, ordinea camerelor din apartament; grupurile orfane — cameră ștearsă — într-o secțiune finală).
+Fiecare secțiune are un header de secțiune standard (iconiță + nume cameră, uppercase 12px bold, regula
+de design existentă). Cardul individual (extras în componenta locală `GroupCard`) nu mai repetă numele
+camerei (spus deja de secțiune) — arată doar `materialType`, acum vizibil (`text-xs font-semibold
+text-secondary`, nu `text-[11px] text-muted`).
+
+Separat, bannerul verde „Ofertă aleasă → element creat" din `/comparator/[groupId]` era prea proeminent
+pentru un mesaj informativ non-critic — micșorat (padding, font, iconiță 14px) și culoare mai discretă
+(`bg-emerald-50/60`, `border-emerald-100`).
+
+**Fișiere atinse:** frontend — `app/comparator/page.tsx` (`roomSections`/`orphanGroups`, componenta locală
+`GroupCard`), `app/comparator/[groupId]/page.tsx` (banner).
+
+**Branch:** `044-comparator-ui-polish`.
+
+---
+
+### 2026-07-22 — Configurare: calcule reale în panoul „Calcule Detaliate" + elimină rândul Glaf Fereastră
+
+Feedback: pe mai multe rânduri din „Calcule Detaliate" (`/configurare`), coloana „Calcul" repeta pur și
+simplu valoarea finală (ex. „Calcul: 35.03 mp") în loc să arate substituția reală a formulei — userul nu
+putea verifica de unde vine numărul. Afecta: Faianță, Vopsea Pereți, Vopsea Deasupra Faianței, Amorsă
+Placări, Chit de Rosturi, Tapet.
+
+**Fix, în `buildRoomCalcRows` (`app/configurare/roomCalcRows.ts`):**
+- **Faianță/Amorsă Placări/Chit de Rosturi**: substituție cu ariile NETE reale, calculate direct din
+  cameră (`netWallTilingArea`/`netFloorTilingArea`, deja existente în `shared/functions/dimensions.ts` —
+  nicio logică nouă, doar apelate aici pt. afișare). Chit de Rosturi arată acum și rata kg/mp per mărime
+  de placă (`groutKgPerSqm`, exportată — era funcție privată).
+- **Vopsea Pereți/Vopsea Deasupra Faianței/Tapet**: aria brută nu e expusă separat în `RoomDimensions`
+  (doar rezultatul cu pierdere inclusă) — recuperată exact prin împărțire la factorul de pierdere deja
+  hardcodat în formula afișată (10%/15%, ca la „Vopsea Tavan"/„Folie Parchet", care procedau deja așa).
+
+**Eliminat complet rândul „Glaf Fereastră"** din panoul „Calcule Detaliate" (cerere explicită) — DOAR din
+afișarea de aici; elementul de cumpărat generat automat de configurator în `/elemente` (glaful e totuși un
+produs fizic de cumpărat) NU a fost atins, `AutoItemReconciler` (backend) rămâne neschimbat.
+
+**Verificat manual în browser:** Vopsea Pereți arată acum „31.84 × 1.10 = 35.03 mp", Tapet „6.49 × 1.15 =
+7.47 mp", Amorsă Placări „(6.00 + 0.00) × 0.15 = 1 l", Chit de Rosturi „(6.00 × 0.24 + 0.00 × 0.24) × 1.10
+= 2.00 kg" — toate cu numere reale, nu valoarea finală repetată; Glaf Fereastră nu mai apare în listă.
+
+**Fișiere atinse:** frontend — `shared/functions/dimensions.ts` (`groutKgPerSqm` exportată),
+`app/configurare/roomCalcRows.ts`.
+
+**Branch:** `044-comparator-ui-polish`.
+
+---
+
+### 2026-07-22 — Audit exhaustiv de calcule (Configurare + tot proiectul) + remedieri
+
+Verificare completă, la cererea userului, a tuturor calculelor: `RoomDimensionsCalculator.java` ↔
+`dimensions.ts` (paritate 1:1), `roomCalcRows.ts` (afișare), `AutoItemReconciler` (generare elemente),
+`BudgetCalculator`/`items.ts`/`budget.ts` (buget), `GetProjectSummaryService`/`GetSpendingTimelineService`
+(agregări). Verificate manual scenarii cu parchet/gresie, uși pe diverși pereți, ferestre, montaj
+drept/diagonal/herringbone, mărimi de plăci. **Concluzie: nicio eroare de aritmetică** — toate formulele
+identice FE↔BE, calibrate pe norme de șantier citate în `docs/tickete-audit-calcule-securitate.md`, 88 de
+teste de calcul treceau deja. Găsite 1 bug real (agregare, nu calcul) + 2 probleme de afișare, toate reparate:
+
+**BUG real — progresul de configurare blocat la 0% permanent.** `RoomDimensionsCalculator.projectTechnicalSummary`
+considera o cameră „configurată" doar dacă avea `perimeter() != null` ȘI cel puțin o ușă — dar câmpul de
+perimetru a fost eliminat din UI la un refactor anterior (perimetrul se derivă azi din lungimile pereților
+sau din suprafață, `roomPerimeter`), deci nicio cameră configurată prin fluxul actual nu satisfăcea
+condiția. Fix: o cameră e „configurată" dacă are pardoseală (`hasFloorConfig`) — fără cerința de
+uși/perimetru explicit. Test nou `projectTechnicalSummaryConsideraCameraConfigurataDoarDupaPardoseala`.
+Verificat manual: STATUS a trecut din „Neînceput"/0% în „În Lucru"/50% (2 din 4 camere configurate).
+
+**Afișare — rotunjirea ascundea pasul intermediar.** La Chit de Rosturi, Amorsă Placări, Amorsă Zugrăveală,
+Vopsea Total, Folie Parchet, coloana „Calcul" sărea direct la valoarea rotunjită în sus (ex. „= 2.00 kg"),
+ca și cum ar fi rezultatul exact al formulei — acum arată ambele: „1.58 → 2.00 kg". Cantitățile finale
+NU s-au schimbat (rotunjirea în sus era deja corectă), doar transparența calculului.
+
+**Afișare — textul „gol ușă" era incomplet.** La Faianță/Vopsea Pereți/Tapet, codul scade corect ariile
+uȘILOR ȘI FERESTRELOR din pereții relevanți, dar formula afișată zicea doar „− gol ușă" — corectat la
+„− goluri uși/ferestre" (nicio schimbare de calcul, doar text).
+
+**Nou — avertisment perimetru estimat.** Funcție locală `isPerimeterEstimated(room)` (`roomCalcRows.ts`) —
+dacă userul n-a completat nici perimetrul explicit, nici toate cele 4 lungimi de perete, plinta se
+calculează dintr-un perimetru presupunând camera PĂTRATĂ (4×√suprafață) — poate subestima la camere
+alungite/neregulate. Nota apare acum lângă rândul „Plintă" când e cazul (nu modifică niciun calcul).
+
+**Fișiere atinse:** backend — `domain/service/RoomDimensionsCalculator.java` (`projectTechnicalSummary`),
+test `RoomDimensionsCalculatorTest`; frontend — `app/configurare/roomCalcRows.ts`
+(`isPerimeterEstimated`, rotunjiri afișate, text goluri).
+
+**Branch:** `045-fix-calcule-configurator` (peste `044-comparator-ui-polish`, nemergeuit încă).
