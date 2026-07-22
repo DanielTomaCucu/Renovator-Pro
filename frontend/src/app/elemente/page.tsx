@@ -21,6 +21,7 @@ import {
   formatMoney,
   itemTotal,
   itemsForRoom,
+  materialUnit,
   roomSpent,
 } from "@/shared/functions";
 import { useSortableTable } from "@/shared/useSortableTable";
@@ -30,6 +31,7 @@ import { DeleteTarget } from "./DeleteTarget";
 import { decidedGroupForItem } from "./decidedGroupForItem";
 import { ItemDrawerState } from "./ItemDrawerState";
 import { ItemDetailsState } from "./ItemDetailsState";
+import { RoomDrawerState } from "./RoomDrawerState";
 
 type ItemSortKey = "name" | "source" | "quantity" | "unitPrice" | "total" | "status";
 
@@ -68,7 +70,7 @@ export default function ElementePage() {
 
   const [itemDrawer, setItemDrawer] = useState<ItemDrawerState>({ open: false });
   const [itemDetails, setItemDetails] = useState<ItemDetailsState>({ open: false });
-  const [roomDrawerOpen, setRoomDrawerOpen] = useState(false);
+  const [roomDrawer, setRoomDrawer] = useState<RoomDrawerState>({ open: false });
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   /** Închide voletul de detalii și deschide formularul de editare pentru același element. */
@@ -209,7 +211,7 @@ export default function ElementePage() {
             </section>
           )}
           <button
-            onClick={() => setRoomDrawerOpen(true)}
+            onClick={() => setRoomDrawer({ open: true })}
             className="ml-auto shrink-0 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
           >
             + Adaugă Cameră
@@ -336,7 +338,7 @@ export default function ElementePage() {
               title="Nicio cameră adăugată încă"
               description="Adaugă prima cameră ca să începi să urmărești elementele de cumpărat și bugetul lor."
               actionLabel="+ Adaugă Cameră"
-              onAction={() => setRoomDrawerOpen(true)}
+              onAction={() => setRoomDrawer({ open: true })}
             />
           )}
           {rooms
@@ -367,6 +369,15 @@ export default function ElementePage() {
                           {money(spentInRoom)} / {money(room.allocatedBudget)}
                         </span>
                       </div>
+                      <button
+                        onClick={() => setRoomDrawer({ open: true, room })}
+                        className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
+                        aria-label={`Editează camera ${room.name}`}
+                      >
+                        <span className="material-symbols-outlined icon-btn">
+                          {ACTION_ICONS.editItem}
+                        </span>
+                      </button>
                       <button
                         onClick={() =>
                           setDeleteTarget({ kind: "room", id: room.id, name: room.name })
@@ -417,7 +428,7 @@ export default function ElementePage() {
                             onSort={toggleSort}
                           />
                           <SortableTh
-                            label="Buc"
+                            label="Cant."
                             sortKey="quantity"
                             activeKey={sortKey}
                             direction={direction}
@@ -493,7 +504,7 @@ export default function ElementePage() {
                               {item.source}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
-                              {item.quantity}
+                              {item.quantity} <span className="text-[10px] text-muted">{materialUnit(item.materialType)}</span>
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
                               {item.unitPrice === 0 ? (
@@ -714,7 +725,7 @@ export default function ElementePage() {
 
         <button
           type="button"
-          onClick={() => setRoomDrawerOpen(true)}
+          onClick={() => setRoomDrawer({ open: true })}
           className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
         >
           + Adaugă Cameră
@@ -728,7 +739,7 @@ export default function ElementePage() {
               title="Nicio cameră adăugată încă"
               description="Adaugă prima cameră ca să începi să urmărești elementele de cumpărat."
               actionLabel="+ Adaugă Cameră"
-              onAction={() => setRoomDrawerOpen(true)}
+              onAction={() => setRoomDrawer({ open: true })}
             />
           )}
           {rooms
@@ -779,6 +790,20 @@ export default function ElementePage() {
                         >
                           <span className="material-symbols-outlined icon-btn">
                             {ACTION_ICONS.add}
+                          </span>
+                        </span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRoomDrawer({ open: true, room });
+                          }}
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted hover:bg-surface-low hover:text-primary"
+                          aria-label={`Editează camera ${room.name}`}
+                        >
+                          <span className="material-symbols-outlined icon-btn">
+                            {ACTION_ICONS.editItem}
                           </span>
                         </span>
                         <span
@@ -893,7 +918,7 @@ export default function ElementePage() {
         onClose={() => setItemDetails({ open: false })}
         onEdit={editFromDetails}
       />
-      <RoomFormDrawer open={roomDrawerOpen} onClose={() => setRoomDrawerOpen(false)} />
+      <RoomFormDrawer open={roomDrawer.open} onClose={() => setRoomDrawer({ open: false })} room={roomDrawer.room} />
       <ConfirmDialog
         open={!!deleteTarget}
         title="Confirmare ștergere"

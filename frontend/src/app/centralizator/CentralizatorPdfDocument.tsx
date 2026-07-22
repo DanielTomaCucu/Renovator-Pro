@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, Font, StyleSheet } from "@react-pdf/renderer";
 import { Currency, Item, Project, Room } from "@/shared/types";
-import { formatMoney, itemTotal, itemsForRoom, roomSubtotal } from "@/shared/functions";
+import { formatMoney, itemTotal, itemsForRoom, materialUnit, roomSubtotal } from "@/shared/functions";
 
 // Helvetica (fontul implicit PDF) nu are diacritice românești (ă/â/î/ș/ț) — înregistrăm Inter, la fel
 // ca la exportul din Configurare Apartament (`ApartmentPdfDocument.tsx`).
@@ -102,7 +102,7 @@ function ItemRow({ item, currency }: { item: Item; currency: Currency }) {
     <View style={styles.tableRow} wrap={false}>
       <Text style={[styles.td, styles.colName]}>{item.name}</Text>
       <Text style={[styles.tdMuted, styles.colSource]}>{item.source || "—"}</Text>
-      <Text style={[styles.td, styles.colQty]}>{item.quantity}</Text>
+      <Text style={[styles.td, styles.colQty]}>{item.quantity} {materialUnit(item.materialType)}</Text>
       <Text style={[styles.td, styles.colPrice]}>{formatMoney(item.unitPrice, currency)}</Text>
       <Text style={[styles.td, styles.colTotal]}>{formatMoney(itemTotal(item), currency)}</Text>
       <Text style={[styles.tdMuted, styles.colStatus]}>{item.status}</Text>

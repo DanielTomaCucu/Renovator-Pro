@@ -23,6 +23,7 @@ import {
   TILE_SIZE_ICONS,
 } from "@/shared/icons";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import RoomFormDrawer from "@/components/RoomFormDrawer";
 import Spinner from "@/components/Spinner";
 import RoomSketch from "./RoomSketch";
 import { RoomShapeSelect, RoomShapeLengthInputs } from "./RoomShapeWallsEditor";
@@ -315,6 +316,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
   // camera la care lucrează.
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   // Draft local — toate editările din card scriu aici, NU direct în store. Nimic nu se propagă către
   // celelalte pagini/calcule globale până la apăsarea explicită a „Salvează" (buton la finalul cardului).
@@ -585,6 +587,18 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
             className={`material-symbols-outlined icon-btn transition-transform ${open ? "rotate-180" : ""}`}
           >
             {ACTION_ICONS.expandMore}
+          </span>
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditOpen(true);
+            }}
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
+            aria-label={`Editează camera ${room.name}`}
+          >
+            <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.editItem}</span>
           </span>
           <span
             role="button"
@@ -1186,6 +1200,8 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
           setConfirmDelete(false);
         }}
       />
+
+      <RoomFormDrawer open={editOpen} onClose={() => setEditOpen(false)} room={room} />
     </div>
   );
 }

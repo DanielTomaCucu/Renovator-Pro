@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Drawer from "./Drawer";
 import { Field, PrimaryButton, inputCls } from "./forms";
-import { RoomType } from "@/shared/types";
+import { Room, RoomType } from "@/shared/types";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 
@@ -23,31 +23,37 @@ const roomTypes = Object.values(RoomType);
 export default function RoomFormDrawer({
   open,
   onClose,
+  room,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Dacă e dat, drawerul editează această cameră (nume/tip/buget alocat) în loc să creeze una nouă. */
+  room?: Room | null;
 }) {
-  const { addRoom } = useStore();
+  const { addRoom, updateRoom } = useStore();
+  const editing = !!room;
   const [type, setType] = useState<RoomType>(RoomType.Dormitor);
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
 
-  // Resetează formularul de fiecare dată când drawerul se deschide.
+  // Resetează/populează formularul de fiecare dată când drawerul se deschide.
   // Pattern React: "adjusting state during render" (nu useEffect) —
   // evită randări în cascadă. Vezi https://react.dev/learn/you-might-not-need-an-effect
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setType(RoomType.Dormitor);
-      setName("");
-      setBudget("");
+      setType(room?.type ?? RoomType.Dormitor);
+      setName(room?.name ?? "");
+      setBudget(room ? String(room.allocatedBudget) : "");
     }
   }
 
   const { run: submit, pending } = useAsyncAction(async (e: React.FormEvent) => {
     e.preventDefault();
-    await addRoom({ type, name, allocatedBudget: Number(budget) || 0 });
+    const data = { type, name, allocatedBudget: Number(budget) || 0 };
+    if (editing && room) await updateRoom(room.id, data);
+    else await addRoom(data);
     onClose();
   });
 
@@ -57,11 +63,11 @@ export default function RoomFormDrawer({
     <Drawer
       open={open}
       onClose={onClose}
-      title="Adaugă Cameră Nouă"
+      title={editing ? "Editează Cameră" : "Adaugă Cameră Nouă"}
       footer={
         <div className="space-y-3">
           <PrimaryButton type="submit" form={formId} pending={pending}>
-            Salvează Camera
+            {editing ? "Salvează Modificările" : "Salvează Camera"}
           </PrimaryButton>
           <button
             type="button"

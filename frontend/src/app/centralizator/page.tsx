@@ -9,6 +9,7 @@ import {
   formatMoney,
   itemTotal,
   itemsForRoom,
+  materialUnit,
   roomSubtotal,
 } from "@/shared/functions";
 import { useSortableTable } from "@/shared/useSortableTable";
@@ -360,7 +361,7 @@ export default function CentralizatorPage() {
                               </span>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px] text-muted">
-                              {item.quantity}
+                              {item.quantity} <span className="text-[10px]">{materialUnit(item.materialType)}</span>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-[13px]">
                               {money(item.unitPrice)}
@@ -524,7 +525,7 @@ export default function CentralizatorPage() {
                                   {item.source}
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
-                                  {item.quantity}
+                                  {item.quantity} <span className="text-[10px] text-muted">{materialUnit(item.materialType)}</span>
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-3 text-right font-mono">
                                   {money(item.unitPrice)}

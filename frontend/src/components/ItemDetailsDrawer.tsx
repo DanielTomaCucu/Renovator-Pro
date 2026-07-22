@@ -5,7 +5,7 @@ import Drawer from "./Drawer";
 import StatusChip from "./StatusChip";
 import OriginBadge from "./OriginBadge";
 import { useStore } from "@/shared/store";
-import { formatMoney, itemTotal, safeHttpUrl } from "@/shared/functions";
+import { formatMoney, itemTotal, materialUnit, safeHttpUrl } from "@/shared/functions";
 import { Item } from "@/shared/types";
 import { ACTION_ICONS, ROOM_TYPE_ICONS } from "@/shared/icons";
 
@@ -103,7 +103,7 @@ export default function ItemDetailsDrawer({
         />
         <DetailRow label="Tip element" value={item.materialType} />
         <DetailRow label="Sursă / Magazin" value={item.source || "—"} />
-        <DetailRow label="Cantitate" value={<span className="font-mono">{item.quantity} buc</span>} />
+        <DetailRow label="Cantitate" value={<span className="font-mono">{item.quantity} {materialUnit(item.materialType)}</span>} />
         <DetailRow
           label="Preț unitar"
           value={<span className="font-mono">{formatMoney(item.unitPrice, project.currency)}</span>}
