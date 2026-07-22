@@ -1368,3 +1368,34 @@ pentru un mesaj informativ non-critic — micșorat (padding, font, iconiță 14
 `GroupCard`), `app/comparator/[groupId]/page.tsx` (banner).
 
 **Branch:** `044-comparator-ui-polish`.
+
+---
+
+### 2026-07-22 — Configurare: calcule reale în panoul „Calcule Detaliate" + elimină rândul Glaf Fereastră
+
+Feedback: pe mai multe rânduri din „Calcule Detaliate" (`/configurare`), coloana „Calcul" repeta pur și
+simplu valoarea finală (ex. „Calcul: 35.03 mp") în loc să arate substituția reală a formulei — userul nu
+putea verifica de unde vine numărul. Afecta: Faianță, Vopsea Pereți, Vopsea Deasupra Faianței, Amorsă
+Placări, Chit de Rosturi, Tapet.
+
+**Fix, în `buildRoomCalcRows` (`app/configurare/roomCalcRows.ts`):**
+- **Faianță/Amorsă Placări/Chit de Rosturi**: substituție cu ariile NETE reale, calculate direct din
+  cameră (`netWallTilingArea`/`netFloorTilingArea`, deja existente în `shared/functions/dimensions.ts` —
+  nicio logică nouă, doar apelate aici pt. afișare). Chit de Rosturi arată acum și rata kg/mp per mărime
+  de placă (`groutKgPerSqm`, exportată — era funcție privată).
+- **Vopsea Pereți/Vopsea Deasupra Faianței/Tapet**: aria brută nu e expusă separat în `RoomDimensions`
+  (doar rezultatul cu pierdere inclusă) — recuperată exact prin împărțire la factorul de pierdere deja
+  hardcodat în formula afișată (10%/15%, ca la „Vopsea Tavan"/„Folie Parchet", care procedau deja așa).
+
+**Eliminat complet rândul „Glaf Fereastră"** din panoul „Calcule Detaliate" (cerere explicită) — DOAR din
+afișarea de aici; elementul de cumpărat generat automat de configurator în `/elemente` (glaful e totuși un
+produs fizic de cumpărat) NU a fost atins, `AutoItemReconciler` (backend) rămâne neschimbat.
+
+**Verificat manual în browser:** Vopsea Pereți arată acum „31.84 × 1.10 = 35.03 mp", Tapet „6.49 × 1.15 =
+7.47 mp", Amorsă Placări „(6.00 + 0.00) × 0.15 = 1 l", Chit de Rosturi „(6.00 × 0.24 + 0.00 × 0.24) × 1.10
+= 2.00 kg" — toate cu numere reale, nu valoarea finală repetată; Glaf Fereastră nu mai apare în listă.
+
+**Fișiere atinse:** frontend — `shared/functions/dimensions.ts` (`groutKgPerSqm` exportată),
+`app/configurare/roomCalcRows.ts`.
+
+**Branch:** `044-comparator-ui-polish`.
