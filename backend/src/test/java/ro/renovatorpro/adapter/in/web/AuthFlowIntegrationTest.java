@@ -3,7 +3,10 @@ package ro.renovatorpro.adapter.in.web;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -14,7 +17,9 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import ro.renovatorpro.application.port.out.PasswordResetEmailSender;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,6 +46,39 @@ class AuthFlowIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private FakePasswordResetEmailSender fakePasswordResetEmailSender;
+
+    /** Captează linkul de resetare „trimis" în loc de a lovi API-ul real Resend din teste. */
+    static class FakePasswordResetEmailSender implements PasswordResetEmailSender {
+        private volatile String lastResetLink;
+
+        @Override
+        public void send(String toEmail, String resetLink) {
+            this.lastResetLink = resetLink;
+        }
+    }
+
+    @TestConfiguration
+    static class EmailTestConfig {
+        @Bean
+        @Primary
+        FakePasswordResetEmailSender fakePasswordResetEmailSender() {
+            return new FakePasswordResetEmailSender();
+        }
+    }
+
+    private static String tokenFromLink(String resetLink) {
+        String query = URI.create(resetLink).getQuery();
+        for (String pair : query.split("&")) {
+            String[] kv = pair.split("=", 2);
+            if (kv[0].equals("token")) {
+                return java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8);
+            }
+        }
+        throw new IllegalStateException("Niciun token în link: " + resetLink);
+    }
 
     private static String uniqueUsername() {
         return "user-" + UUID.randomUUID().toString().substring(0, 8);
@@ -181,11 +219,12 @@ class AuthFlowIntegrationTest {
         restTemplate.postForEntity("/api/auth/register",
                 Map.of("username", username, "email", email, "password", "parola-veche-12345", "projectName", "P1"), Map.class);
 
-        ResponseEntity<Map> forgotResponse = restTemplate.postForEntity("/api/auth/forgot-password",
-                Map.of("email", email), Map.class);
-        assertThat(forgotResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        String resetToken = (String) forgotResponse.getBody().get("resetToken");
-        assertThat(resetToken).isNotBlank();
+        ResponseEntity<Void> forgotResponse = restTemplate.postForEntity("/api/auth/forgot-password",
+                Map.of("email", email), Void.class);
+        assertThat(forgotResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        String resetLink = fakePasswordResetEmailSender.lastResetLink;
+        assertThat(resetLink).isNotBlank();
+        String resetToken = tokenFromLink(resetLink);
 
         ResponseEntity<Void> resetResponse = restTemplate.postForEntity("/api/auth/reset-password",
                 Map.of("token", resetToken, "newPassword", "parola-noua-67890"), Void.class);
@@ -208,10 +247,11 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void forgotPasswordCuEmailInexistentPrimeste404() {
-        ResponseEntity<Map> response = restTemplate.postForEntity("/api/auth/forgot-password",
-                Map.of("email", "nu-exista-" + UUID.randomUUID() + "@example.com"), Map.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    void forgotPasswordCuEmailInexistentNuConfirmaExistentaContului() {
+        // Răspuns identic la cont găsit/negăsit (202) — altfel un atacator ar putea enumera conturile.
+        ResponseEntity<Void> response = restTemplate.postForEntity("/api/auth/forgot-password",
+                Map.of("email", "nu-exista-" + UUID.randomUUID() + "@example.com"), Void.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test

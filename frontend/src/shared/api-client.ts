@@ -170,8 +170,8 @@ export const authApi = {
     if (!refreshed) return null;
     return api.get<CurrentUserBody>("/api/auth/me").then(toSession);
   },
-  /** Mod dev (fără serviciu de email real): `resetToken` pleacă direct în răspuns — vezi pagina `/forgot-password`. */
-  forgotPassword: (email: string) => authFetch<{ resetToken: string }>("/api/auth/forgot-password", { email }),
+  /** Răspuns generic (nu confirmă dacă emailul există) — linkul de resetare pleacă pe email real. */
+  forgotPassword: (email: string) => authFetch<void>("/api/auth/forgot-password", { email }),
   resetPassword: (token: string, newPassword: string) =>
     authFetch<void>("/api/auth/reset-password", { token, newPassword }),
   /**

@@ -3,8 +3,8 @@ package ro.renovatorpro.application.port.in;
 public interface RequestPasswordResetUseCase {
 
     /**
-     * @return tokenul BRUT de resetare (mod dev — expus direct API-ului, nu trimis prin email; vezi
-     * {@code PasswordResetAccountNotFoundException} pt. de ce nu ascundem existența contului aici).
+     * Răspunde mereu în același fel (fără să confirme dacă emailul există în sistem) — dacă un cont e
+     * găsit, tokenul de resetare pleacă pe email; altfel nu se întâmplă nimic vizibil pentru apelant.
      */
-    String execute(String email);
+    void execute(String email);
 }

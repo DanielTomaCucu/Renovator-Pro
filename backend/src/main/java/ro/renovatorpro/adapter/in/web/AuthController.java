@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 import ro.renovatorpro.adapter.in.web.dto.AuthResponse;
 import ro.renovatorpro.adapter.in.web.dto.CurrentUserResponse;
 import ro.renovatorpro.adapter.in.web.dto.ForgotPasswordRequest;
-import ro.renovatorpro.adapter.in.web.dto.ForgotPasswordResponse;
 import ro.renovatorpro.adapter.in.web.dto.JoinProjectRequest;
 import ro.renovatorpro.adapter.in.web.dto.LoginRequest;
 import ro.renovatorpro.adapter.in.web.dto.MyProjectResponse;
@@ -107,8 +106,9 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ForgotPasswordResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        return new ForgotPasswordResponse(requestPasswordResetUseCase.execute(request.email()));
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        requestPasswordResetUseCase.execute(request.email());
     }
 
     @PostMapping("/reset-password")

@@ -14,22 +14,17 @@ function errorMessage(err: unknown): string {
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const { run: handleSubmit, pending } = useAsyncAction(async () => {
     setError(null);
-    setResetToken(null);
     try {
-      const { resetToken } = await authApi.forgotPassword(email);
-      setResetToken(resetToken);
+      await authApi.forgotPassword(email);
+      setSubmitted(true);
     } catch (err) {
       setError(errorMessage(err));
     }
   });
-
-  const resetUrl = resetToken
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/reset-password?token=${encodeURIComponent(resetToken)}`
-    : null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
@@ -45,22 +40,14 @@ export default function ForgotPasswordPage() {
 
         <div className="space-y-4 rounded-xl border border-line bg-surface p-6 shadow-sm">
           <h2 className="font-heading text-lg font-bold text-primary">Ai uitat parola?</h2>
-          <p className="text-sm text-muted">Introdu emailul contului — îți arătăm aici linkul de resetare.</p>
+          <p className="text-sm text-muted">Introdu emailul contului — îți trimitem un link de resetare.</p>
 
-          {resetUrl ? (
-            <div className="space-y-3 rounded-lg border border-line bg-surface-low p-4">
-              {/* Mod dev — proiectul n-are niciun serviciu de email configurat, linkul apare direct aici
-                  în loc să plece pe email real. Vezi ForgotPasswordResponse (backend). */}
-              <p className="text-xs font-bold uppercase tracking-wide text-secondary">
-                Link de resetare (mod dev — fără email real)
+          {submitted ? (
+            <div className="space-y-2 rounded-lg border border-line bg-surface-low p-4">
+              <p className="text-sm text-primary">
+                Dacă există un cont cu acest email, am trimis un link de resetare a parolei.
               </p>
-              <Link
-                href={`/reset-password?token=${encodeURIComponent(resetToken!)}`}
-                className="block break-all rounded-md bg-surface px-3 py-2 font-mono text-xs text-secondary underline"
-              >
-                {resetUrl}
-              </Link>
-              <p className="text-xs text-muted">Link-ul expiră în 30 de minute și poate fi folosit o singură dată.</p>
+              <p className="text-xs text-muted">Linkul expiră în 30 de minute și poate fi folosit o singură dată.</p>
             </div>
           ) : (
             <form

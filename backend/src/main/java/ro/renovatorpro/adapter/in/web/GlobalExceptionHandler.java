@@ -21,7 +21,6 @@ import ro.renovatorpro.domain.exception.InvalidPasswordResetTokenException;
 import ro.renovatorpro.domain.exception.InvalidRegistrationException;
 import ro.renovatorpro.domain.exception.ItemNotFoundException;
 import ro.renovatorpro.domain.exception.OfferNotFoundException;
-import ro.renovatorpro.domain.exception.PasswordResetAccountNotFoundException;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.exception.RoomNotFoundException;
 
@@ -39,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({ProjectNotFoundException.class, RoomNotFoundException.class, ItemNotFoundException.class,
             ComparisonGroupNotFoundException.class, OfferNotFoundException.class, InvalidInviteCodeException.class,
-            InspirationImageNotFoundException.class, PasswordResetAccountNotFoundException.class})
+            InspirationImageNotFoundException.class})
     public ProblemDetail handleNotFound(DomainException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }

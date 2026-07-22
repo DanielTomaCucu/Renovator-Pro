@@ -1689,3 +1689,36 @@ codul lui B → comutare automată pe proiectul B (rol Editor), „Proiectele me
 „Comută” înapoi pe proiectul A → date reîncărcate corect; zero erori în consolă.
 
 **Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).
+
+## 2026-07-22 — Trimitere reală a emailului de resetare parolă (Resend)
+
+Înlocuit modul dev de resetare parolă (token expus direct în răspunsul `POST /api/auth/forgot-password`)
+cu trimitere efectivă prin **Resend**. `RequestPasswordResetUseCase.execute` nu mai întoarce tokenul —
+trimite emailul prin noul port `PasswordResetEmailSender` și răspunde uniform (`204`, mereu, indiferent
+dacă emailul există), corectând deviera de securitate documentată în D2 (nu mai confirmăm existența
+conturilor). Fără `RESEND_API_KEY` (dev local fără cont Resend), linkul se scrie în logul backend-ului
+în loc să eșueze fluxul.
+
+**Backend — fișiere noi:** `application/port/out/PasswordResetEmailSender.java`,
+`adapter/out/email/ResendPasswordResetEmailSender.java` (+ `package-info.java`),
+`domain/exception/EmailDeliveryException.java`. **Șterse:** `ForgotPasswordResponse.java`,
+`PasswordResetAccountNotFoundException.java` (nu mai există caz „cont negăsit" vizibil apelantului).
+**Modificate:** `RequestPasswordResetUseCase`/`RequestPasswordResetService` (`String` → `void`, swallow
+silențios pe cont negăsit), `AuthController` (`forgot-password` → `204` fără body），`GlobalExceptionHandler`
+(handler-ul pt. `PasswordResetAccountNotFoundException` eliminat), `pom.xml` (+`com.resend:resend-java`),
+`application.yml`/`application-dev.yml`/test `application.yml` (+`app.frontend.base-url`,
+`app.email.resend-api-key`, `app.email.from-address`), `.env.example` (+`APP_FRONTEND_URL`,
+`RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`).
+
+**Frontend — modificate:** `shared/api-client.ts` (`forgotPassword` întoarce `void`),
+`app/forgot-password/page.tsx` (rescrisă — mesaj generic „dacă există un cont..." în loc de linkul afișat
+direct).
+
+**Teste:** `AuthFlowIntegrationTest` — `fakePasswordResetEmailSender` (`@TestConfiguration`, bean fals care
+capturează linkul „trimis" în loc de a lovi API-ul real Resend) înlocuiește citirea `resetToken` din body;
+test nou pt. cazul „email inexistent" verifică răspuns uniform `204` (nu mai există `404` distinctiv).
+`mvn verify` verde (13/13 în `AuthFlowIntegrationTest`).
+
+**Rămâne manual:** cont Resend + `RESEND_API_KEY` pe Render (prod), `APP_FRONTEND_URL` = domeniul Vercel real.
+
+**Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).

@@ -19,6 +19,11 @@ app:
     secret: ${JWT_SECRET:dev-secret-nu-il-folosi-niciodata-in-productie-32chars}
   auth:
     refresh-cookie-same-site: Lax
+  frontend:
+    base-url: ${APP_FRONTEND_URL:http://localhost:3001}
+  email:
+    # Fallback DOAR pe dev — fără cheie, ResendPasswordResetEmailSender scrie linkul în log în loc să trimită email.
+    resend-api-key: ${RESEND_API_KEY:}
 
 management:
   endpoints:
