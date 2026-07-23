@@ -8,6 +8,7 @@ import ProjectSwitcherCard from "@/components/ProjectSwitcherCard";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { DecimalInput } from "@/components/forms";
 import { useStore } from "@/shared/store";
+import { useAuth } from "@/shared/AuthProvider";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import { exchangeRateApi } from "@/shared/api-client";
 import { Currency } from "@/shared/types";
@@ -22,6 +23,7 @@ const CURRENCY_LABEL: Record<Currency, string> = {
 
 export default function SetariPage() {
   const { project, updateProject, convertCurrency } = useStore();
+  const { session } = useAuth();
 
   // Titlu + Buget Total — needitabile până acum (Problema 5 din audit): pe date reale (backend),
   // proiectul seedat are titlu generic și buget 0, ceea ce sparge toate calculele de buget din /analiza.
@@ -77,6 +79,10 @@ export default function SetariPage() {
   const [rateFetchedAt, setRateFetchedAt] = useState<string | null>(null);
 
   useEffect(() => {
+    // Așteaptă sesiunea (refresh silențios la boot din AuthProvider) — altfel requestul pleacă înainte
+    // ca tokenul de acces să fie setat în api-client și primește 401 (fals „cursul automat nu e
+    // disponibil", când de fapt problema era doar ordinea, nu sursa BNR).
+    if (!session) return;
     let cancelled = false;
     exchangeRateApi
       .get()
@@ -92,7 +98,7 @@ export default function SetariPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session]);
 
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);

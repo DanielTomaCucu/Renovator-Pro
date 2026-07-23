@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Currency } from "@/shared/types";
 
@@ -16,6 +16,10 @@ vi.mock("@/shared/store", () => ({
 
 vi.mock("@/components/ProjectSharingCard", () => ({ default: () => null }));
 vi.mock("@/components/ProjectSwitcherCard", () => ({ default: () => null }));
+
+vi.mock("@/shared/AuthProvider", () => ({
+  useAuth: () => ({ session: { user: { id: "u1", username: "test" } } }),
+}));
 
 const getExchangeRate = vi.fn();
 vi.mock("@/shared/api-client", () => ({
@@ -48,9 +52,10 @@ describe("Setări — curs valutar automat", () => {
     await user.click(screen.getByRole("button", { name: /lei \(ron\)/i }));
     await waitFor(() => expect(screen.getByText(/curs automat \(bnr\)/i)).toBeInTheDocument());
 
+    // Lipire/autofill dintr-o singură scriere (consecvent cu testele similare din RoomTechnicalCard —
+    // evită particularitățile tastării caracter-cu-caracter simulate în happy-dom pe câmpuri controlate).
     const input = screen.getByPlaceholderText("4.97");
-    await user.clear(input);
-    await user.type(input, "5,10");
+    fireEvent.change(input, { target: { value: "5,10" } });
 
     expect(screen.getByText(/introdus manual/i)).toBeInTheDocument();
     expect(input).toHaveValue("5.10");
