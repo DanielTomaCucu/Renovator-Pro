@@ -1873,3 +1873,28 @@ header-ului închide și el acum — comportament comun la bottom sheets, inofen
 direct pe titlu): drawer-ul se închide.
 
 **Branch:** `048-fix-aliniere-iconite-responsive` (continuare).
+
+## 2026-07-23 — Keep-alive Render: migrat de la GitHub Actions la cron extern (cron-job.org)
+
+User a raportat: cron-ul GitHub Actions (`*/10 4-19 * * *`, fereastra 08:00–21:00) nu era punctual —
+ping-uri trimise cu întârzieri de ordinul orei, nu al minutelor, ceea ce lăsa serviciul Render să adoarmă
+în ferestre în care ar fi trebuit să fie treaz. A cerut o soluție „batch job" nouă.
+
+**Decizie:** NU un job intern (Spring `@Scheduled`) — nu poate reînvia procesul din stare oprită (JVM-ul
+nu rulează dacă Render a făcut spin-down, deci n-are cine să execute jobul); ar avea nevoie oricum de un
+trigger extern pentru primul ping al zilei, deci nu elimină dependența de un serviciu extern, doar adaugă
+cod fără beneficiu real. Am confirmat cu userul: **cron extern (cron-job.org)** — precizie reală la minut,
+suport nativ timezone + fereastră orară, funcționează chiar dacă serviciul e complet oprit.
+
+**Schimbat:**
+- Șters `.github/workflows/keepalive.yml` (GitHub Actions) — înlocuit de un job pe cron-job.org
+  (configurare manuală, cont extern — nu se automatizează din repo).
+- Fereastra extinsă de la 08:00–21:00 la **08:00–22:00** (cerință user), ~434h/lună din cele 750 gratuite.
+- `docs/cerinte-keepalive-render.md` — KEEP-1 marcat eliminat (istoric păstrat, cu motivul eliminării),
+  KEEP-2 (cron extern) promovat la implementare curentă, cu pașii exacți de configurare pe cron-job.org.
+- `README.md` — secțiunea „Keep-alive" actualizată (cron-job.org în loc de GitHub Actions Variable).
+
+**Rămâne manual:** userul creează cont pe cron-job.org și configurează job-ul (URL `/actuator/health`,
+la 10 min, fereastră 08:00–22:00 `Europe/Bucharest`, timeout ≥90s) — nu se poate automatiza din agent/CI.
+
+**Branch:** `049-keepalive-cron-extern` (nou, din `main`).
