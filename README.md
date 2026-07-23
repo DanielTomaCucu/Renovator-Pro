@@ -47,7 +47,7 @@ fallback, nu e obligatoriu de setat local).
 - **[docs/cerinte-comparator-oferte.md](docs/cerinte-comparator-oferte.md)** — 🟡 de implementat: pagină nouă `/comparator` (grupuri de oferte per cameră, poze din telefon + upload, detectare magazin din locație, niciun câmp obligatoriu, alegere → element de cumpărat), tickete BE/FE.
 - **[docs/cerinte-loading-states.md](docs/cerinte-loading-states.md)** — 🟡 specificație de implementat: skeleton la încărcarea paginii + spinner în butoane pe durata requesturilor.
 - **[docs/cerinte-autentificare.md](docs/cerinte-autentificare.md)** — ✅ Faza 5 implementată (register/login pe username + parolă, JWT, autorizare pe membership, partajare proiect prin cod de invitație). Rămâne manual doar setarea `JWT_SECRET` pe Render (vezi „Deploy” mai jos).
-- **[docs/cerinte-keepalive-render.md](docs/cerinte-keepalive-render.md)** — ✅ implementat (`.github/workflows/keepalive.yml`): keep-alive Render 08:00–21:00 (GitHub Actions cron; ~403 h/lună din cele 750 gratuite). Rămâne manual doar setarea variabilei `RENDER_APP_URL` (vezi „Deploy” mai jos).
+- **[docs/cerinte-keepalive-render.md](docs/cerinte-keepalive-render.md)** — ✅ implementat (cron extern **cron-job.org**, nu GitHub Actions — cron-ul GH s-a dovedit imprecis, întârzieri de ordinul orei): keep-alive Render 08:00–22:00 (~434 h/lună din cele 750 gratuite). Rămâne manual doar configurarea job-ului pe cron-job.org (vezi „Deploy” mai jos).
 - **[docs/backend-blueprint.md](docs/backend-blueprint.md)** — blueprint-ul oficial al backend-ului (arhitect-șef → executori).
 - **[docs/api-contract.md](docs/api-contract.md)** — contractul API REST (sursă unică de adevăr pentru shape-uri).
 - **[docs/progress.md](docs/progress.md)** — jurnal cronologic de schimbări + registru de funcții.
@@ -68,14 +68,18 @@ profil diferit de `dev`. **De verificat manual după deploy, pe Safari/iOS** —
 third-party chiar cu `SameSite=None`; dacă se confirmă, e nevoie de o decizie separată (nu se improvizează,
 vezi `docs/cerinte-autentificare.md` AUTH-6).
 
-### Keep-alive (`.github/workflows/keepalive.yml`)
+### Keep-alive (cron extern — cron-job.org)
 
-Ping automat pe `/actuator/health` la fiecare ~10 minute, doar în fereastra **08:00–21:00** (ora României) —
-ține treaz backend-ul Render (spin-down după 15 min de inactivitate pe planul gratuit) și, implicit, DB-ul
-Supabase. ⚠️ **Pas manual necesar:** GitHub → repo → Settings → Secrets and variables → Actions → tab
-**Variables** → **New repository variable** → `RENDER_APP_URL` = URL-ul public al serviciului Render
-(ex. `https://renovator-pro-backend.onrender.com`, fără slash final). Fără această variabilă, workflow-ul
-rulează dar pasul de ping eșuează explicit.
+Ping automat pe `/actuator/health` la fiecare 10 minute, doar în fereastra **08:00–22:00** (ora
+României) — ține treaz backend-ul Render (spin-down după 15 min de inactivitate pe planul gratuit) și,
+implicit, DB-ul Supabase. **Nu mai folosim GitHub Actions** pentru asta (`.github/workflows/keepalive.yml`
+a fost șters) — cron-ul GH s-a dovedit imprecis în practică (întârzieri de ordinul orei, nu al minutelor).
 
-Test manual: Actions → „Keep-alive Render” → **Run workflow**. Dacă workflow-ul rămâne inactiv 60 de zile,
-GitHub îl dezactivează automat — reactivare din Actions → workflow → **Enable workflow**.
+⚠️ **Pas manual necesar** (cont extern, nu se automatizează din repo): creează un cont gratuit pe
+[cron-job.org](https://cron-job.org) și configurează un job:
+- **URL:** `https://<domeniul-render>/actuator/health`
+- **Interval:** la fiecare 10 minute
+- **Fereastră orară:** 08:00–22:00, timezone `Europe/Bucharest`
+- **Timeout:** ≥ 90s (primul ping al zilei prinde cold-start-ul Render, ~1 min)
+
+Detalii complete: `docs/cerinte-keepalive-render.md` (KEEP-2).
