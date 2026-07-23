@@ -54,3 +54,16 @@ h4 {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
   font-size: 18px;
 }
+
+/* Safari pe iOS face zoom automat la focus pe orice input/select/textarea cu font-size sub 16px, și
+   NU revine singur la zoom normal — userul rămâne "blocat" mărit. Design-ul foloseste text-sm (14px)
+   pe toate câmpurile, ceea ce declanșează zoom-ul. Forțăm 16px DOAR pe ecrane mici (sub breakpoint-ul
+   `md`), ca să nu se mai declanșeze deloc — NU dezactivăm scalarea userului (user-scalable=no în
+   viewport ar fi un anti-pattern de accesibilitate, blochează zoom-ul manual pt. cine are nevoie). */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

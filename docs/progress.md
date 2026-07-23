@@ -1814,3 +1814,21 @@ Trei reparații de UI cerute de user (branch nou, separat de PR-ul anterior):
 la 3 lățimi (tabletă/laptop/desktop lat) pentru Adăugare Rapidă, ambele stări EUR/RON pentru aliniere.
 
 **Branch:** `048-fix-aliniere-iconite-responsive` (nou, din `047-galerie-inspiratie`).
+
+## 2026-07-23 — Fix: iOS Safari face zoom la focus pe input-uri (bug UX)
+
+User a raportat: pe iPhone, atingerea unui câmp de input face zoom in automat pe pagină, iar zoom-ul nu
+revine singur — experiență proastă. Cauză cunoscută: Safari pe iOS mărește automat orice `input`/
+`select`/`textarea` cu `font-size` calculat sub 16px la focus; design system-ul aplicației folosește
+`text-sm` (14px) pe toate câmpurile.
+
+**Fix:** `globals.css` — regulă nouă `@media (max-width: 767px) { input, select, textarea { font-size:
+16px !important; } }`. Aplicată STRICT sub breakpoint-ul `md` (mobil) — desktop rămâne neschimbat la
+14px. Nu s-a atins `user-scalable`/`maximum-scale` din viewport (ar fi blocat zoom-ul manual al userului,
+anti-pattern de accesibilitate) — soluția corectă e să nu mai existe motivul pt. care Safari zoom-ează.
+
+**Verificat:** computed `font-size` pe toate input/select/textarea confirmat 16px la 375px lățime,
+14px neschimbat la 1280px (JS direct în browser, nu presupunere). `npm test` 248/248, `tsc`, `lint`,
+`build` — curate.
+
+**Branch:** `048-fix-aliniere-iconite-responsive` (continuare).
