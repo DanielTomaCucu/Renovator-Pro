@@ -15,8 +15,8 @@ export default function BottomNav() {
 
   return (
     <nav
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-surface pt-2.5 md:hidden"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-surface pt-4 md:hidden"
     >
       {mainNav.map((item) => {
         const active = pathname.startsWith(item.href);
@@ -24,7 +24,7 @@ export default function BottomNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center justify-center gap-0.5 transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
               active ? "text-secondary" : "text-muted"
             }`}
           >
