@@ -1791,3 +1791,26 @@ exchangeRate.test.tsx`) — preîncărcare + badge automat, comutare pe manual l
 API. `npm test` 246/246, `tsc`, `lint`, `build` — toate curate.
 
 **Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).
+
+## 2026-07-23 — Fix-uri de design: aliniere Setări, iconițe cameră, responsive Adăugare Rapidă
+
+Trei reparații de UI cerute de user (branch nou, separat de PR-ul anterior):
+
+1. **Aliniere „Configurare Monedă"**: rândul toggle monedă + curs valutar folosea `sm:items-end`,
+   ceea ce alinia FUNDUL celor două coloane (nu vârful) — coloana mai scurtă (toggle) era împinsă
+   în jos, dezaliniind etichetele „MONEDA DE BAZĂ" / „CURS (...)". Schimbat la `sm:items-start`.
+2. **Iconițe tip cameră (`RoomFormDrawer.tsx`)**: emoji (🛏️🛁🛋️🍳🌿🪟) înlocuite cu Material Symbols
+   din `ROOM_TYPE_ICONS` (`shared/icons.ts`) — rezolvă TODO-ul din `CLAUDE.md` („migrare parțială,
+   netratată complet"), consecvent cu restul aplicației.
+3. **Responsive „Adăugare Rapidă" (`elemente/page.tsx`)**: la lățime de tabletă (768-1024px), titlul
+   secțiunii stătea deasupra grid-ului până la `lg`, iar cele 3 câmpuri foloseau `sm:grid-cols-2`
+   (împărțire asimetrică 2+1). Acum grid-ul e mereu 3 coloane egale de la `sm` în sus, iar titlul se
+   așază lângă grid abia de la `xl` (spațiu suficient doar pe desktop lat) — testat vizual la 768px,
+   1400px și 1920px.
+
+**Teste noi:** `RoomFormDrawer.test.tsx` — regresie „iconițele sunt Material Symbols, nu emoji".
+
+**Verificat:** `npm test` 248/248, `tsc`, `lint`, `build` — toate curate. Verificat vizual în browser
+la 3 lățimi (tabletă/laptop/desktop lat) pentru Adăugare Rapidă, ambele stări EUR/RON pentru aliniere.
+
+**Branch:** `048-fix-aliniere-iconite-responsive` (nou, din `047-galerie-inspiratie`).

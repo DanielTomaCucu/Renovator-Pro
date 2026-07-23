@@ -6,17 +6,7 @@ import { DecimalInput, Field, PrimaryButton, inputCls } from "./forms";
 import { Room, RoomType } from "@/shared/types";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
-
-// TODO (backlog CLAUDE.md #2): înlocuit cu ROOM_TYPE_ICONS (Material Symbols)
-// din "@/shared/icons" când fontul Material Symbols e încărcat în layout.tsx.
-const ROOM_TYPE_EMOJI: Record<RoomType, string> = {
-  [RoomType.Dormitor]: "🛏️",
-  [RoomType.Baie]: "🛁",
-  [RoomType.Living]: "🛋️",
-  [RoomType.Bucatarie]: "🍳",
-  [RoomType.Terasa]: "🌿",
-  [RoomType.Balcon]: "🪟",
-};
+import { ROOM_TYPE_ICONS } from "@/shared/icons";
 
 const roomTypes = Object.values(RoomType);
 
@@ -94,8 +84,8 @@ export default function RoomFormDrawer({
                     : "border-line hover:bg-surface-low"
                 }`}
               >
-                <span className="text-lg" aria-hidden>
-                  {ROOM_TYPE_EMOJI[rt]}
+                <span className="material-symbols-outlined text-lg" aria-hidden>
+                  {ROOM_TYPE_ICONS[rt]}
                 </span>
                 {rt}
               </button>

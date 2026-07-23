@@ -27,3 +27,20 @@ describe("RoomFormDrawer — Buget alocat (regresie virgulă)", () => {
     );
   });
 });
+
+describe("RoomFormDrawer — iconițe tip cameră (Material Symbols, nu emoji)", () => {
+  it("folosește iconițele Material Symbols din shared/icons, consecvente cu restul aplicației", () => {
+    render(<RoomFormDrawer open onClose={() => {}} />);
+
+    // ROOM_TYPE_ICONS (shared/icons.ts): king_bed/bathtub/chair/soup_kitchen/deck/balcony —
+    // niciun emoji (🛏️🛁🛋️🍳🌿🪟) nu mai trebuie să apară în grid-ul de tip cameră.
+    expect(document.querySelectorAll(".material-symbols-outlined").length).toBeGreaterThanOrEqual(6);
+    expect(screen.getByText("king_bed")).toBeInTheDocument();
+    expect(screen.getByText("bathtub")).toBeInTheDocument();
+    expect(screen.getByText("chair")).toBeInTheDocument();
+    expect(screen.getByText("soup_kitchen")).toBeInTheDocument();
+    expect(screen.getByText("deck")).toBeInTheDocument();
+    expect(screen.getByText("balcony")).toBeInTheDocument();
+    expect(screen.queryByText("🛏️")).not.toBeInTheDocument();
+  });
+});

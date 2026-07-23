@@ -233,7 +233,7 @@ export default function SetariPage() {
           </div>
 
           <div className="space-y-4 p-5">
-            <div className="flex flex-col flex-wrap gap-4 sm:flex-row sm:items-end sm:gap-6">
+            <div className="flex flex-col flex-wrap gap-4 sm:flex-row sm:items-start sm:gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-muted">
                   Moneda de bază
