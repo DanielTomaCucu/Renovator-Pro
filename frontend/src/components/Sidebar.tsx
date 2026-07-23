@@ -48,6 +48,7 @@ export default function Sidebar() {
         <div
           className="fixed inset-0 z-30 bg-black/30 md:hidden"
           onClick={() => setMobileOpen(false)}
+          onPointerUp={() => setMobileOpen(false)}
           aria-hidden="true"
         />
       )}

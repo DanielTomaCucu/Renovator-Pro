@@ -225,14 +225,14 @@ export default function ElementePage() {
           className="rounded-xl p-4 text-white shadow-md"
           style={{ background: "linear-gradient(135deg, #1e293b 0%, #000000 100%)" }}
         >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:gap-6">
             <div className="flex shrink-0 items-center gap-3">
               <span className="material-symbols-outlined text-secondary">
                 {ACTION_ICONS.quickAdd}
               </span>
               <h3 className="font-heading text-base font-bold">Adăugare Rapidă</h3>
             </div>
-            <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
+            <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="space-y-1">
                 <label className="block text-[9px] font-bold uppercase tracking-widest text-white/70">
                   Nume element

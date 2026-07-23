@@ -1791,3 +1791,85 @@ exchangeRate.test.tsx`) — preîncărcare + badge automat, comutare pe manual l
 API. `npm test` 246/246, `tsc`, `lint`, `build` — toate curate.
 
 **Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).
+
+## 2026-07-23 — Fix-uri de design: aliniere Setări, iconițe cameră, responsive Adăugare Rapidă
+
+Trei reparații de UI cerute de user (branch nou, separat de PR-ul anterior):
+
+1. **Aliniere „Configurare Monedă"**: rândul toggle monedă + curs valutar folosea `sm:items-end`,
+   ceea ce alinia FUNDUL celor două coloane (nu vârful) — coloana mai scurtă (toggle) era împinsă
+   în jos, dezaliniind etichetele „MONEDA DE BAZĂ" / „CURS (...)". Schimbat la `sm:items-start`.
+2. **Iconițe tip cameră (`RoomFormDrawer.tsx`)**: emoji (🛏️🛁🛋️🍳🌿🪟) înlocuite cu Material Symbols
+   din `ROOM_TYPE_ICONS` (`shared/icons.ts`) — rezolvă TODO-ul din `CLAUDE.md` („migrare parțială,
+   netratată complet"), consecvent cu restul aplicației.
+3. **Responsive „Adăugare Rapidă" (`elemente/page.tsx`)**: la lățime de tabletă (768-1024px), titlul
+   secțiunii stătea deasupra grid-ului până la `lg`, iar cele 3 câmpuri foloseau `sm:grid-cols-2`
+   (împărțire asimetrică 2+1). Acum grid-ul e mereu 3 coloane egale de la `sm` în sus, iar titlul se
+   așază lângă grid abia de la `xl` (spațiu suficient doar pe desktop lat) — testat vizual la 768px,
+   1400px și 1920px.
+
+**Teste noi:** `RoomFormDrawer.test.tsx` — regresie „iconițele sunt Material Symbols, nu emoji".
+
+**Verificat:** `npm test` 248/248, `tsc`, `lint`, `build` — toate curate. Verificat vizual în browser
+la 3 lățimi (tabletă/laptop/desktop lat) pentru Adăugare Rapidă, ambele stări EUR/RON pentru aliniere.
+
+**Branch:** `048-fix-aliniere-iconite-responsive` (nou, din `047-galerie-inspiratie`).
+
+## 2026-07-23 — Fix: iOS Safari face zoom la focus pe input-uri (bug UX)
+
+User a raportat: pe iPhone, atingerea unui câmp de input face zoom in automat pe pagină, iar zoom-ul nu
+revine singur — experiență proastă. Cauză cunoscută: Safari pe iOS mărește automat orice `input`/
+`select`/`textarea` cu `font-size` calculat sub 16px la focus; design system-ul aplicației folosește
+`text-sm` (14px) pe toate câmpurile.
+
+**Fix:** `globals.css` — regulă nouă `@media (max-width: 767px) { input, select, textarea { font-size:
+16px !important; } }`. Aplicată STRICT sub breakpoint-ul `md` (mobil) — desktop rămâne neschimbat la
+14px. Nu s-a atins `user-scalable`/`maximum-scale` din viewport (ar fi blocat zoom-ul manual al userului,
+anti-pattern de accesibilitate) — soluția corectă e să nu mai existe motivul pt. care Safari zoom-ează.
+
+**Verificat:** computed `font-size` pe toate input/select/textarea confirmat 16px la 375px lățime,
+14px neschimbat la 1280px (JS direct în browser, nu presupunere). `npm test` 248/248, `tsc`, `lint`,
+`build` — curate.
+
+**Branch:** `048-fix-aliniere-iconite-responsive` (continuare).
+
+## 2026-07-23 — Fix: închiderea sheet-urilor prin atingerea fundalului nu mergea fiabil pe iOS
+
+User a raportat: pe iPhone, tap pe fundalul întunecat al unui bottom sheet/dialog/lightbox nu-l închide
+— doar tragerea de bara de sus (handle) funcționează. Cauză: toate aceste overlay-uri foloseau DOAR
+`onClick` pe `div`-ul de fundal pentru închidere; pe iOS Safari, `onClick` pe un element non-nativ
+(fără `cursor:pointer`/rol de buton) nu se declanșează mereu fiabil la o atingere reală, deși
+funcționează perfect cu click de mouse (motiv pt. care bug-ul nu era vizibil în teste/browser desktop).
+Handle-ul de tragere folosea deja `onPointerDown/Move/Up` (Pointer Events) — dovedit funcțional pe
+device-ul userului — deci am aliniat toate fundalurile de overlay la același mecanism.
+
+**Fix:** adăugat `onPointerUp` alături de `onClick` (nu în locul lui — păstrează comportamentul de mouse
+neschimbat) pe fundalul din: `Drawer.tsx`, `ConfirmDialog.tsx`, `galerie/Lightbox.tsx`,
+`comparator/[groupId]/OfferGallery.tsx` (lightbox propriu), `Sidebar.tsx` (meniul mobil). Pe
+`Lightbox`/`OfferGallery`, poza din interior oprește propagarea pentru AMBELE evenimente
+(`stopPropagation` pe click ȘI pe pointerup), altfel un tap pe poză ar fi închis lightbox-ul prin
+bubbling de `pointerup` neoprit.
+
+**Teste noi:** `Drawer.test.tsx` — 3 teste (close pe click, close pe pointerup, NU se închide la
+click/pointerup în interiorul conținutului).
+
+**Verificat:** `npm test` 251/251, `tsc`, `lint`, `build` — curate. Confirmat vizual în browser la
+375px lățime: tap pe zona întunecată de deasupra sheet-ului închide drawer-ul „Editează Cameră".
+
+**Branch:** `048-fix-aliniere-iconite-responsive` (continuare).
+
+## 2026-07-23 — Fix: header-ul (titlul) unui sheet nu închidea la tap pe mobil
+
+User a cerut explicit: pe mobil, tap pe zona de titlu a unui bottom sheet (nu doar pe bara mică de
+tragere de deasupra ei) trebuie să-l închidă — zonă de atingere prea mică altfel.
+
+**Fix:** `Drawer.tsx` — `onClick`+`onPointerUp` adăugate pe tot header-ul (div-ul care conține `h2` +
+butonul X), nu doar pe backdrop. Pe desktop rămâne funcțional neschimbat (X vizibil, click pe restul
+header-ului închide și el acum — comportament comun la bottom sheets, inofensiv).
+
+**Teste noi:** 2 teste în `Drawer.test.tsx` — close la click pe titlu, close la pointerup pe titlu.
+
+**Verificat:** `npm test` 253/253, `tsc`, `lint`, `build` — curate. Confirmat în browser (click DOM
+direct pe titlu): drawer-ul se închide.
+
+**Branch:** `048-fix-aliniere-iconite-responsive` (continuare).

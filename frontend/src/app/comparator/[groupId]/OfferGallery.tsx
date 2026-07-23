@@ -41,6 +41,7 @@ export default function OfferGallery({ images }: { images: string[] }) {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={() => setLightboxOpen(false)}
+          onPointerUp={() => setLightboxOpen(false)}
         >
           <button
             type="button"
@@ -56,6 +57,7 @@ export default function OfferGallery({ images }: { images: string[] }) {
             alt="Poza mărită a ofertei"
             className="max-h-full max-w-full rounded-lg object-contain"
             onClick={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
           />
         </div>
       )}
