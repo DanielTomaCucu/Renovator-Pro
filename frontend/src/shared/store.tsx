@@ -12,6 +12,7 @@ import {
 import {
   ComparisonGroup,
   Currency,
+  InspirationImage,
   Item,
   MaterialType,
   Offer,
@@ -61,6 +62,15 @@ function normalizeComparisonGroup(group: ComparisonGroup): ComparisonGroup {
   };
 }
 
+function normalizeInspirationImage(image: InspirationImage): InspirationImage {
+  return {
+    ...image,
+    roomId: image.roomId ?? undefined,
+    caption: image.caption ?? undefined,
+    sourceUrl: image.sourceUrl ?? undefined,
+  };
+}
+
 /**
  * Store conectat la backend-ul real: mutațiile apelează API-ul, apoi actualizează starea locală din
  * răspuns. `summary`/`spendingTimeline` (agregările server-side) sunt reîncărcate după FIECARE mutație —
@@ -86,6 +96,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [summary, setSummary] = useState<ProjectSummary | null>(null);
   const [spendingTimeline, setSpendingTimeline] = useState<SpendingTimelinePoint[] | null>(null);
   const [comparisonGroups, setComparisonGroups] = useState<ComparisonGroup[]>([]);
+  const [inspirationImages, setInspirationImages] = useState<InspirationImage[]>([]);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -110,8 +121,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       api.get<ProjectSummary>(`/api/projects/${projectId}/summary`),
       api.get<SpendingTimelinePoint[]>(`/api/projects/${projectId}/spending-timeline`),
       api.get<ComparisonGroup[]>(`/api/projects/${projectId}/comparison-groups`),
+      api.get<InspirationImage[]>(`/api/projects/${projectId}/inspiration-images`),
     ])
-      .then(([p, r, i, s, t, cg]) => {
+      .then(([p, r, i, s, t, cg, ii]) => {
         if (cancelled) return;
         setProject(p);
         setRooms(r);
@@ -119,6 +131,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSummary(s);
         setSpendingTimeline(t);
         setComparisonGroups(cg.map(normalizeComparisonGroup));
+        setInspirationImages(ii.map(normalizeInspirationImage));
       })
       .catch((err) => {
         if (cancelled) return;
@@ -209,6 +222,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setItems((prev) => prev.filter((i) => i.roomId !== id));
         // Cascade — șterge și grupurile de comparație ale camerei (backend-ul le-a șters deja).
         setComparisonGroups((prev) => prev.filter((g) => g.roomId !== id));
+        // Pozele din Galeria de Inspirație NU se șterg — backend-ul doar le dezasignează (rămân „General").
+        setInspirationImages((prev) => prev.map((img) => (img.roomId === id ? { ...img, roomId: undefined } : img)));
         await reloadAggregates();
       } catch (err) {
         setError(toErrorMessage(err));
@@ -356,6 +371,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [reloadAggregates]
   );
 
+  const addInspirationImage = useCallback(
+    async (data: { roomId?: string; type: InspirationImage["type"]; image: string; caption?: string; sourceUrl?: string }) => {
+      try {
+        const created = normalizeInspirationImage(
+          await api.post<InspirationImage>(`/api/projects/${projectId}/inspiration-images`, data)
+        );
+        setInspirationImages((prev) => [created, ...prev]);
+      } catch (err) {
+        setError(toErrorMessage(err));
+      }
+    },
+    [projectId]
+  );
+
+  const updateInspirationImage = useCallback(
+    async (id: string, patch: { [K in keyof InspirationImage]?: InspirationImage[K] | null }) => {
+      try {
+        const updated = normalizeInspirationImage(await api.patch<InspirationImage>(`/api/inspiration-images/${id}`, patch));
+        setInspirationImages((prev) => prev.map((img) => (img.id === id ? updated : img)));
+      } catch (err) {
+        setError(toErrorMessage(err));
+      }
+    },
+    []
+  );
+
+  const deleteInspirationImage = useCallback(async (id: string) => {
+    try {
+      await api.delete(`/api/inspiration-images/${id}`);
+      setInspirationImages((prev) => prev.filter((img) => img.id !== id));
+    } catch (err) {
+      setError(toErrorMessage(err));
+    }
+  }, []);
+
   const value = useMemo<RenovationStore | null>(
     () =>
       project && summary && spendingTimeline
@@ -366,6 +416,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             summary,
             spendingTimeline,
             comparisonGroups,
+            inspirationImages,
             error,
             dismissError,
             updateProject,
@@ -383,6 +434,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             updateOffer,
             deleteOffer,
             chooseOffer,
+            addInspirationImage,
+            updateInspirationImage,
+            deleteInspirationImage,
           }
         : null,
     [
@@ -396,6 +450,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateOffer,
       deleteOffer,
       chooseOffer,
+      inspirationImages,
+      addInspirationImage,
+      updateInspirationImage,
+      deleteInspirationImage,
       items,
       summary,
       spendingTimeline,

@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Spinner from "@/components/Spinner";
 import ProjectSharingCard from "@/components/ProjectSharingCard";
+import ProjectSwitcherCard from "@/components/ProjectSwitcherCard";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { DecimalInput } from "@/components/forms";
 import { useStore } from "@/shared/store";
+import { useAuth } from "@/shared/AuthProvider";
 import { useAsyncAction } from "@/shared/useAsyncAction";
+import { exchangeRateApi } from "@/shared/api-client";
 import { Currency } from "@/shared/types";
 import { ACTION_ICONS, SETTINGS_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
+
+type RateSource = "loading" | "auto" | "manual" | "error";
 
 const CURRENCY_LABEL: Record<Currency, string> = {
   [Currency.RON]: "Lei (RON)",
@@ -17,6 +23,7 @@ const CURRENCY_LABEL: Record<Currency, string> = {
 
 export default function SetariPage() {
   const { project, updateProject, convertCurrency } = useStore();
+  const { session } = useAuth();
 
   // Titlu + Buget Total — needitabile până acum (Problema 5 din audit): pe date reale (backend),
   // proiectul seedat are titlu generic și buget 0, ceea ce sparge toate calculele de buget din /analiza.
@@ -65,6 +72,34 @@ export default function SetariPage() {
     setPendingCurrency(project.currency);
   }
   const [exchangeRate, setExchangeRate] = useState("4.97");
+  // Curs preluat automat de la BNR (gratuit, fără cheie API), cache 24h pe backend — vezi
+  // GetExchangeRateService. La montare preîncărcăm câmpul cu valoarea automată; dacă userul editează
+  // manual, `rateSource` trece pe "manual" și rămâne așa (nu se mai suprascrie tăcut cu automatul).
+  const [rateSource, setRateSource] = useState<RateSource>("loading");
+  const [rateFetchedAt, setRateFetchedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Așteaptă sesiunea (refresh silențios la boot din AuthProvider) — altfel requestul pleacă înainte
+    // ca tokenul de acces să fie setat în api-client și primește 401 (fals „cursul automat nu e
+    // disponibil", când de fapt problema era doar ordinea, nu sursa BNR).
+    if (!session) return;
+    let cancelled = false;
+    exchangeRateApi
+      .get()
+      .then(({ rate, fetchedAt }) => {
+        if (cancelled) return;
+        setExchangeRate(String(rate));
+        setRateFetchedAt(fetchedAt);
+        setRateSource("auto");
+      })
+      .catch(() => {
+        if (!cancelled) setRateSource("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Confirmare explicită înainte de conversie (BIZ-1, docs/tickete-audit-calcule-securitate.md) —
@@ -73,8 +108,12 @@ export default function SetariPage() {
   // greșeala înainte de a apăsa Confirmă, nu după.
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Conversie necesară doar când moneda țintă diferă de cea curentă a proiectului.
+  // Conversie necesară doar când moneda țintă diferă de cea curentă a proiectului — decide ce se
+  // întâmplă efectiv la Salvare (rămâne neschimbat, indiferent de vizibilitatea casetei de curs).
   const conversionNeeded = pendingCurrency !== project.currency;
+  // Vizibilitatea casetei de curs valutar: cerere explicită user — se arată când e selectat EUR
+  // (indiferent care e moneda curentă a proiectului), nu când e selectat RON.
+  const showRateSection = pendingCurrency === Currency.EUR;
 
   const { run: handleSave, pending: savePending } = useAsyncAction(async () => {
     if (!conversionNeeded) {
@@ -115,15 +154,15 @@ export default function SetariPage() {
     <div>
       <PageHeader title="Setări Proiect" showSearch={false} />
 
-      <main className="mx-auto max-w-6xl space-y-6 px-6 py-6 lg:px-10">
+      <main className="mx-auto max-w-6xl space-y-5 px-6 py-6 lg:px-10">
         <div className="md:hidden">
           <h2 className="font-heading text-xl font-bold text-primary">Setări Proiect</h2>
         </div>
 
         {/* Detalii Proiect — titlu + buget total, editabile (Problema 5 din audit). */}
         <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
-          <div className="border-b border-line bg-surface p-6">
-            <div className="mb-2 flex items-center gap-2">
+          <div className="border-b border-line bg-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">
                 {SETTINGS_ICONS.verifiedUser}
               </span>
@@ -135,7 +174,7 @@ export default function SetariPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-muted">Titlu proiect</label>
               <input
@@ -143,26 +182,23 @@ export default function SetariPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="ex: Renovare Apartament Centru"
-                className="w-full rounded-lg border border-line bg-surface-low px-4 py-3 text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+                className="w-full rounded-lg border border-line bg-surface-low px-4 py-2.5 text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-muted">
                 Buget total ({project.currency})
               </label>
-              <input
-                type="number"
-                min="0"
-                step="100"
+              <DecimalInput
                 value={totalBudget}
-                onChange={(e) => setTotalBudget(e.target.value)}
+                onChange={setTotalBudget}
                 placeholder="ex: 12500"
-                className="w-full rounded-lg border border-line bg-surface-low px-4 py-3 font-mono text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+                className="w-full rounded-lg border border-line bg-surface-low px-4 py-2.5 font-mono text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-line p-6">
+          <div className="flex items-center justify-end gap-3 border-t border-line p-5">
             {detailsError && <span className="mr-auto text-xs font-bold text-tertiary">{detailsError}</span>}
             {detailsSaved && <span className="text-xs font-bold text-secondary">Salvat ✓</span>}
             <button
@@ -182,22 +218,22 @@ export default function SetariPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-          {/* Configurare Monedă */}
-          <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm lg:col-span-2">
-            <div className="border-b border-line bg-surface p-6">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">
-                  {SETTINGS_ICONS.currencyExchange}
-                </span>
-                <h3 className="font-heading text-lg font-bold text-primary">Configurare Monedă</h3>
-              </div>
-              <p className="text-sm text-muted">
-                Selectează moneda principală pentru raportare și calculele bugetare.
-              </p>
+        {/* Configurare Monedă */}
+        <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
+          <div className="border-b border-line bg-surface p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">
+                {SETTINGS_ICONS.currencyExchange}
+              </span>
+              <h3 className="font-heading text-lg font-bold text-primary">Configurare Monedă</h3>
             </div>
+            <p className="text-sm text-muted">
+              Selectează moneda principală pentru raportare și calculele bugetare.
+            </p>
+          </div>
 
-            <div className="space-y-6 p-6">
+          <div className="space-y-4 p-5">
+            <div className="flex flex-col flex-wrap gap-4 sm:flex-row sm:items-end sm:gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-muted">
                   Moneda de bază
@@ -208,7 +244,7 @@ export default function SetariPage() {
                       key={c}
                       type="button"
                       onClick={() => setPendingCurrency(c)}
-                      className={`rounded-md px-5 py-2.5 text-sm font-bold transition-all ${
+                      className={`whitespace-nowrap rounded-md px-5 py-2.5 text-sm font-bold transition-all ${
                         pendingCurrency === c
                           ? "bg-primary text-white shadow-sm"
                           : "text-muted hover:bg-surface"
@@ -220,10 +256,10 @@ export default function SetariPage() {
                 </div>
               </div>
 
-              {conversionNeeded && (
-                <div className="max-w-xs space-y-2">
+              {showRateSection && (
+                <div className="w-full max-w-[220px] space-y-1.5">
                   <label className="flex items-center gap-1 text-[10px] font-bold uppercase text-muted">
-                    Curs Valutar (1 EUR = ... RON)
+                    Curs (1 EUR = ... RON)
                     <span
                       className="material-symbols-outlined text-[14px] text-muted"
                       title="Folosit pentru conversia tuturor sumelor între EUR și RON"
@@ -232,98 +268,90 @@ export default function SetariPage() {
                     </span>
                   </label>
                   <div className="relative">
-                    <input
-                      type="number"
-                      step="0.01"
+                    <DecimalInput
                       placeholder="4.97"
                       value={exchangeRate}
-                      onChange={(e) => setExchangeRate(e.target.value)}
-                      className="w-full rounded-lg border border-line bg-surface-low px-4 py-3 font-mono text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+                      onChange={(v) => {
+                        setExchangeRate(v);
+                        setRateSource("manual");
+                      }}
+                      className="w-full rounded-lg border border-line bg-surface-low px-4 py-2.5 font-mono text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-[10px] uppercase text-muted">
                       RON
                     </span>
                   </div>
-                  <p className="text-xs italic text-muted">
-                    La salvare, {pendingCurrency === Currency.RON ? "sumele în EUR se înmulțesc" : "sumele în RON se împart"}{" "}
-                    cu acest curs. Se convertesc toate valorile: buget total, buget pe camere și prețurile elementelor.
+                  <p className="flex items-center gap-1 text-[11px] font-medium">
+                    {rateSource === "loading" && (
+                      <span className="flex items-center gap-1 text-muted">
+                        <Spinner /> Se preia cursul...
+                      </span>
+                    )}
+                    {rateSource === "auto" && (
+                      <span className="text-secondary" title={rateFetchedAt ? new Date(rateFetchedAt).toLocaleString("ro-RO") : undefined}>
+                        ✓ Automat (BNR){rateFetchedAt && `, ${new Date(rateFetchedAt).toLocaleDateString("ro-RO")}`}
+                      </span>
+                    )}
+                    {rateSource === "manual" && <span className="text-tertiary">✎ Introdus manual</span>}
+                    {rateSource === "error" && <span className="text-tertiary">⚠ Automat indisponibil</span>}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-line p-6">
-              {error && <span className="mr-auto text-xs font-bold text-tertiary">{error}</span>}
-              {saved && (
-                <span className="text-xs font-bold text-secondary">
-                  {conversionNeeded ? "Conversie aplicată ✓" : "Salvat ✓"}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={currencyPending}
-                aria-busy={currencyPending}
-                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {currencyPending ? (
-                  <Spinner />
-                ) : (
-                  <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
-                )}
-                {conversionNeeded ? "Convertește și Salvează" : "Salvează Setările"}
-              </button>
-            </div>
-          </div>
-
-          {/* Panou lateral: informativ + istoric curs */}
-          <div className="space-y-6">
-            <div className="rounded-xl border border-primary bg-primary p-6 text-white">
-              <h4 className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
-                <span className="material-symbols-outlined text-[18px]">
+            {/* Avertismentul de conversie apare doar când chiar se convertesc sume — nu e relevant
+                cât timp moneda selectată e aceeași cu cea curentă a proiectului. */}
+            {showRateSection && conversionNeeded && Number.isFinite(rateNumber) && rateNumber > 0 && (
+              <div className="flex items-start gap-2 rounded-lg border-l-4 border-tertiary bg-tertiary/5 px-3 py-2.5">
+                <span className="material-symbols-outlined mt-0.5 text-base text-tertiary">
                   {SETTINGS_ICONS.verifiedUser}
                 </span>
-                De Reținut
-              </h4>
-              <p className="text-sm leading-relaxed text-white/80">
-                Schimbarea monedei convertește efectiv toate sumele proiectului (buget total, buget
-                pe camere și prețurile elementelor) la cursul introdus. Conversia este distructivă —
-                dus-întors repetat pierde precizie prin rotunjire — deci stabilește moneda la
-                începutul proiectului și schimb-o rar.
-              </p>
-            </div>
-
-            {conversionNeeded && Number.isFinite(rateNumber) && rateNumber > 0 && (
-              <div className="overflow-hidden rounded-xl border border-line bg-surface">
-                <div className="flex h-24 items-center justify-center bg-surface-low">
-                  <span className="material-symbols-outlined text-4xl text-muted">
-                    {TECHNICAL_ICONS.projectEfficiency}
-                  </span>
-                </div>
-                <div className="p-4">
-                  <h5 className="mb-2 text-[10px] font-bold uppercase text-muted">
-                    Exemplu de conversie
-                  </h5>
-                  <p className="font-mono text-sm text-primary">
-                    100 {exampleFrom} → <span className="font-bold">{exampleConverted}</span> {exampleTo}
-                  </p>
-                  <p className="mt-2 text-[10px] italic text-muted">
-                    Verifică dacă rezultatul are sens înainte de a confirma — cursul RON/EUR de azi e
-                    aproximativ 4.9-5.0, nu 0.2-0.25 (curs invers, greșeală frecventă).
-                  </p>
-                </div>
+                <p className="text-xs leading-relaxed text-muted">
+                  Se convertesc <span className="font-semibold text-primary">toate</span> sumele
+                  (buget total, buget pe camere, prețuri elemente) — ex: 100 {exampleFrom} →{" "}
+                  <span className="font-mono font-bold text-primary">{exampleConverted}</span> {exampleTo}.
+                  Conversia e{" "}
+                  <span className="font-semibold">ireversibilă</span> (pierdere de precizie la dus-întors) —
+                  verifică dacă rezultatul are sens (cursul RON/EUR de azi e ~4.9-5.0, nu ~0.2, curs invers).
+                </p>
               </div>
             )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-line p-5">
+            {error && <span className="mr-auto text-xs font-bold text-tertiary">{error}</span>}
+            {saved && (
+              <span className="text-xs font-bold text-secondary">
+                {conversionNeeded ? "Conversie aplicată ✓" : "Salvat ✓"}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={currencyPending}
+              aria-busy={currencyPending}
+              className="flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition-transform hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {currencyPending ? (
+                <Spinner />
+              ) : (
+                <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.save}</span>
+              )}
+              {conversionNeeded ? "Convertește și Salvează" : "Salvează Setările"}
+            </button>
           </div>
         </div>
 
         <ProjectSharingCard />
+        <ProjectSwitcherCard />
       </main>
 
       <ConfirmDialog
         open={confirmOpen}
         title="Confirmă conversia de monedă"
         message={`Toate sumele proiectului (buget total, buget pe camere, prețuri elemente) vor fi convertite din ${project.currency} în ${pendingCurrency} cu cursul ${exchangeRate}. Exemplu: 100 ${exampleFrom} → ${exampleConverted} ${exampleTo}. Conversia e ireversibilă (pierdere de precizie la dus-întors). Continui?`}
+        confirmLabel="Convertește"
+        danger={false}
         onConfirm={applyConversion}
         onCancel={() => setConfirmOpen(false)}
       />

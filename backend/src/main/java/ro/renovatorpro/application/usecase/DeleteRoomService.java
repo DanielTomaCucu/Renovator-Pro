@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.renovatorpro.application.port.in.DeleteRoomUseCase;
 import ro.renovatorpro.application.port.out.ComparisonGroupRepository;
+import ro.renovatorpro.application.port.out.InspirationImageRepository;
 import ro.renovatorpro.application.port.out.ItemRepository;
 import ro.renovatorpro.application.port.out.OfferRepository;
 import ro.renovatorpro.application.port.out.RoomRepository;
@@ -16,7 +17,9 @@ import ro.renovatorpro.domain.model.user.ProjectRole;
  * Ștergerea unei camere elimină ȘI elementele ei + grupurile de comparație (cu ofertele lor) — cascade
  * explicit aici, la nivel de business, chiar dacă schema DB are deja {@code ON DELETE CASCADE}
  * (blueprint §Task 3.2: regula trebuie să existe independent de constrângerea de schemă — un backend
- * viitor pe alt store nu ar mai avea cascade gratis).
+ * viitor pe alt store nu ar mai avea cascade gratis). Pozele din Galeria de Inspirație fac excepție —
+ * NU se șterg, doar se dezasignează (rămân „General"), fiindcă sunt conținut al userului, nu date derivate
+ * din configurarea camerei.
  */
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class DeleteRoomService implements DeleteRoomUseCase {
     private final ItemRepository itemRepository;
     private final ComparisonGroupRepository comparisonGroupRepository;
     private final OfferRepository offerRepository;
+    private final InspirationImageRepository inspirationImageRepository;
     private final MembershipGuard membershipGuard;
 
     @Override
@@ -38,6 +42,7 @@ public class DeleteRoomService implements DeleteRoomUseCase {
         itemRepository.deleteByRoomId(roomId);
         offerRepository.deleteByRoomId(roomId);
         comparisonGroupRepository.deleteByRoomId(roomId);
+        inspirationImageRepository.clearRoomId(roomId);
         roomRepository.deleteById(roomId);
     }
 }

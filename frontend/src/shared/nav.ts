@@ -18,5 +18,6 @@ export const mainNav = [
  */
 export const secondaryNav = [
   { href: "/comparator", label: "Comparator Oferte", icon: NAV_ICONS.comparator },
+  { href: "/galerie", label: "Galerie Inspirație", icon: NAV_ICONS.galerie },
   { href: "/setari", label: "Setări", icon: NAV_ICONS.setari },
 ];

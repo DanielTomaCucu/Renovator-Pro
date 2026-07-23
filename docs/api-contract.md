@@ -66,7 +66,8 @@ body-ul de creare/actualizare (`Omit<Item, "id" | "createdAt" | "purchasedAt">` 
 actualizează DOAR la tranziția SPRE `Cumpărat` (era altceva → devine Cumpărat); rămâne neschimbat dacă statusul
 e deja Cumpărat (nu se „reîmprospătează" la fiecare editare) sau dacă revine la alt status (istoric, nu se șterge).
 Elementele deja `Cumpărat` înainte de migrarea acestor coloane au `purchasedAt: null` (nu există un moment real
-cunoscut) — nu apar în `spending-timeline` până la o eventuală retranziție de status.
+cunoscut) — nu contribuie la seria `cumulativeSpent` din `spending-timeline` până la o eventuală retranziție de
+status (contribuie totuși la `cumulativeTotal`, pe luna lui `createdAt`).
 
 **`origin: ItemOrigin.Configurare`** marchează elemente generate automat de server din configurarea tehnică a
 unei camere (`Room.floorMaterial`/`floorArea`/`perimeter`/`wallTiling`) — vezi `domain/service/AutoItemReconciler`
@@ -113,7 +114,7 @@ oferte comparate. Vezi `docs/cerinte-comparator-oferte.md` pentru descrierea fun
 ⚠️ **Deviere deliberată de la designul inițial:** pozele NU trăiesc într-un tabel separat cu upload
 multipart/BYTEA — sunt string-uri simple (URL sau data-URI), refolosind exact convenția deja existentă
 pt. `Item.imageUrl` (validare `ItemUrlValidation`, compresie canvas client-side înainte de encodare —
-`app/comparator/[groupId]/compressImage.ts`). Mai simplu, consistent cu restul aplicației, fără infra nouă.
+`shared/functions/image.ts`, `compressImage`). Mai simplu, consistent cu restul aplicației, fără infra nouă.
 
 ### Sincronizare cu Configurare — `linkedItemId` (docs/cerinte-comparator-config-sync.md)
 
@@ -158,6 +159,32 @@ proiectului (ofertele fără preț se sar). **Ștergerea unei camere** șterge c
 (`createdItemId` rămâne în istoric, poate ajunge să pointeze spre un item de mult șters — nu e problemă, e
 doar istoric).
 
+### `InspirationImage` — Galerie de Inspirație
+
+**Implementat.** O poză din galeria de inspirație a proiectului — poză proprie, randare, sau inspirație
+preluată online, opțional legată de o cameră (`roomId` absent = „General"). Pattern identic cu `Offer`:
+`image` e un string simplu (URL http(s) sau `data:image/...;base64,...`, comprimată client-side), fără
+tabel/upload separat.
+
+```ts
+{
+  id: string;
+  projectId: string;
+  roomId?: string;         // absent = poză „generală", neasignată unei camere
+  type: InspirationType;   // enum: "Poză Proprie" | "Randare" | "Inspirație Online"
+  image: string;           // URL http(s) SAU data-URI, ca Item.imageUrl — OBLIGATORIU
+  caption?: string;        // max 300
+  sourceUrl?: string;      // max 2048, doar http(s)
+  createdAt: string;       // ISO 8601, server-side
+}
+```
+
+**Ștergerea unei camere NU șterge pozele ei** — le dezasignează (`roomId` devine `null`, poza rămâne la
+„General"). Decizie deliberată, diferită de `Item`/`ComparisonGroup` (care fac cascade la ștergerea camerei):
+pozele sunt conținut al userului, nu date derivate din configurarea tehnică — nu are sens să dispară dintr-o
+simplă redenumire/refacere de cameră. Implementat atât ca cascade explicit la nivel de business
+(`DeleteRoomService`), cât și ca `ON DELETE SET NULL` la nivel de schemă (V9).
+
 ## Endpoint-uri planificate
 
 Maparea e directă pe metodele din interfața `RenovationStore` (`src/shared/types/RenovationStore.ts`) —
@@ -186,28 +213,43 @@ fiecare metodă client devine un apel HTTP. Nu inventa endpoint-uri suplimentare
 | `updateOffer(id, patch)` | `/api/offers/{id}` | `PATCH` | `null` explicit pe un câmp = șterge valoarea (ca la `Room`) |
 | `deleteOffer(id)` | `/api/offers/{id}` | `DELETE` | Dacă era `chosenOfferId`, referința devine `null` (statusul grupului rămâne Decis) |
 | `chooseOffer(groupId, offerId, quantity?)` | `/api/comparison-groups/{groupId}/choose` | `POST` | Actualizează itemul `linkedItemId` (dacă există) SAU creează unul nou (origin `Din Comparator`) — vezi secțiunea „Sincronizare cu Configurare" |
+| `inspirationImages` (store) | `/api/projects/{id}/inspiration-images` | `GET` | `InspirationImage[]` ale proiectului — vezi secțiunea „Galerie de Inspirație" |
+| `addInspirationImage(data)` | `/api/projects/{id}/inspiration-images` | `POST` | Body: `Omit<InspirationImage, "id"\|"projectId"\|"createdAt">` — `roomId` opțional, `image` obligatoriu |
+| `updateInspirationImage(id, patch)` | `/api/inspiration-images/{id}` | `PATCH` | `null` explicit pe `roomId` = mută poza la „General" (ca la `Room`/`Offer`) |
+| `deleteInspirationImage(id)` | `/api/inspiration-images/{id}` | `DELETE` | — |
 
-## Autentificare (Faza 5)
+## Autentificare (Faza 5 + revizuire multi-proiect/resetare parolă)
 
 Toate rutele de mai sus, EXCEPTÂND `/api/auth/**` și `/actuator/health`, cer un header
 `Authorization: Bearer <accessToken>` — fără el, `401`. Deciziile complete (login pe username, cod de
-invitație, 404 uniform la refuz de autorizare) sunt în `docs/cerinte-autentificare.md`; aici doar shape-urile.
+invitație, 404 uniform la refuz de autorizare, multi-proiect, resetare parolă) sunt în
+`docs/cerinte-autentificare.md`; aici doar shape-urile.
+
+⚠️ **Revizuire (înlocuiește D2/D4 din versiunea inițială):** `email` e acum OBLIGATORIU la register
+(necesar pt. resetarea parolei); userul poate fi membru al MAI MULTOR proiecte simultan, cu un proiect
+„activ" per sesiune (encodat implicit în refresh token-ul sesiunii, nu în JWT-ul de access) — vezi
+`docs/cerinte-autentificare.md` pt. detalii arhitecturale.
 
 | Endpoint | Verb | Body / Auth | Response |
 |---|---|---|---|
-| `/api/auth/register` | `POST` | `{ username, password, projectName? }` SAU `{ username, password, inviteCode? }` — exact unul din `projectName`/`inviteCode` | `201 { accessToken, user: {id, username}, project: Project, role }` + cookie `rp_refresh` (httpOnly) |
-| `/api/auth/login` | `POST` | `{ username, password }` | `200`, același shape ca register |
-| `/api/auth/refresh` | `POST` | fără body, cookie `rp_refresh` | `200 { accessToken }` + cookie NOU (rotire — cel vechi devine invalid) |
+| `/api/auth/register` | `POST` | `{ username, email, password, projectName? }` SAU `{ username, email, password, inviteCode? }` — exact unul din `projectName`/`inviteCode` | `201 { accessToken, user: {id, username, email}, project: Project, role }` + cookie `rp_refresh` (httpOnly) |
+| `/api/auth/login` | `POST` | `{ username, password }` | `200`, același shape ca register — proiectul „de-acasă" (cel mai vechi, dacă userul e membru al mai multora) |
+| `/api/auth/refresh` | `POST` | fără body, cookie `rp_refresh` | `200 { accessToken }` + cookie NOU (rotire — cel vechi devine invalid), pe ACELAȘI proiect ca sesiunea |
 | `/api/auth/logout` | `POST` | cookie `rp_refresh` | `204`, revocă refresh token-ul |
-| `/api/auth/me` | `GET` | `Authorization: Bearer` | `200 { user, project, role }` |
+| `/api/auth/me` | `GET` | `Authorization: Bearer` + cookie `rp_refresh` | `200 { user, project, role }` — proiectul activ al sesiunii curente (rezolvat din refresh token) |
+| `/api/auth/me/projects` | `GET` | `Authorization: Bearer` | `200 [{ project: Project, role }]` — TOATE proiectele userului, cel mai vechi (`joinedAt`) primul |
+| `/api/auth/join-project` | `POST` | `Authorization: Bearer`, body `{ inviteCode }` | `200`, shape identic cu register/login — alătură userul DEJA autentificat la proiectul codului (idempotent dacă e deja membru) și COMUTĂ sesiunea pe el |
+| `/api/auth/switch-project` | `POST` | `Authorization: Bearer`, body `{ projectId }` | `200`, shape identic — comută sesiunea activă pe un proiect la care userul e deja membru; `404` dacă nu e membru (IDOR) |
+| `/api/auth/forgot-password` | `POST` | `{ email }`, fără auth | `204` mereu, indiferent dacă emailul există sau nu (nu confirmăm existența contului); dacă există un cont, tokenul de resetare pleacă pe email real (Resend) cu link `${APP_FRONTEND_URL}/reset-password?token=...`, valabil 30 min, single-use |
+| `/api/auth/reset-password` | `POST` | `{ token, newPassword }`, fără auth | `204`; schimbă parola, marchează tokenul folosit (single-use, expiră în 30 min) și revocă TOATE refresh token-urile userului (relogare obligatorie peste tot); `400` token invalid/expirat/deja folosit |
 | `/api/projects/{id}/invite-code` | `GET` | `Authorization` — doar OWNER | `200 { inviteCode }` (generat leneș la prima cerere) |
 | `/api/projects/{id}/invite-code/regenerate` | `POST` | `Authorization` — doar OWNER | `200 { inviteCode }` nou; cel vechi devine invalid |
 | `/api/projects/{id}/members` | `GET` | `Authorization` — orice membru | `200 [{ userId, username, role }]` |
 | `/api/projects/{id}/members/{userId}` | `DELETE` | `Authorization` — doar OWNER | `204`; revocă și refresh token-urile membrului șters |
 
-Erori: `401` credențiale/token invalid, `409` username deja folosit, `404` (uniform, IDOR — nu confirmă
-existența resursei) pentru orice acces fără membership sau rol suficient, `400` payload invalid (ex. nici
-`projectName` nici `inviteCode`).
+Erori: `401` credențiale/token invalid, `409` username SAU email deja folosit, `404` (uniform, IDOR — nu
+confirmă existența resursei) pentru orice acces fără membership sau rol suficient, `400` payload invalid
+(ex. nici `projectName` nici `inviteCode`; token de resetare invalid/expirat/folosit).
 
 ## Conversie monedă — `POST /api/projects/{id}/currency`
 
@@ -252,7 +294,7 @@ FIECARE mutație (add/update/delete item/room, update/convert project), ca heade
   budgetRemaining: number; // totalBudget − totalSpent (poate fi negativ)
   purchaseProgress: number;// % întregi 0–100
   boughtCount: number;
-  costPerRoom: { name: string; total: number }[];            // sortat desc, fără camere goale
+  costPerRoom: { name: string; total: number }[];            // sortat desc, fără camere goale — DOAR ItemStatus.Cumparat (roomSpent, nu roomSubtotal)
   costPerCategory: { materialType: MaterialType; total: number; spent: number }[]; // sortat desc
   technical: { totalFloorArea: number; configuredRoomsRatio: number }; // projectTechnicalSummary
 }
@@ -341,20 +383,33 @@ recreând bug-ul). `RenovationStore.updateRoom` acceptă `{ [K in keyof Room]?: 
 ## Serie temporală de cheltuieli — `GET /api/projects/{id}/spending-timeline`
 
 **Implementat (Problema 3 din audit, fundamentată pe Problema 4 — `Item.createdAt`/`purchasedAt`).** Sursa
-graficului „Evoluția Cheltuielilor" din `/analiza` — înlocuiește curba SVG hardcodată. Grupează elementele
-`ItemStatus.Cumparat` pe luna calendaristică (UTC) a lui `purchasedAt`, însumează `itemTotal` per lună, apoi
-calculează suma **cumulativă** crescătoare. Elementele fără `purchasedAt` (niciodată cumpărate, sau cumpărate
-înainte de migrarea `V3`) sunt ignorate.
+graficului „Evoluția Cheltuielilor" din `/analiza` — 2 serii cumulative pe aceeași axă de luni:
+
+- `cumulativeSpent` — linia principală: DOAR elemente `ItemStatus.Cumparat`, grupate pe luna calendaristică
+  (UTC) a lui `purchasedAt`.
+- `cumulativeTotal` — linia secundară (mai puțin vizibilă în UI): TOATE elementele indiferent de status,
+  grupate pe luna lui `createdAt`. `cumulativeTotal >= cumulativeSpent` în fiecare punct (garantat structural
+  — `purchasedAt >= createdAt` întotdeauna).
+
+Ambele serii sunt unificate pe reuniunea lunilor din amândouă (o lună poate avea activitate doar pe una din
+serii), cumulate crescător (step function — o lună fără activitate proprie păstrează valoarea ultimei luni
+active).
 
 **Response** (oglinda TS: `src/shared/types/SpendingTimelinePoint.ts`), sortat cronologic ascendent:
 ```ts
-{ month: string; cumulativeSpent: number }[]  // month = "yyyy-MM" (ISO); cumulativeSpent = sumă cumulativă
+{ month: string; cumulativeSpent: number; cumulativeTotal: number }[]  // month = "yyyy-MM" (ISO)
 ```
 
-**Listă goală** dacă nimic nu a fost încă marcat Cumpărat — frontend-ul afișează un empty-state explicit
-(„Niciun element cumpărat încă"), NICIODATĂ o curbă falsă (regulă explicită din audit). Etichetele de lună
-(„Ian", „Feb 2025" etc.) se derivă pe frontend din `month` (`app/analiza/dates.ts` → `formatMonthLabel`) —
-formatarea locală RO nu e concern de backend. Reîncărcat de store după fiecare mutație de item.
+**Listă goală DOAR dacă proiectul nu are NICIUN element încă** (nu doar „nimic cumpărat" — `cumulativeTotal`
+are nevoie de elementele neachiziționate ca să crească; un proiect cu elemente dar nimic cumpărat produce
+puncte cu `cumulativeSpent: 0` și `cumulativeTotal` > 0, nu o listă goală). Frontend-ul afișează empty-state
+explicit doar în cazul „zero elemente", NICIODATĂ o curbă falsă (regulă din audit). Etichetele de lună („Ian",
+„Feb 2025" etc.) se derivă pe frontend din `month` (`app/analiza/dates.ts` → `formatMonthLabel`) — formatarea
+locală RO nu e concern de backend. Reîncărcat de store după fiecare mutație de item.
+
+**Grafic interactiv** (`app/analiza/SpendingTimelineChart.tsx`): hover pe desktop / drag cu degetul pe mobil
+(ambele prin `onPointerMove` — Pointer Events unifică mouse+touch într-un singur handler) → linie verticală
+punctată cu „snap" pe cea mai apropiată lună + tooltip cu ambele sume ale lunii respective.
 
 ## De decis înainte de prima implementare
 
@@ -362,4 +417,18 @@ formatarea locală RO nu e concern de backend. Reîncărcat de store după fieca
 - [ ] Autentificare (JWT? sesiune?) și cine are acces la un proiect
 - [ ] Paginare pe `/items` dacă un proiect crește mult
 - [ ] Upload real de imagini (`imageUrl`) — azi e doar text liber, un URL extern
-- [x] Rate/curs valutar pentru conversia EUR↔RON (backlog frontend, item 6 din `CLAUDE.md`) — **rezolvat**: cursul e furnizat de user la conversie (`POST /api/projects/{id}/currency`, câmp `exchangeRate`); nu există (încă) sursă automată de curs.
+- [x] Rate/curs valutar pentru conversia EUR↔RON (backlog frontend, item 6 din `CLAUDE.md`) — **rezolvat**: cursul e furnizat de user la conversie (`POST /api/projects/{id}/currency`, câmp `exchangeRate`), dar acum e preîncărcat automat în UI (vezi `GET /api/exchange-rate` mai jos) — userul poate suprascrie manual, ceea ce comută explicit sursa afișată de la „automat" la „manual".
+
+### `GET /api/exchange-rate` — curs EUR→RON automat
+
+Autentificat (ca orice rută în afara `/api/auth/**`). Sursă: feed XML public BNR (Banca Națională a
+României), gratuit, fără cheie API — `nbrfxrates.xml`. Cache server-side 24h (tabela
+`exchange_rate_cache`, un singur rând per pereche de monede): primul apel după expirarea cache-ului
+reface fetch-ul de la BNR, restul zilei servește valoarea cache-uită — deci sursa externă e interogată
+efectiv o dată pe zi, indiferent de câte ori userii deschid pagina. Dacă BNR e indisponibil ȘI există
+un cache anterior (chiar expirat), se servește cache-ul vechi (`fetchedAt` rămâne cel vechi, ca userul
+să vadă că nu e cursul de azi); dacă nu există niciun cache și BNR e jos → `502` cu mesaj care
+recomandă introducerea manuală.
+
+- `GET /api/exchange-rate` → `200 { rate: number, fetchedAt: string (ISO instant), source: "BNR" }`.
+  `502 { detail }` doar dacă nu există niciun cache și sursa externă e indisponibilă.

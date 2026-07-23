@@ -12,12 +12,7 @@ import DashboardSummaryCard, {
 } from "@/components/DashboardSummaryCard";
 import EmptyState from "@/components/EmptyState";
 import { formatMonthLabel } from "./dates";
-
-/** Padding vertical al viewBox-ului (0 0 800 200) pt. graficul de evoluție — nu chiar marginile, ca linia să nu atingă marginile. */
-const TIMELINE_PAD_TOP = 30;
-const TIMELINE_PAD_BOTTOM = 180;
-const toScreenX = (x: number) => x * 800;
-const toScreenY = (y: number) => TIMELINE_PAD_BOTTOM - y * (TIMELINE_PAD_BOTTOM - TIMELINE_PAD_TOP);
+import SpendingTimelineChart from "./SpendingTimelineChart";
 
 /** Paletă pastel pt. segmentele donut-ului „Cost per Cameră" (desktop) — vezi design Stitch. */
 const PIE_COLORS = ["#a7f3d0", "#ddd6fe", "#fecaca", "#bae6fd", "#fde68a"];
@@ -29,9 +24,6 @@ export default function AnalizaPage() {
   const { project, rooms, items, summary, spendingTimeline } = useStore();
   const money = (value: number) => formatMoney(value, project.currency);
 
-  // Tooltip pe hover (desktop)/tap (mobil) pt. graficul „Evoluția Cheltuielilor" — index-ul punctului
-  // curent din `timeline`, null = niciun tooltip afișat.
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   // Camera selectată prin click pe donut-ul „Cost per Cameră" (nume, nu index — segmentele nu au index
   // stabil între desktop/mobil). null = nicio selecție, centrul arată camera cu cel mai mare cost.
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
@@ -87,22 +79,10 @@ export default function AnalizaPage() {
   // preț 0 până userul îl completează — fără hint, graficele par „că nu reacționează" la configurare.
   const noPriceCount = items.filter((i) => i.unitPrice === 0).length;
 
-  // Evoluția Cheltuielilor: date REALE (Problema 3 din audit) — serie cumulativă pe luna cumpărării,
-  // nu mai o curbă hardcodată. Listă goală → empty-state (randat mai jos), nu o curbă falsă.
+  // Evoluția Cheltuielilor: date REALE (Problema 3 din audit) — 2 serii cumulative (cheltuit + total),
+  // pe axa unificată de luni din backend. Listă goală DOAR dacă proiectul n-are niciun element încă
+  // (nu doar „nimic cumpărat" — linia de total are nevoie de elementele neachiziționate ca să crească).
   const timeline = useMemo(() => timelinePoints(spendingTimeline), [spendingTimeline]);
-  const timelineLinePath = useMemo(
-    () =>
-      timeline.length < 2
-        ? ""
-        : timeline.map((p, i) => `${i === 0 ? "M" : "L"}${toScreenX(p.x)},${toScreenY(p.y)}`).join(" "),
-    [timeline]
-  );
-  const timelineAreaPath = useMemo(() => {
-    if (timeline.length < 2) return "";
-    const first = timeline[0];
-    const last = timeline[timeline.length - 1];
-    return `${timelineLinePath} L${toScreenX(last.x)},200 L${toScreenX(first.x)},200 Z`;
-  }, [timeline, timelineLinePath]);
 
   return (
     <div>
@@ -169,11 +149,15 @@ export default function AnalizaPage() {
                 </h3>
               </div>
               {timeline.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  <span className="text-[11px] uppercase tracking-wider text-muted">
-                    Cheltuit cumulat
-                  </span>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-primary" />
+                    <span className="text-[11px] uppercase tracking-wider text-muted">Cheltuit cumulat</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-muted/50" />
+                    <span className="text-[11px] uppercase tracking-wider text-muted">Total (+ în așteptare)</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -183,78 +167,14 @@ export default function AnalizaPage() {
                   {ANALYTICS_ICONS.expenseTimeline}
                 </span>
                 <p className="max-w-xs text-sm text-muted">
-                  Niciun element cumpărat încă — evoluția cheltuielilor apare aici pe măsură ce
-                  marchezi elemente ca „Cumpărat”.
+                  Niciun element încă — evoluția cheltuielilor apare aici pe măsură ce adaugi elemente
+                  și le marchezi ca „Cumpărat”.
                 </p>
               </div>
             ) : (
               <>
-                <div className="relative h-64 w-full">
-                  <svg
-                    className="h-full w-full"
-                    preserveAspectRatio="none"
-                    viewBox="0 0 800 200"
-                  >
-                    <defs>
-                      <linearGradient id="expense-gradient" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#000000" stopOpacity="0.1" />
-                        <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="50" y2="50" />
-                    <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="100" y2="100" />
-                    <line stroke="#f1f5f9" strokeWidth="1" x1="0" x2="800" y1="150" y2="150" />
-                    {timeline.length === 1 ? (
-                      <circle cx="400" cy={toScreenY(timeline[0].y)} r="5" fill="#000000" />
-                    ) : (
-                      <>
-                        <path d={timelineLinePath} fill="none" stroke="#000000" strokeWidth="3" />
-                        <path d={timelineAreaPath} fill="url(#expense-gradient)" />
-                      </>
-                    )}
-                    {/* Punct evidențiat + zonă de hover mărită (invizibilă) per lună — un grafic
-                        „adevărat" arată data + suma la hover, nu doar o linie mută. */}
-                    {timeline.map((p, i) => (
-                      <g key={p.month}>
-                        {hoverIndex === i && (
-                          <circle
-                            cx={toScreenX(p.x)}
-                            cy={toScreenY(p.y)}
-                            r="6"
-                            fill="#000000"
-                            stroke="#ffffff"
-                            strokeWidth="2"
-                          />
-                        )}
-                        <circle
-                          cx={toScreenX(p.x)}
-                          cy={toScreenY(p.y)}
-                          r="18"
-                          fill="transparent"
-                          className="cursor-pointer"
-                          onMouseEnter={() => setHoverIndex(i)}
-                          onMouseLeave={() => setHoverIndex(null)}
-                          onClick={() => setHoverIndex((cur) => (cur === i ? null : i))}
-                        />
-                      </g>
-                    ))}
-                  </svg>
-                  {hoverIndex !== null && timeline[hoverIndex] && (
-                    <div
-                      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-lg bg-primary px-3 py-1.5 text-center text-white shadow-lg"
-                      style={{
-                        left: `${timeline[hoverIndex].x * 100}%`,
-                        top: `${(toScreenY(timeline[hoverIndex].y) / 200) * 100}%`,
-                      }}
-                    >
-                      <div className="text-[10px] uppercase tracking-wider opacity-70">
-                        {formatMonthLabel(timeline[hoverIndex].month)}
-                      </div>
-                      <div className="font-mono text-[13px] font-bold">
-                        {money(timeline[hoverIndex].cumulativeSpent)}
-                      </div>
-                    </div>
-                  )}
+                <div className="h-64 w-full">
+                  <SpendingTimelineChart timeline={timeline} money={money} />
                 </div>
                 <div className="mt-4 flex justify-between px-2 text-[11px] uppercase tracking-wider text-muted">
                   {timeline.map((p) => (
@@ -494,37 +414,22 @@ export default function AnalizaPage() {
             </h3>
             {timeline.length === 0 ? (
               <p className="py-8 text-center text-xs text-muted">
-                Niciun element cumpărat încă.
+                Niciun element încă.
               </p>
             ) : (
               <>
-                <div className="flex h-48 w-full items-end justify-between gap-2 px-2">
-                  {timeline.map((p, i) => (
-                    <div
-                      key={p.month}
-                      className="relative flex h-full flex-1 items-end justify-center"
-                    >
-                      {hoverIndex === i && (
-                        <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[calc(100%+8px)] whitespace-nowrap rounded-lg bg-primary px-2.5 py-1.5 text-center text-white shadow-lg">
-                          <div className="text-[9px] uppercase tracking-wider opacity-70">
-                            {formatMonthLabel(p.month)}
-                          </div>
-                          <div className="font-mono text-[12px] font-bold">
-                            {money(p.cumulativeSpent)}
-                          </div>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setHoverIndex((cur) => (cur === i ? null : i))}
-                        aria-label={`${formatMonthLabel(p.month)}: ${money(p.cumulativeSpent)}`}
-                        className={`w-full max-w-8 rounded-t transition-colors ${
-                          hoverIndex === i ? "bg-secondary" : "bg-primary"
-                        }`}
-                        style={{ height: `${Math.max(p.y * 100, 4)}%` }}
-                      />
-                    </div>
-                  ))}
+                <div className="flex items-center gap-4 pb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span className="text-[9px] uppercase tracking-wider text-muted">Cheltuit</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted/50" />
+                    <span className="text-[9px] uppercase tracking-wider text-muted">Total</span>
+                  </div>
+                </div>
+                <div className="h-48 w-full">
+                  <SpendingTimelineChart timeline={timeline} money={money} />
                 </div>
                 <div className="mt-2 flex justify-between px-2 text-[10px] font-bold uppercase text-muted">
                   {timeline.map((p) => (

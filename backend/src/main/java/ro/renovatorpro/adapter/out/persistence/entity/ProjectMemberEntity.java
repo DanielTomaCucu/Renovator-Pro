@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.io.Serializable;
+import java.time.Instant;
 
 @Entity
 @Table(name = "project_members")
@@ -32,6 +33,9 @@ public class ProjectMemberEntity {
 
     @Column(nullable = false)
     private String role;
+
+    @Column(name = "joined_at", nullable = false)
+    private Instant joinedAt;
 
     @EqualsAndHashCode
     @NoArgsConstructor

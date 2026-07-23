@@ -9,12 +9,18 @@ export default function ConfirmDialog({
   open,
   title,
   message,
+  confirmLabel = "Șterge",
+  danger = true,
   onConfirm,
   onCancel,
 }: {
   open: boolean;
   title: string;
   message: string;
+  /** Implicit „Șterge" (majoritatea apelurilor sunt confirmări de ștergere) — suprascrie pt. alte acțiuni distructive (ex. conversie de monedă). */
+  confirmLabel?: string;
+  /** Implicit roșu (acțiune ireversibilă gen ștergere) — `false` pt. acțiuni distructive dar non-„delete" (ex. conversie), unde roșu ar sugera greșit o ștergere de date. */
+  danger?: boolean;
   onConfirm: () => Promise<void> | void;
   onCancel: () => void;
 }) {
@@ -54,10 +60,12 @@ export default function ConfirmDialog({
             onClick={handleConfirm}
             disabled={pending}
             aria-busy={pending}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:py-2.5 sm:font-semibold sm:hover:bg-red-700"
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-xl py-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-1 sm:rounded-md sm:py-2.5 sm:font-semibold ${
+              danger ? "bg-red-600 sm:hover:bg-red-700" : "bg-primary sm:hover:bg-primary/90"
+            }`}
           >
             {pending && <Spinner />}
-            Șterge
+            {confirmLabel}
           </button>
           <button
             onClick={onCancel}

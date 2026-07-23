@@ -72,6 +72,12 @@ export default function LoginPage() {
             />
           </Field>
 
+          <p className="-mt-2 text-right text-xs">
+            <Link href="/forgot-password" className="font-semibold text-secondary hover:underline">
+              Ai uitat parola?
+            </Link>
+          </p>
+
           {error && <p className="text-sm font-medium text-tertiary">{error}</p>}
 
           <PrimaryButton type="submit" pending={pending}>

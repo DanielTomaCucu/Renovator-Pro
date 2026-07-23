@@ -6,7 +6,12 @@ import ro.renovatorpro.domain.model.user.User;
 
 public interface GetCurrentUserUseCase {
 
-    Result execute(String currentUserId);
+    /**
+     * {@code rawRefreshToken} (din cookie-ul curent, poate fi {@code null}) rezolvă proiectul ACTIV al
+     * sesiunii (V11, multi-proiect) — fără el (edge case, nu fluxul normal), cade pe cel mai vechi proiect
+     * al userului.
+     */
+    Result execute(String currentUserId, String rawRefreshToken);
 
     record Result(User user, Project project, ProjectRole role) {
     }

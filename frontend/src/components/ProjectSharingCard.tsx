@@ -101,8 +101,8 @@ export default function ProjectSharingCard() {
           <h3 className="font-heading text-lg font-bold text-primary">Partajare proiect</h3>
         </div>
         <p className="text-sm text-muted">
-          Invită un coleg să vadă și să editeze același proiect — introduce codul la Înregistrare, la
-          „Mă alătur unui proiect”.
+          Invită un coleg să vadă și să editeze același proiect — introduce codul la Înregistrare
+          („Mă alătur unui proiect”) sau, dacă are deja cont, la „Proiectele mele” de mai jos.
         </p>
       </div>
 

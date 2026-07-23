@@ -15,7 +15,7 @@ import ro.renovatorpro.application.security.SessionIssuer;
 import ro.renovatorpro.domain.exception.InvalidRefreshTokenException;
 import ro.renovatorpro.domain.exception.ProjectNotFoundException;
 import ro.renovatorpro.domain.model.Project;
-import ro.renovatorpro.domain.model.user.ProjectMember;
+import ro.renovatorpro.domain.model.user.ProjectRole;
 import ro.renovatorpro.domain.model.user.User;
 
 /** Rotire strictă: tokenul prezentat se revocă mereu, indiferent dacă mai era valid — o singură folosire posibilă. */
@@ -51,10 +51,13 @@ public class RefreshTokenService implements RefreshTokenUseCase {
         }
 
         User user = userRepository.findById(stored.userId()).orElseThrow(InvalidRefreshTokenException::new);
-        ProjectMember membership = projectMemberRepository.findByUserId(user.id())
+        // Proiectul rămâne cel al SESIUNII (stored.projectId()), nu „primul" al userului — o comutare de
+        // proiect a rotit deja tokenul spre noul proiect (SwitchProjectService); dacă userul a fost între
+        // timp scos din ACEST proiect specific, findRole eșuează și refresh-ul cade corect (relogare).
+        ProjectRole role = projectMemberRepository.findRole(stored.projectId(), user.id())
                 .orElseThrow(InvalidRefreshTokenException::new);
-        Project project = projectRepository.findById(membership.projectId())
-                .orElseThrow(() -> new ProjectNotFoundException(membership.projectId()));
-        return sessionIssuer.issue(user, project, membership.role());
+        Project project = projectRepository.findById(stored.projectId())
+                .orElseThrow(() -> new ProjectNotFoundException(stored.projectId()));
+        return sessionIssuer.issue(user, project, role);
     }
 }

@@ -164,19 +164,21 @@ class ProjectControllerTest {
     @Test
     void spendingTimelineIntoarceSeriaCumulativaFormatataYyyyMm() throws Exception {
         when(getSpendingTimelineUseCase.execute(anyString(), anyString())).thenReturn(List.of(
-                new GetSpendingTimelineUseCase.TimelinePoint(YearMonth.of(2026, 1), Money.of(100)),
-                new GetSpendingTimelineUseCase.TimelinePoint(YearMonth.of(2026, 2), Money.of(400))));
+                new GetSpendingTimelineUseCase.TimelinePoint(YearMonth.of(2026, 1), Money.of(100), Money.of(100)),
+                new GetSpendingTimelineUseCase.TimelinePoint(YearMonth.of(2026, 2), Money.of(400), Money.of(1399))));
 
         mockMvc.perform(get("/api/projects/p1/spending-timeline"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].month").value("2026-01"))
                 .andExpect(jsonPath("$[0].cumulativeSpent").value(100.00))
+                .andExpect(jsonPath("$[0].cumulativeTotal").value(100.00))
                 .andExpect(jsonPath("$[1].month").value("2026-02"))
-                .andExpect(jsonPath("$[1].cumulativeSpent").value(400.00));
+                .andExpect(jsonPath("$[1].cumulativeSpent").value(400.00))
+                .andExpect(jsonPath("$[1].cumulativeTotal").value(1399.00));
     }
 
     @Test
-    void spendingTimelineIntoarceListaGoalaCandNimicNuECumparat() throws Exception {
+    void spendingTimelineIntoarceListaGoalaCandProiectulNuAreNiciUnElement() throws Exception {
         when(getSpendingTimelineUseCase.execute(anyString(), anyString())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/projects/p1/spending-timeline"))

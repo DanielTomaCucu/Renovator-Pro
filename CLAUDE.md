@@ -8,7 +8,7 @@
 
 Aplicație web de **management al bugetului pentru renovări de locuințe** (proprietari, contractori, arhitecți). UI-ul este implementat după design-urile generate în **Google Stitch** (proiect Stitch: `projects/14594146001803528847`, titlu "Planificator Buget Renovare"). Când e nevoie de referință vizuală, ecranele se pot prelua prin MCP-ul `stitch` (`get_screen` → screenshot + HTML).
 
-**Stadiu actual:** monorepo `frontend/` (Next.js, conectat la backend-ul real prin `store.tsx` — vezi `docs/backend-blueprint.md`) + `backend/` (Spring Boot + PostgreSQL, arhitectură hexagonală, Fazele 0–7 finalizate, inclusiv Faza 5 — autentificare JWT pe username + parolă, autorizare pe membership de proiect, partajare proiect prin cod de invitație; vezi `docs/cerinte-autentificare.md`). Frontend-ul are `/login`+`/register` și rutele protejate client-side (`AuthProvider`/`AppShell`). Urmează și o aplicație mobilă Flutter (proiect separat).
+**Stadiu actual:** monorepo `frontend/` (Next.js, conectat la backend-ul real prin `store.tsx` — vezi `docs/backend-blueprint.md`) + `backend/` (Spring Boot + PostgreSQL, arhitectură hexagonală, Fazele 0–7 finalizate, inclusiv Faza 5 — autentificare JWT pe username + parolă, autorizare pe membership de proiect, partajare proiect prin cod de invitație, resetare parolă (mod dev) și multi-proiect (comutare + alăturare cu cont existent); vezi `docs/cerinte-autentificare.md`). Frontend-ul are `/login`+`/register`+`/forgot-password`+`/reset-password` și rutele protejate client-side (`AuthProvider`/`AppShell`). Urmează și o aplicație mobilă Flutter (proiect separat).
 
 ## Monorepo — unde stă ce
 
@@ -46,24 +46,25 @@ frontend/src/
     types/                — modelul de date. UN FIȘIER PER INTERFAȚĂ/ENUM (vezi regula dedicată mai jos).
       RoomType.ts, ItemStatus.ts, MaterialType.ts, Currency.ts   — enums
       Room.ts, Item.ts, Project.ts, RenovationStore.ts, DonutSegment.ts   — interfețe
-      User.ts, ProjectRole.ts, ProjectMember.ts, AuthSession.ts   — Faza 5 (autentificare/partajare)
+      User.ts, ProjectRole.ts, ProjectMember.ts, MyProject.ts, AuthSession.ts   — Faza 5 (autentificare/partajare/multi-proiect)
       index.ts            — barrel de re-export; importă din „@/shared/types", nu din fișierele individuale
     functions/            — logica de business partajată, împărțită pe domeniu (nu un fișier gigant)
       money.ts, items.ts, budget.ts, charts.ts, index.ts
     store.tsx             — StoreProvider (React context, DOAR CRUD + `summary`, fără calcule); conectat exclusiv la backend real via api-client.ts, folosește `session.project.id` din AuthProvider (nu un ID fix). Expune `summary` (agregările server-side), reîncărcat după fiecare mutație
-    AuthProvider.tsx       — sesiune (Faza 5): register/login/logout, refresh silențios la boot, `useAuth()`
+    AuthProvider.tsx       — sesiune (Faza 5): register/login/logout, refresh silențios la boot, `useAuth()`; expune și `projects[]` (multi-proiect) + `joinProject`/`switchProject`
     api-client.ts          — fetch wrapper spre backend (NEXT_PUBLIC_API_URL); access token JWT în memorie, retry pe 401 cu refresh; `authApi`/`sharingApi`
     icons.ts              — mapare centralizată nume-Material-Symbol (vezi secțiunea Iconițe)
-  components/             — componente UI reutilizate în ≥2 pagini (Sidebar, StatCard, StatusChip, Drawer, ItemFormDrawer, RoomFormDrawer, ConfirmDialog, forms, AppShell, ProjectSharingCard)
+  components/             — componente UI reutilizate în ≥2 pagini (Sidebar, StatCard, StatusChip, Drawer, ItemFormDrawer, RoomFormDrawer, ConfirmDialog, forms, AppShell, ProjectSharingCard, ProjectSwitcherCard)
   app/
-    login/, register/      — pagini de autentificare (Faza 5), randate fără Sidebar/StoreProvider (vezi AppShell)
+    login/, register/      — pagini de autentificare (Faza 5; email + confirmare parolă la register), randate fără Sidebar/StoreProvider (vezi AppShell)
+    forgot-password/, reset-password/   — resetare parolă (mod dev — linkul apare direct în UI, fără email real)
     elemente/             — Elemente de Cumpărat (pagina principală)
       page.tsx
       DeleteTarget.ts, ItemDrawerState.ts   — tipuri LOCALE acestei pagini (nu sunt reutilizate în altă parte)
     centralizator/        — Tabel Centralizator Costuri
     analiza/              — Analiză Bugetară (dashboard)
     configurare/          — Configurare Apartament
-    setari/               — Setări Proiect (include Partajare proiect — cod invitație + membri, Faza 5)
+    setari/               — Setări Proiect (include Partajare proiect — cod invitație + membri, Faza 5; și „Proiectele mele" — comutare/alăturare multi-proiect)
 docs/                     — (la RĂDĂCINĂ, nu în frontend/) documentație comună
   progress.md             — jurnal cronologic de schimbări (actualizează-l după fiecare sesiune de lucru)
   api-contract.md         — contractul API REST (viitor backend Spring Boot) — sursa unică de adevăr pt. shape-urile de request/response
@@ -130,6 +131,7 @@ Aplicația asta va exista în minim 3 locuri (web Next.js, backend Spring Boot, 
 | `donutSegments(data)` | `charts.ts` | transformă distribuție în segmente SVG cumulative (`DonutSegment[]`) — geometrie de prezentare |
 | `timelinePoints(data)` | `charts.ts` | normalizează `SpendingTimelinePoint[]` în puncte {x,y}∈[0,1] pt. graficul de evoluție — geometrie de prezentare |
 | `computeRoomDimensions(room)` | `dimensions.ts` | breakdown necesar material (oglinda backend); PREVIEW client la editare + fallback |
+| `compressImage(file, maxSide?, quality?)` | `image.ts` | comprimă o poză (canvas) înainte de a o encoda ca data URI — folosită de Comparator ȘI Galerie Inspirație |
 
 > **⚠️ Agregările de dashboard NU se mai calculează client-side** (Problema 2 din audit): `totalEstimated`/`totalSpent`/
 > `budgetRemaining`/`purchaseProgress`/`boughtCount`/`costPerRoom`/`costPerCategory` de proiect + sumarul tehnic vin din
@@ -217,7 +219,7 @@ iconiță mică fără să ajustezi și `opsz`** — dacă ai nevoie de o dimens
 | `shopping_cart` | Elemente de Cumpărat |
 | `table_chart` | Tabel Centralizator |
 | `leaderboard` | Grafice / Analiză Bugetară |
-| `auto_awesome` | Galerie Inspirație (neimplementată încă) |
+| `auto_awesome` | Galerie Inspirație |
 | `settings` | Setări |
 | `keyboard_double_arrow_left` | Restrânge meniu (sidebar colapsabil) |
 | `search` | Căutare (header) |
@@ -275,9 +277,10 @@ iconiță mică fără să ajustezi și `opsz`** — dacă ai nevoie de o dimens
 
 **Notă:** iconițele de mai sus au fost confirmate direct din HTML-ul a 6+ ecrane Stitch (desktop + mobil,
 inclusiv variantele „Meniu Restrâns”, „Premium Black Theme”, „Volet Adăugare Cameră”). Dacă la implementare
-apare o secțiune nouă (ex: Galerie Inspirație) fără iconiță confirmată încă, preia ecranul din Stitch cu
-`get_screen` și extrage `class="material-symbols-outlined"` din HTML înainte de a ghici — Stitch e sursa
-de adevăr pentru iconografie, nu presupuneri.
+apare o secțiune nouă fără iconiță confirmată încă, preia ecranul din Stitch cu `get_screen` și extrage
+`class="material-symbols-outlined"` din HTML înainte de a ghici — Stitch e sursa de adevăr pentru
+iconografie, nu presupuneri. (`GALLERY_ICONS`/`INSPIRATION_TYPE_ICONS` din Galeria de Inspirație NU au
+ecran Stitch confirmat — alese prin analogie cu restul aplicației, fără referință vizuală de sursă.)
 
 **Toate numele de iconițe de mai sus sunt deja centralizate în `src/shared/icons.ts`** (`NAV_ICONS`,
 `ROOM_TYPE_ICONS`, `ACTION_ICONS`, `STATUS_ICONS`, `DOCUMENT_ICONS`, `ANALYTICS_ICONS`, chei tipate pe
@@ -337,16 +340,20 @@ Vezi „Registru actual de funcții partajate” mai sus pentru lista completă.
    - Rând de buget alocat per cameră (funcționalitate existentă, păstrată din varianta inițială a paginii).
    - Stare goală „Adaugă Cameră Nouă" → deschide `RoomFormDrawer` existent. Ștergere cameră prin `ConfirmDialog`.
    - Funcțiile de calcul: `src/app/configurare/dimensions.ts` (locale paginii — vezi Registrul de funcții din `docs/progress.md`).
+5. **`/galerie` — Galerie Inspirație**
+   - Poze proprii, randări, sau inspirație preluată online, grupate pe cameră (+ secțiune „General" pt. poze neasignate). Grid Pinterest-style (pătrate uniforme), filtre pe cameră, `DashboardSummaryCard` (Total poze/Camere ilustrate/Neasignate).
+   - Side effects: `GalleryFormDrawer` (upload cu compresie canvas SAU URL, tip, cameră opțională, notiță, link sursă), `Lightbox` (poză mărită full-screen), `ConfirmDialog` la ștergere.
+   - Ștergerea unei camere NU șterge pozele ei — le dezasignează la „General" (diferit de `Item`/`ComparisonGroup`, care fac cascade).
+   - Tipuri locale: `GalleryDrawerState.ts` (în folderul paginii).
 
 ### Backlog (în ordinea priorității)
 1. Bottom navigation + bottom sheets pentru mobile
 2. Înlocuire emoji cu Material Symbols (necesită încărcarea fontului în `layout.tsx` întâi)
 3. Sidebar colapsabil (varianta „Meniu Restrâns" din Stitch)
-4. Galerie Inspirație (există în design, neimplementată)
 
 **Rezolvate** (vezi `docs/progress.md` pentru detalii): export PDF/partajare, comutare monedă EUR↔RON cu
 curs real, conectare la backend Spring Boot, grafic evoluție cheltuieli pe `/analiza` (date reale, pe
-momentul cumpărării — Problemele 3+4 din audit).
+momentul cumpărării — Problemele 3+4 din audit), Galerie Inspirație (`/galerie`, poze/randări/inspirație pe cameră).
 
 ## Convenții de cod
 

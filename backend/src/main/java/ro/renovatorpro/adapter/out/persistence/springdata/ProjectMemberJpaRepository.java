@@ -12,8 +12,8 @@ public interface ProjectMemberJpaRepository extends JpaRepository<ProjectMemberE
 
     List<ProjectMemberEntity> findByProjectId(String projectId);
 
-    /** Single-project per user azi (D4) — la nevoie viitoare de multi-proiect, devine findAllByUserId. */
-    Optional<ProjectMemberEntity> findFirstByUserId(String userId);
+    /** Multi-proiect (V11): toate apartenențele unui user, cea mai veche (proiectul „de-acasă") întâi. */
+    List<ProjectMemberEntity> findByUserIdOrderByJoinedAtAsc(String userId);
 
     void deleteByProjectIdAndUserId(String projectId, String userId);
 }

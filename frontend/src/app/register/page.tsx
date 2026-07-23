@@ -17,18 +17,26 @@ export default function RegisterPage() {
   const { registerNewProject, registerWithInviteCode } = useAuth();
   const [mode, setMode] = useState<RegisterMode>("new-project");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [projectName, setProjectName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const { run: handleSubmit, pending } = useAsyncAction(async () => {
     setError(null);
+    // Verificare client-side — nu ajunge la backend (confirmPassword nu face parte din contractul API,
+    // e doar o plasă de siguranță ca userul să nu greșească parola din neatenție la tastare).
+    if (password !== confirmPassword) {
+      setError("Parolele nu coincid");
+      return;
+    }
     try {
       if (mode === "new-project") {
-        await registerNewProject(username, password, projectName);
+        await registerNewProject(username, email, password, projectName);
       } else {
-        await registerWithInviteCode(username, password, inviteCode);
+        await registerWithInviteCode(username, email, password, inviteCode);
       }
     } catch (err) {
       setError(errorMessage(err));
@@ -92,12 +100,37 @@ export default function RegisterPage() {
             />
           </Field>
 
+          <Field label="Email">
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ex: nume@exemplu.ro"
+              className={inputCls}
+              required
+            />
+          </Field>
+
           <Field label="Parolă">
             <input
               type="password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              maxLength={72}
+              className={inputCls}
+              required
+            />
+          </Field>
+
+          <Field label="Confirmă parola">
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               minLength={8}
               maxLength={72}
               className={inputCls}

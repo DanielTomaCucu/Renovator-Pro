@@ -1,8 +1,8 @@
 /**
  * Comprimă o poză (de regulă din camera telefonului, 3–8 MB brute) înainte de a o encoda ca data URI —
- * redimensionare la max `maxSide` px pe latura lungă + reencodare JPEG la `quality`, ca o ofertă cu până
- * la 8 poze să nu umfle nerezonabil DB-ul (payload-ul e stocat ca text în `offers.images`, ca la
- * `Item.imageUrl`). Rezultat tipic: sub 400 KB/poză.
+ * redimensionare la max `maxSide` px pe latura lungă + reencodare JPEG la `quality`, ca payload-ul (stocat
+ * ca text/JSONB, ca la `Item.imageUrl`/`Offer.images`) să nu umfle nerezonabil DB-ul. Rezultat tipic: sub
+ * 400 KB/poză. Folosită din comparator (`OfferFormDrawer`) și galeria de inspirație (`GalleryFormDrawer`).
  */
 export function compressImage(file: File, maxSide = 1600, quality = 0.8): Promise<string> {
   return new Promise((resolve, reject) => {

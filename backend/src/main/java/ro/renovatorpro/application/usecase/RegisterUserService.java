@@ -12,6 +12,7 @@ import ro.renovatorpro.application.port.out.ProjectRepository;
 import ro.renovatorpro.application.port.out.TimeProvider;
 import ro.renovatorpro.application.port.out.UserRepository;
 import ro.renovatorpro.application.security.SessionIssuer;
+import ro.renovatorpro.domain.exception.DuplicateEmailException;
 import ro.renovatorpro.domain.exception.DuplicateUsernameException;
 import ro.renovatorpro.domain.exception.InvalidInviteCodeException;
 import ro.renovatorpro.domain.exception.InvalidRegistrationException;
@@ -60,8 +61,12 @@ public class RegisterUserService implements RegisterUserUseCase {
         if (userRepository.findByUsername(username).isPresent()) {
             throw new DuplicateUsernameException(username);
         }
+        String email = command.email().trim().toLowerCase(Locale.ROOT);
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new DuplicateEmailException(email);
+        }
 
-        User user = new User(idGenerator.newId(), username, null, passwordHasher.hash(command.password()), null, timeProvider.now());
+        User user = new User(idGenerator.newId(), username, email, passwordHasher.hash(command.password()), null, timeProvider.now());
         User savedUser = userRepository.insert(user);
 
         Project project;
@@ -75,7 +80,7 @@ public class RegisterUserService implements RegisterUserUseCase {
             project = resolveOrCreateProject(command.projectName().trim(), savedUser.id());
             role = ProjectRole.OWNER;
         }
-        projectMemberRepository.save(new ProjectMember(project.id(), savedUser.id(), role));
+        projectMemberRepository.save(new ProjectMember(project.id(), savedUser.id(), role, timeProvider.now()));
 
         return sessionIssuer.issue(savedUser, project, role);
     }

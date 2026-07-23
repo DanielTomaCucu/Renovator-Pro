@@ -235,7 +235,7 @@ function GroupCard({
           type="button"
           onClick={onDelete}
           aria-label="Șterge grupul"
-          className="icon-btn shrink-0 rounded-md p-2 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
         >
           <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
         </button>

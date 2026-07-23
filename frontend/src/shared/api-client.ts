@@ -123,13 +123,18 @@ async function authFetch<T>(path: string, body?: unknown, extraHeaders?: Record<
 }
 
 interface CurrentUserBody {
-  user: { id: string; username: string };
+  user: { id: string; username: string; email?: string };
   project: { id: string; title: string; totalBudget: number; currency: string; totalArea?: number };
   role: string;
 }
 
 interface AuthResponseBody extends CurrentUserBody {
   accessToken: string;
+}
+
+interface MyProjectBody {
+  project: CurrentUserBody["project"];
+  role: string;
 }
 
 function toSession(body: CurrentUserBody): AuthSession {
@@ -146,10 +151,10 @@ function handleAuthResponse(body: AuthResponseBody): AuthSession {
 }
 
 export const authApi = {
-  registerNewProject: (username: string, password: string, projectName: string) =>
-    authFetch<AuthResponseBody>("/api/auth/register", { username, password, projectName }).then(handleAuthResponse),
-  registerWithInviteCode: (username: string, password: string, inviteCode: string) =>
-    authFetch<AuthResponseBody>("/api/auth/register", { username, password, inviteCode }).then(handleAuthResponse),
+  registerNewProject: (username: string, email: string, password: string, projectName: string) =>
+    authFetch<AuthResponseBody>("/api/auth/register", { username, email, password, projectName }).then(handleAuthResponse),
+  registerWithInviteCode: (username: string, email: string, password: string, inviteCode: string) =>
+    authFetch<AuthResponseBody>("/api/auth/register", { username, email, password, inviteCode }).then(handleAuthResponse),
   login: (username: string, password: string) =>
     authFetch<AuthResponseBody>("/api/auth/login", { username, password }).then(handleAuthResponse),
   logout: async () => {
@@ -165,6 +170,43 @@ export const authApi = {
     if (!refreshed) return null;
     return api.get<CurrentUserBody>("/api/auth/me").then(toSession);
   },
+  /** Răspuns generic (nu confirmă dacă emailul există) — linkul de resetare pleacă pe email real. */
+  forgotPassword: (email: string) => authFetch<void>("/api/auth/forgot-password", { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    authFetch<void>("/api/auth/reset-password", { token, newPassword }),
+  /**
+   * Alăturare la un alt proiect (user deja autentificat) — comută sesiunea pe proiectul nou.
+   * `credentials: "include"` obligatoriu (spre deosebire de `api.post` obișnuit) — răspunsul setează un
+   * cookie de refresh NOU, rotit spre noul proiect; fără el, browserul nu l-ar reține.
+   */
+  joinProject: (inviteCode: string) =>
+    apiFetch<AuthResponseBody>("/api/auth/join-project", {
+      method: "POST",
+      credentials: "include",
+      body: JSON.stringify({ inviteCode }),
+    }).then(handleAuthResponse),
+  /** Comută proiectul activ al sesiunii pe unul la care userul e deja membru — vezi nota de la `joinProject`. */
+  switchProject: (projectId: string) =>
+    apiFetch<AuthResponseBody>("/api/auth/switch-project", {
+      method: "POST",
+      credentials: "include",
+      body: JSON.stringify({ projectId }),
+    }).then(handleAuthResponse),
+  listMyProjects: () =>
+    api.get<MyProjectBody[]>("/api/auth/me/projects").then((list) =>
+      list.map((m) => ({ project: m.project as AuthSession["project"], role: m.role as AuthSession["role"] }))
+    ),
+};
+
+interface ExchangeRateBody {
+  rate: number;
+  fetchedAt: string;
+  source: string;
+}
+
+/** Curs valutar EUR→RON preluat automat (BNR), cache 24h pe backend — vezi Setări → Configurare Monedă. */
+export const exchangeRateApi = {
+  get: () => api.get<ExchangeRateBody>("/api/exchange-rate"),
 };
 
 /** Partajare proiect (AUTH-7) — folosite din Setări, doar OWNER pentru cod/ștergere membru. */

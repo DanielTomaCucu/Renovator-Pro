@@ -36,6 +36,14 @@ app:
     # SameSite=None (+ Secure, setat direct la construirea cookie-ului în AuthController). Pe dev,
     # application-dev.yml suprascrie cu Lax (localhost:3001 → localhost:8080 nu e „cross-site" real).
     refresh-cookie-same-site: None
+  # Baza linkului trimis prin email (forgot-password) — fără fallback intenționat: domeniul Vercel real
+  # trebuie setat explicit pe prod, fără slash final.
+  frontend:
+    base-url: ${APP_FRONTEND_URL}
+  email:
+    # Fără fallback intenționat pe prod — vezi ResendPasswordResetEmailSender pt. comportamentul dacă lipsește.
+    resend-api-key: ${RESEND_API_KEY}
+    from-address: ${EMAIL_FROM_ADDRESS:onboarding@resend.dev}
 
 management:
   endpoints:

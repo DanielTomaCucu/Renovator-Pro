@@ -1,5 +1,6 @@
 package ro.renovatorpro.adapter.in.web.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -13,6 +14,13 @@ public record RegisterRequest(
         @Size(min = 3, max = 40, message = "Numele de utilizator trebuie să aibă între 3 și 40 de caractere")
         @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "Numele de utilizator poate conține doar litere, cifre, punct, underscore și cratimă")
         String username,
+
+        // Necesar pt. resetarea parolei (mod dev — vezi RequestPasswordResetService): fără el, un cont
+        // pierdut nu are nicio cale de recuperare.
+        @NotBlank(message = "Email-ul este obligatoriu")
+        @Email(message = "Adresa de email nu este validă")
+        @Size(max = 320, message = "Email-ul e prea lung")
+        String email,
 
         // SEC-4 (docs/tickete-audit-calcule-securitate.md): BCrypt procesează doar primii 72 de bytes —
         // peste limită, versiuni noi de Spring Security aruncă excepție (500 derutant), altele trunchiază

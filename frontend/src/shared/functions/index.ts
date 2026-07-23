@@ -9,3 +9,4 @@ export * from "./budget";
 export * from "./charts";
 export * from "./dimensions";
 export * from "./url";
+export * from "./image";

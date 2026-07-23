@@ -25,6 +25,7 @@ import {
 import ConfirmDialog from "@/components/ConfirmDialog";
 import RoomFormDrawer from "@/components/RoomFormDrawer";
 import Spinner from "@/components/Spinner";
+import { DecimalInput } from "@/components/forms";
 import RoomSketch from "./RoomSketch";
 import { RoomShapeSelect, RoomShapeLengthInputs } from "./RoomShapeWallsEditor";
 import { buildRoomCalcRows } from "./roomCalcRows";
@@ -595,7 +596,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               e.stopPropagation();
               setEditOpen(true);
             }}
-            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-primary"
             aria-label={`Editează camera ${room.name}`}
           >
             <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.editItem}</span>
@@ -607,7 +608,7 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
               e.stopPropagation();
               setConfirmDelete(true);
             }}
-            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
             aria-label="Șterge camera"
           >
             <span className="material-symbols-outlined icon-btn">{ACTION_ICONS.delete}</span>
@@ -635,16 +636,11 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 />
                 <label className="space-y-1">
                   <span className={labelCls}>Suprafață (MP)</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
+                  <DecimalInput
                     placeholder="ex: 5.40"
                     className={inputCls}
-                    value={draft.floorArea ?? ""}
-                    onChange={(e) =>
-                      patch({ floorArea: e.target.value ? Number(e.target.value) : undefined })
-                    }
+                    value={draft.floorArea !== undefined ? String(draft.floorArea) : ""}
+                    onChange={(v) => patch({ floorArea: v ? Number(v) : undefined })}
                   />
                 </label>
                 {isGresie && (
@@ -658,16 +654,13 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                 {isGresie && (
                   <label className="space-y-1">
                     <span className={labelCls}>Înălțime plintă (cm)</span>
-                    <input
-                      type="number"
-                      step="1"
-                      min={0}
+                    <DecimalInput
                       placeholder="ex: 8"
                       className={inputCls}
-                      value={draft.baseboardHeight ? Math.round(draft.baseboardHeight * 100) : ""}
-                      onChange={(e) =>
+                      value={draft.baseboardHeight ? String(Math.round(draft.baseboardHeight * 100)) : ""}
+                      onChange={(v) =>
                         patch({
-                          baseboardHeight: e.target.value ? Number(e.target.value) / 100 : undefined,
+                          baseboardHeight: v ? Number(v) / 100 : undefined,
                         })
                       }
                     />
@@ -740,18 +733,15 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       />
                       <label className="space-y-1">
                         <span className={labelCls}>Înălțime Placare (M)</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
+                        <DecimalInput
                           placeholder="ex: 2.40"
                           className={inputCls}
-                          value={draft.wallTiling!.tileHeight || ""}
-                          onChange={(e) =>
+                          value={draft.wallTiling!.tileHeight ? String(draft.wallTiling!.tileHeight) : ""}
+                          onChange={(v) =>
                             patch({
                               wallTiling: {
                                 ...draft.wallTiling!,
-                                tileHeight: Number(e.target.value) || 0,
+                                tileHeight: Number(v) || 0,
                               },
                             })
                           }
@@ -759,19 +749,15 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       </label>
                       <label className="space-y-1">
                         <span className={labelCls}>Înălțime cameră (m)</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          max={6}
+                        <DecimalInput
                           placeholder="ex: 2.70"
                           className={inputCls}
-                          value={draft.wallTiling!.roomHeight ?? ""}
-                          onChange={(e) =>
+                          value={draft.wallTiling!.roomHeight !== undefined ? String(draft.wallTiling!.roomHeight) : ""}
+                          onChange={(v) =>
                             patch({
                               wallTiling: {
                                 ...draft.wallTiling!,
-                                roomHeight: e.target.value ? Number(e.target.value) : undefined,
+                                roomHeight: v ? Number(v) : undefined,
                               },
                             })
                           }
@@ -853,18 +839,15 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                     />
                     <label className="space-y-1">
                       <span className={labelCls}>Înălțime Pereți (M)</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min={0}
+                      <DecimalInput
                         placeholder="ex: 2.50"
                         className={inputCls}
-                        value={draft.wallFinish!.wallHeight || ""}
-                        onChange={(e) =>
+                        value={draft.wallFinish!.wallHeight ? String(draft.wallFinish!.wallHeight) : ""}
+                        onChange={(v) =>
                           patch({
                             wallFinish: {
                               ...draft.wallFinish!,
-                              wallHeight: Number(e.target.value) || 0,
+                              wallHeight: Number(v) || 0,
                             },
                           })
                         }
@@ -974,36 +957,30 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       </SelectField>
                       <label className="space-y-1">
                         <span className={labelCls}>Lățime (m) — L</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
+                        <DecimalInput
                           placeholder="ex: 1.20"
                           className={inputCls}
-                          value={win.width || ""}
-                          onChange={(e) =>
-                            updateWindow(w, { width: Number(e.target.value) || 0 })
+                          value={win.width ? String(win.width) : ""}
+                          onChange={(v) =>
+                            updateWindow(w, { width: Number(v) || 0 })
                           }
                         />
                       </label>
                       <label className="space-y-1">
                         <span className={labelCls}>Înălțime (m) — H</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
+                        <DecimalInput
                           placeholder="ex: 1.40"
                           className={inputCls}
-                          value={win.height || ""}
-                          onChange={(e) =>
-                            updateWindow(w, { height: Number(e.target.value) || 0 })
+                          value={win.height ? String(win.height) : ""}
+                          onChange={(v) =>
+                            updateWindow(w, { height: Number(v) || 0 })
                           }
                         />
                       </label>
                       <button
                         type="button"
                         onClick={() => removeWindow(w)}
-                        className="rounded-lg p-3 text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
                         aria-label={`Elimină fereastra de pe peretele ${w}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
@@ -1074,32 +1051,26 @@ export default function RoomTechnicalCard({ room }: { room: Room }) {
                       </SelectField>
                       <label className="space-y-1">
                         <span className={labelCls}>Lățime (m) — L</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
+                        <DecimalInput
                           placeholder="ex: 0.80"
                           className={inputCls}
-                          value={d.width || ""}
-                          onChange={(e) => updateDoor(w, { width: Number(e.target.value) || 0 })}
+                          value={d.width ? String(d.width) : ""}
+                          onChange={(v) => updateDoor(w, { width: Number(v) || 0 })}
                         />
                       </label>
                       <label className="space-y-1">
                         <span className={labelCls}>Înălțime (m) — H</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min={0}
+                        <DecimalInput
                           placeholder="ex: 2.10"
                           className={inputCls}
-                          value={d.height || ""}
-                          onChange={(e) => updateDoor(w, { height: Number(e.target.value) || 0 })}
+                          value={d.height ? String(d.height) : ""}
+                          onChange={(v) => updateDoor(w, { height: Number(v) || 0 })}
                         />
                       </label>
                       <button
                         type="button"
                         onClick={() => removeDoor(w)}
-                        className="rounded-lg p-3 text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-low hover:text-tertiary sm:self-end"
                         aria-label={`Elimină ușa de pe peretele ${w}`}
                       >
                         <span className="material-symbols-outlined icon-btn">

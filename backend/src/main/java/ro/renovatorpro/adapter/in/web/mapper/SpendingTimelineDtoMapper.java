@@ -12,7 +12,7 @@ public class SpendingTimelineDtoMapper {
 
     public List<SpendingTimelinePointResponse> toResponse(List<TimelinePoint> points) {
         return points.stream()
-                .map(p -> new SpendingTimelinePointResponse(p.month().toString(), p.cumulativeSpent().amount()))
+                .map(p -> new SpendingTimelinePointResponse(p.month().toString(), p.cumulativeSpent().amount(), p.cumulativeTotal().amount()))
                 .toList();
     }
 }

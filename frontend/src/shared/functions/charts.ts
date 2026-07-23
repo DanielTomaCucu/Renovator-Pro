@@ -18,27 +18,35 @@ export function donutSegments(
   });
 }
 
-/** Un punct normalizat pt. graficul „Evoluția Cheltuielilor" — x,y ∈ [0,1] (stânga→dreapta, jos→sus). */
+/**
+ * Un punct normalizat pt. graficul „Evoluția Cheltuielilor" — x ∈ [0,1] (stânga→dreapta), `ySpent`/`yTotal`
+ * ∈ [0,1] (jos→sus), ambele scalate pe ACEEAȘI axă (max-ul seriei `cumulativeTotal`, care e mereu ≥
+ * `cumulativeSpent`) — ca cele 2 linii să fie direct comparabile pe același grafic.
+ */
 export interface NormalizedTimelinePoint {
   x: number;
-  y: number;
+  ySpent: number;
+  yTotal: number;
   month: string;
   cumulativeSpent: number;
+  cumulativeTotal: number;
 }
 
 /**
- * Normalizează seria reală de cheltuieli cumulate (`GET .../spending-timeline`) în puncte {x,y} ∈ [0,1],
- * gata de scalat într-un viewBox SVG. Geometrie de PREZENTARE (nu regulă de business) — datele rămân
- * server-side (Problema 2/3 din audit); randarea (polilinie sau bare) rămâne concern al componentei.
+ * Normalizează seria reală dublă (cheltuit + total, `GET .../spending-timeline`) în puncte {x,ySpent,yTotal}
+ * ∈ [0,1], gata de scalat într-un viewBox SVG. Geometrie de PREZENTARE (nu regulă de business) — datele
+ * rămân server-side (Problema 2/3 din audit); randarea (polilinie sau bare) rămâne concern al componentei.
  * Listă goală → listă goală (empty-state se afișează în componentă, nu o curbă falsă — Problema 3).
  */
 export function timelinePoints(data: SpendingTimelinePoint[]): NormalizedTimelinePoint[] {
   if (data.length === 0) return [];
-  const max = Math.max(...data.map((d) => d.cumulativeSpent), 0);
+  const max = Math.max(...data.map((d) => d.cumulativeTotal), 0);
   return data.map((d, i) => ({
     x: data.length === 1 ? 0 : i / (data.length - 1),
-    y: max === 0 ? 0 : d.cumulativeSpent / max,
+    ySpent: max === 0 ? 0 : d.cumulativeSpent / max,
+    yTotal: max === 0 ? 0 : d.cumulativeTotal / max,
     month: d.month,
     cumulativeSpent: d.cumulativeSpent,
+    cumulativeTotal: d.cumulativeTotal,
   }));
 }

@@ -14,6 +14,7 @@ import PageHeader from "@/components/PageHeader";
 import SortableTh from "@/components/SortableTh";
 import Spinner from "@/components/Spinner";
 import EmptyState from "@/components/EmptyState";
+import { DecimalInput } from "@/components/forms";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
 import {
@@ -263,12 +264,9 @@ export default function ElementePage() {
                 <label className="block text-[9px] font-bold uppercase tracking-widest text-white/70">
                   Preț estimat (€)
                 </label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                <DecimalInput
                   value={qaPrice}
-                  onChange={(e) => setQaPrice(e.target.value)}
+                  onChange={setQaPrice}
                   placeholder="0,00"
                   className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-mono text-sm text-white outline-none transition-all focus:bg-white/20"
                 />
@@ -371,7 +369,7 @@ export default function ElementePage() {
                       </div>
                       <button
                         onClick={() => setRoomDrawer({ open: true, room })}
-                        className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-primary"
                         aria-label={`Editează camera ${room.name}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
@@ -382,7 +380,7 @@ export default function ElementePage() {
                         onClick={() =>
                           setDeleteTarget({ kind: "room", id: room.id, name: room.name })
                         }
-                        className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
                         aria-label={`Șterge camera ${room.name}`}
                       >
                         <span className="material-symbols-outlined icon-btn">
@@ -528,7 +526,7 @@ export default function ElementePage() {
                               <div className="flex items-center justify-end gap-1">
                                 <button
                                   onClick={() => setItemDetails({ open: true, item })}
-                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-secondary"
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-secondary"
                                   aria-label={`Vezi detalii ${item.name}`}
                                 >
                                   <span className="material-symbols-outlined icon-btn">
@@ -537,7 +535,7 @@ export default function ElementePage() {
                                 </button>
                                 <button
                                   onClick={() => setItemDrawer({ open: true, item })}
-                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-primary"
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-primary"
                                   aria-label={`Editează ${item.name}`}
                                 >
                                   <span className="material-symbols-outlined icon-btn">
@@ -552,7 +550,7 @@ export default function ElementePage() {
                                       name: item.name,
                                     })
                                   }
-                                  className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-low hover:text-tertiary"
                                   aria-label={`Șterge ${item.name}`}
                                 >
                                   <span className="material-symbols-outlined icon-btn">
@@ -663,12 +661,9 @@ export default function ElementePage() {
                   <label className="mb-1 block text-[11px] font-bold uppercase text-muted">
                     Preț estimat
                   </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
+                  <DecimalInput
                     value={qaPrice}
-                    onChange={(e) => setQaPrice(e.target.value)}
+                    onChange={setQaPrice}
                     placeholder="0,00"
                     className="w-full rounded border border-line bg-surface-low p-3 font-mono text-sm outline-none focus:border-secondary"
                   />
@@ -785,7 +780,7 @@ export default function ElementePage() {
                             e.stopPropagation();
                             setItemDrawer({ open: true, roomId: room.id });
                           }}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted hover:bg-surface-low hover:text-primary"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-low hover:text-primary"
                           aria-label={`Adaugă element în ${room.name}`}
                         >
                           <span className="material-symbols-outlined icon-btn">
@@ -799,7 +794,7 @@ export default function ElementePage() {
                             e.stopPropagation();
                             setRoomDrawer({ open: true, room });
                           }}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted hover:bg-surface-low hover:text-primary"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-low hover:text-primary"
                           aria-label={`Editează camera ${room.name}`}
                         >
                           <span className="material-symbols-outlined icon-btn">
@@ -813,7 +808,7 @@ export default function ElementePage() {
                             e.stopPropagation();
                             setDeleteTarget({ kind: "room", id: room.id, name: room.name });
                           }}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-tertiary/70 hover:bg-surface-low hover:text-tertiary"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-tertiary/70 hover:bg-surface-low hover:text-tertiary"
                           aria-label={`Șterge camera ${room.name}`}
                         >
                           <span className="material-symbols-outlined icon-btn">

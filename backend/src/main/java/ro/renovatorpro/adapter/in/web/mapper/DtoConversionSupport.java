@@ -6,6 +6,7 @@ import ro.renovatorpro.domain.model.ComparisonGroupStatus;
 import ro.renovatorpro.domain.model.Currency;
 import ro.renovatorpro.domain.model.FlooringType;
 import ro.renovatorpro.domain.model.InstallationType;
+import ro.renovatorpro.domain.model.InspirationType;
 import ro.renovatorpro.domain.model.ItemOrigin;
 import ro.renovatorpro.domain.model.ItemStatus;
 import ro.renovatorpro.domain.model.MaterialType;
@@ -125,6 +126,14 @@ public final class DtoConversionSupport {
     }
 
     public static String fromComparisonGroupStatus(ComparisonGroupStatus value) {
+        return value == null ? null : value.label();
+    }
+
+    public static InspirationType toInspirationType(String label) {
+        return label == null ? null : InspirationType.fromLabel(label);
+    }
+
+    public static String fromInspirationType(InspirationType value) {
         return value == null ? null : value.label();
     }
 
