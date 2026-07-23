@@ -108,8 +108,12 @@ export default function SetariPage() {
   // greșeala înainte de a apăsa Confirmă, nu după.
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Conversie necesară doar când moneda țintă diferă de cea curentă a proiectului.
+  // Conversie necesară doar când moneda țintă diferă de cea curentă a proiectului — decide ce se
+  // întâmplă efectiv la Salvare (rămâne neschimbat, indiferent de vizibilitatea casetei de curs).
   const conversionNeeded = pendingCurrency !== project.currency;
+  // Vizibilitatea casetei de curs valutar: cerere explicită user — se arată când e selectat EUR
+  // (indiferent care e moneda curentă a proiectului), nu când e selectat RON.
+  const showRateSection = pendingCurrency === Currency.EUR;
 
   const { run: handleSave, pending: savePending } = useAsyncAction(async () => {
     if (!conversionNeeded) {
@@ -252,7 +256,7 @@ export default function SetariPage() {
                 </div>
               </div>
 
-              {conversionNeeded && (
+              {showRateSection && (
                 <div className="max-w-xs space-y-2">
                   <label className="flex items-center gap-1 text-[10px] font-bold uppercase text-muted">
                     Curs Valutar (1 EUR = ... RON)
@@ -293,10 +297,14 @@ export default function SetariPage() {
                       <span className="text-tertiary">⚠ Cursul automat nu e disponibil — introdu-l manual.</span>
                     )}
                   </p>
-                  <p className="text-xs italic text-muted">
-                    La salvare, {pendingCurrency === Currency.RON ? "sumele în EUR se înmulțesc" : "sumele în RON se împart"}{" "}
-                    cu acest curs. Se convertesc toate valorile: buget total, buget pe camere și prețurile elementelor.
-                  </p>
+                  {/* Descrierea de conversie apare doar când chiar se convertește ceva — dacă proiectul
+                      e deja pe EUR (nimic de schimbat), caseta de curs rămâne doar informativă. */}
+                  {conversionNeeded && (
+                    <p className="text-xs italic text-muted">
+                      La salvare, sumele în RON se împart cu acest curs. Se convertesc toate valorile:
+                      buget total, buget pe camere și prețurile elementelor.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
