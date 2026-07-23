@@ -50,8 +50,14 @@ export default function Drawer({
           <div className="h-1.5 w-12 rounded-full bg-line" />
         </div>
 
-        {/* Pe mobil: fără X (se închide prin tragere/backdrop), titlu centrat — pe desktop: X + titlu la stânga. */}
-        <div className="flex shrink-0 items-center justify-center border-b border-line px-6 py-4 md:justify-between">
+        {/* Pe mobil: fără X (se închide prin tragere/backdrop/tap pe header), titlu centrat — pe
+            desktop: X + titlu la stânga. Header-ul întreg închide la tap pe mobil (zonă de atingere
+            mult mai mare decât doar bara de tragere de mai sus — cerere explicită user). */}
+        <div
+          onClick={onClose}
+          onPointerUp={onClose}
+          className="flex shrink-0 items-center justify-center border-b border-line px-6 py-4 md:cursor-default md:justify-between"
+        >
           <h2 className="font-heading text-lg font-semibold">{title}</h2>
           <button
             onClick={onClose}

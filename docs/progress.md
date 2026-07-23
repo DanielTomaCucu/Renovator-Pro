@@ -1857,3 +1857,19 @@ click/pointerup în interiorul conținutului).
 375px lățime: tap pe zona întunecată de deasupra sheet-ului închide drawer-ul „Editează Cameră".
 
 **Branch:** `048-fix-aliniere-iconite-responsive` (continuare).
+
+## 2026-07-23 — Fix: header-ul (titlul) unui sheet nu închidea la tap pe mobil
+
+User a cerut explicit: pe mobil, tap pe zona de titlu a unui bottom sheet (nu doar pe bara mică de
+tragere de deasupra ei) trebuie să-l închidă — zonă de atingere prea mică altfel.
+
+**Fix:** `Drawer.tsx` — `onClick`+`onPointerUp` adăugate pe tot header-ul (div-ul care conține `h2` +
+butonul X), nu doar pe backdrop. Pe desktop rămâne funcțional neschimbat (X vizibil, click pe restul
+header-ului închide și el acum — comportament comun la bottom sheets, inofensiv).
+
+**Teste noi:** 2 teste în `Drawer.test.tsx` — close la click pe titlu, close la pointerup pe titlu.
+
+**Verificat:** `npm test` 253/253, `tsc`, `lint`, `build` — curate. Confirmat în browser (click DOM
+direct pe titlu): drawer-ul se închide.
+
+**Branch:** `048-fix-aliniere-iconite-responsive` (continuare).
