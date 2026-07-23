@@ -38,6 +38,7 @@ export default function ConfirmDialog({
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm sm:backdrop-blur-none"
         onClick={pending ? undefined : onCancel}
+        onPointerUp={pending ? undefined : onCancel}
         aria-hidden
       />
       {/* Mobil: bottom sheet tras cu degetul (colțuri sus rotunjite, handle bar, butoane full-width

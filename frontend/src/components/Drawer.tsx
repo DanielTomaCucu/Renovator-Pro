@@ -32,7 +32,11 @@ export default function Drawer({
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+      {/* `onPointerUp` alături de `onClick` — pe iOS Safari, un `onClick` simplu pe un `div` nu se
+          declanșează mereu fiabil la tap real (spre deosebire de click de mouse, unde merge perfect).
+          Bara de tragere de mai jos folosește deja `onPointerUp` (dovedit funcțional pe iOS), deci
+          aliniem și fundalul la același mecanism, ca închiderea prin atingere să meargă peste tot. */}
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} onPointerUp={onClose} aria-hidden />
 
       <div
         style={{

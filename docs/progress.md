@@ -1832,3 +1832,28 @@ anti-pattern de accesibilitate) — soluția corectă e să nu mai existe motivu
 `build` — curate.
 
 **Branch:** `048-fix-aliniere-iconite-responsive` (continuare).
+
+## 2026-07-23 — Fix: închiderea sheet-urilor prin atingerea fundalului nu mergea fiabil pe iOS
+
+User a raportat: pe iPhone, tap pe fundalul întunecat al unui bottom sheet/dialog/lightbox nu-l închide
+— doar tragerea de bara de sus (handle) funcționează. Cauză: toate aceste overlay-uri foloseau DOAR
+`onClick` pe `div`-ul de fundal pentru închidere; pe iOS Safari, `onClick` pe un element non-nativ
+(fără `cursor:pointer`/rol de buton) nu se declanșează mereu fiabil la o atingere reală, deși
+funcționează perfect cu click de mouse (motiv pt. care bug-ul nu era vizibil în teste/browser desktop).
+Handle-ul de tragere folosea deja `onPointerDown/Move/Up` (Pointer Events) — dovedit funcțional pe
+device-ul userului — deci am aliniat toate fundalurile de overlay la același mecanism.
+
+**Fix:** adăugat `onPointerUp` alături de `onClick` (nu în locul lui — păstrează comportamentul de mouse
+neschimbat) pe fundalul din: `Drawer.tsx`, `ConfirmDialog.tsx`, `galerie/Lightbox.tsx`,
+`comparator/[groupId]/OfferGallery.tsx` (lightbox propriu), `Sidebar.tsx` (meniul mobil). Pe
+`Lightbox`/`OfferGallery`, poza din interior oprește propagarea pentru AMBELE evenimente
+(`stopPropagation` pe click ȘI pe pointerup), altfel un tap pe poză ar fi închis lightbox-ul prin
+bubbling de `pointerup` neoprit.
+
+**Teste noi:** `Drawer.test.tsx` — 3 teste (close pe click, close pe pointerup, NU se închide la
+click/pointerup în interiorul conținutului).
+
+**Verificat:** `npm test` 251/251, `tsc`, `lint`, `build` — curate. Confirmat vizual în browser la
+375px lățime: tap pe zona întunecată de deasupra sheet-ului închide drawer-ul „Editează Cameră".
+
+**Branch:** `048-fix-aliniere-iconite-responsive` (continuare).
