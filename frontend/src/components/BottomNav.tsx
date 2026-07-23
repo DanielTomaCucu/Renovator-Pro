@@ -15,8 +15,8 @@ export default function BottomNav() {
 
   return (
     <nav
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-4 border-t border-line bg-surface md:hidden"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-surface pt-2.5 md:hidden"
     >
       {mainNav.map((item) => {
         const active = pathname.startsWith(item.href);
