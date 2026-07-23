@@ -1977,3 +1977,23 @@ un Android/iPhone fizic, după deploy pe Vercel (necesită HTTPS — funcționea
 producție, nu pe alte medii de test fără certificat).
 
 **Branch:** `051-pwa` (nou, din `main`).
+
+## 2026-07-23 — Padding bottom pe mobil: conținutul nu mai e lipit de meniul de jos
+
+User a raportat: pe mobil, conținutul ultimei secțiuni dintr-o pagină atinge direct meniul de jos
+(bottom nav), fără respirație vizuală; a cerut și puțin mai mult padding în meniul însuși.
+
+**Fix — un singur loc, aplicat egal pe toate paginile** (nu s-a atins fiecare pagină individual, ci
+wrapper-ul comun din `AppShell.tsx` care înfășoară `children` pt. toate rutele):
+- `AppShell.tsx` — `<main>`: `pb-16` (exact înălțimea meniului, zero respirație) → `pb-28` (112px,
+  ~32px marjă vizibilă peste meniu).
+- `BottomNav.tsx` — eliminat `h-16` fix (risc de tăiere a conținutului pe telefoane cu safe-area-inset-
+  bottom mare, ex. iPhone cu bară de home — dacă padding-ul + safe-area depășeau înălțimea fixă de 64px,
+  conținutul putea fi tăiat); înălțimea e acum dată de conținut + padding (`pt-2.5` sus, `paddingBottom`
+  inline = `env(safe-area-inset-bottom) + 0.5rem` jos — 8px în plus față de simplul safe-area de dinainte).
+
+**Verificat:** `tsc`, `lint`, `npm test` (265/265), `build` — curate. Confirmat vizual în browser la
+375px lățime, pagina `/elemente` scrollată complet jos: ultimul card are spațiu vizibil față de meniu,
+meniul însuși are mai multă respirație internă.
+
+**Branch:** `052-padding-bottom-mobil` (nou, din `main`).

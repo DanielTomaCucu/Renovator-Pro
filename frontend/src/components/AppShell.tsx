@@ -47,7 +47,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <>
       <div className="flex min-h-screen flex-col md:flex-row">
         <Sidebar />
-        <main className="min-w-0 flex-1 pb-16 md:pb-0">
+        <main className="min-w-0 flex-1 pb-28 md:pb-0">
           <StoreProvider>{children}</StoreProvider>
         </main>
       </div>
