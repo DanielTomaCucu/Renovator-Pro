@@ -198,6 +198,17 @@ export const authApi = {
     ),
 };
 
+interface ExchangeRateBody {
+  rate: number;
+  fetchedAt: string;
+  source: string;
+}
+
+/** Curs valutar EUR→RON preluat automat (BNR), cache 24h pe backend — vezi Setări → Configurare Monedă. */
+export const exchangeRateApi = {
+  get: () => api.get<ExchangeRateBody>("/api/exchange-rate"),
+};
+
 /** Partajare proiect (AUTH-7) — folosite din Setări, doar OWNER pentru cod/ștergere membru. */
 export const sharingApi = {
   getInviteCode: (projectId: string) => api.get<{ inviteCode: string }>(`/api/projects/${projectId}/invite-code`),

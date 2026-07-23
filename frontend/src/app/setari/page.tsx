@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Spinner from "@/components/Spinner";
 import ProjectSharingCard from "@/components/ProjectSharingCard";
@@ -9,8 +9,11 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { DecimalInput } from "@/components/forms";
 import { useStore } from "@/shared/store";
 import { useAsyncAction } from "@/shared/useAsyncAction";
+import { exchangeRateApi } from "@/shared/api-client";
 import { Currency } from "@/shared/types";
 import { ACTION_ICONS, SETTINGS_ICONS, TECHNICAL_ICONS } from "@/shared/icons";
+
+type RateSource = "loading" | "auto" | "manual" | "error";
 
 const CURRENCY_LABEL: Record<Currency, string> = {
   [Currency.RON]: "Lei (RON)",
@@ -67,6 +70,30 @@ export default function SetariPage() {
     setPendingCurrency(project.currency);
   }
   const [exchangeRate, setExchangeRate] = useState("4.97");
+  // Curs preluat automat de la BNR (gratuit, fără cheie API), cache 24h pe backend — vezi
+  // GetExchangeRateService. La montare preîncărcăm câmpul cu valoarea automată; dacă userul editează
+  // manual, `rateSource` trece pe "manual" și rămâne așa (nu se mai suprascrie tăcut cu automatul).
+  const [rateSource, setRateSource] = useState<RateSource>("loading");
+  const [rateFetchedAt, setRateFetchedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    exchangeRateApi
+      .get()
+      .then(({ rate, fetchedAt }) => {
+        if (cancelled) return;
+        setExchangeRate(String(rate));
+        setRateFetchedAt(fetchedAt);
+        setRateSource("auto");
+      })
+      .catch(() => {
+        if (!cancelled) setRateSource("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Confirmare explicită înainte de conversie (BIZ-1, docs/tickete-audit-calcule-securitate.md) —
@@ -234,13 +261,32 @@ export default function SetariPage() {
                     <DecimalInput
                       placeholder="4.97"
                       value={exchangeRate}
-                      onChange={setExchangeRate}
+                      onChange={(v) => {
+                        setExchangeRate(v);
+                        setRateSource("manual");
+                      }}
                       className="w-full rounded-lg border border-line bg-surface-low px-4 py-3 font-mono text-sm text-primary outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-[10px] uppercase text-muted">
                       RON
                     </span>
                   </div>
+                  <p className="flex items-center gap-1 text-xs font-medium">
+                    {rateSource === "loading" && (
+                      <span className="flex items-center gap-1 text-muted">
+                        <Spinner /> Se preia cursul curent...
+                      </span>
+                    )}
+                    {rateSource === "auto" && (
+                      <span className="text-secondary" title={rateFetchedAt ? new Date(rateFetchedAt).toLocaleString("ro-RO") : undefined}>
+                        ✓ Curs automat (BNR){rateFetchedAt && `, actualizat ${new Date(rateFetchedAt).toLocaleDateString("ro-RO")}`}
+                      </span>
+                    )}
+                    {rateSource === "manual" && <span className="text-tertiary">✎ Curs introdus manual</span>}
+                    {rateSource === "error" && (
+                      <span className="text-tertiary">⚠ Cursul automat nu e disponibil — introdu-l manual.</span>
+                    )}
+                  </p>
                   <p className="text-xs italic text-muted">
                     La salvare, {pendingCurrency === Currency.RON ? "sumele în EUR se înmulțesc" : "sumele în RON se împart"}{" "}
                     cu acest curs. Se convertesc toate valorile: buget total, buget pe camere și prețurile elementelor.

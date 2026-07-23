@@ -1754,3 +1754,40 @@ zecimale din aplicație (`ItemFormDrawer`, `OfferFormDrawer`, `RoomFormDrawer`, 
 `mvn verify` — BUILD SUCCESS, toate testele verzi (Testcontainers/Docker disponibil în mediu).
 
 **Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).
+
+## 2026-07-23 — Curs valutar EUR/RON preluat automat (BNR), nu doar manual
+
+Cerință user: cursul valutar din Setări → Configurare Monedă era 100% manual (câmp gol cu placeholder
+"4.97"). User a cerut o sursă automată, apelată o dată pe zi, cu indicație clară dacă valoarea afișată
+vine din API sau a fost introdusă manual.
+
+**Sursă aleasă:** feed XML public BNR (Banca Națională a României) — gratuit, fără cheie API, actualizat
+zilnic de BNR însuși.
+
+**Backend:** endpoint nou `GET /api/exchange-rate` (autentificat, ca restul aplicației). Cache server-side
+24h în tabela nouă `exchange_rate_cache` (`V12__exchange_rate_cache.sql`) — sursa externă e interogată
+efectiv o dată pe zi, indiferent de câte requesturi vin. Fallback: dacă BNR e jos dar există cache
+(chiar expirat), se servește cache-ul vechi în loc de eroare; fără niciun cache → `502` cu mesaj clar.
+Fișiere noi: `domain/model/ExchangeRateSnapshot.java`, `domain/exception/ExchangeRateFetchException.java`,
+`application/port/{in/GetExchangeRateUseCase, out/ExchangeRateFetcher, out/ExchangeRateCacheRepository}.java`,
+`application/usecase/GetExchangeRateService.java`, `adapter/out/exchangerate/BnrExchangeRateFetcher.java`
+(parsare XML cu `java.net.http.HttpClient` + DOM din JDK, fără dependințe noi), persistență
+(`ExchangeRateCacheEntity`/`ExchangeRateCacheJpaRepository`/`ExchangeRateCacheRepositoryAdapter`),
+`adapter/in/web/ExchangeRateController.java` + `dto/ExchangeRateResponse.java`. `GlobalExceptionHandler`
+mapează `ExchangeRateFetchException` → `502`.
+
+**Frontend:** `setari/page.tsx` preîncarcă automat câmpul de curs la montare (`exchangeRateApi.get()` în
+`api-client.ts`) și afișează un badge sub câmp: „✓ Curs automat (BNR), actualizat [dată]" / „✎ Curs
+introdus manual" (comutat instant la prima editare a câmpului) / „⚠ nu e disponibil" la eroare (fallback
+rămâne „4.97", editabil manual ca înainte). Userul poate oricând suprascrie manual — badge-ul reflectă
+mereu proveniența reală a valorii curente.
+
+**Verificat:** `GetExchangeRateServiceTest` (5 teste noi, fake-uri: fără cache → fetch+save; cache <24h
+→ nu refetch; cache >24h → refetch; sursă externă jos + cache vechi → servește cache-ul; sursă jos +
+fără cache → excepție). Testat end-to-end contra BNR real (nu mockat) pe backend local: primul apel
+aduce curs live, al doilea apel (aceeași sesiune) întoarce EXACT același `fetchedAt` — cache-ul
+funcționează. `mvn verify` — 236 teste, toate verzi. Frontend: 3 teste noi (`setari/__tests__/
+exchangeRate.test.tsx`) — preîncărcare + badge automat, comutare pe manual la editare, fallback la eroare
+API. `npm test` 246/246, `tsc`, `lint`, `build` — toate curate.
+
+**Branch:** `047-galerie-inspiratie` (continuare, aceeași sesiune).

@@ -417,4 +417,18 @@ punctată cu „snap" pe cea mai apropiată lună + tooltip cu ambele sume ale l
 - [ ] Autentificare (JWT? sesiune?) și cine are acces la un proiect
 - [ ] Paginare pe `/items` dacă un proiect crește mult
 - [ ] Upload real de imagini (`imageUrl`) — azi e doar text liber, un URL extern
-- [x] Rate/curs valutar pentru conversia EUR↔RON (backlog frontend, item 6 din `CLAUDE.md`) — **rezolvat**: cursul e furnizat de user la conversie (`POST /api/projects/{id}/currency`, câmp `exchangeRate`); nu există (încă) sursă automată de curs.
+- [x] Rate/curs valutar pentru conversia EUR↔RON (backlog frontend, item 6 din `CLAUDE.md`) — **rezolvat**: cursul e furnizat de user la conversie (`POST /api/projects/{id}/currency`, câmp `exchangeRate`), dar acum e preîncărcat automat în UI (vezi `GET /api/exchange-rate` mai jos) — userul poate suprascrie manual, ceea ce comută explicit sursa afișată de la „automat" la „manual".
+
+### `GET /api/exchange-rate` — curs EUR→RON automat
+
+Autentificat (ca orice rută în afara `/api/auth/**`). Sursă: feed XML public BNR (Banca Națională a
+României), gratuit, fără cheie API — `nbrfxrates.xml`. Cache server-side 24h (tabela
+`exchange_rate_cache`, un singur rând per pereche de monede): primul apel după expirarea cache-ului
+reface fetch-ul de la BNR, restul zilei servește valoarea cache-uită — deci sursa externă e interogată
+efectiv o dată pe zi, indiferent de câte ori userii deschid pagina. Dacă BNR e indisponibil ȘI există
+un cache anterior (chiar expirat), se servește cache-ul vechi (`fetchedAt` rămâne cel vechi, ca userul
+să vadă că nu e cursul de azi); dacă nu există niciun cache și BNR e jos → `502` cu mesaj care
+recomandă introducerea manuală.
+
+- `GET /api/exchange-rate` → `200 { rate: number, fetchedAt: string (ISO instant), source: "BNR" }`.
+  `502 { detail }` doar dacă nu există niciun cache și sursa externă e indisponibilă.

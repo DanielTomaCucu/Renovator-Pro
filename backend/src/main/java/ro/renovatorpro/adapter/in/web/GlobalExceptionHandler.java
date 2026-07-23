@@ -13,6 +13,7 @@ import ro.renovatorpro.domain.exception.ComparisonGroupNotFoundException;
 import ro.renovatorpro.domain.exception.DomainException;
 import ro.renovatorpro.domain.exception.DuplicateEmailException;
 import ro.renovatorpro.domain.exception.DuplicateUsernameException;
+import ro.renovatorpro.domain.exception.ExchangeRateFetchException;
 import ro.renovatorpro.domain.exception.InvalidCredentialsException;
 import ro.renovatorpro.domain.exception.InvalidInviteCodeException;
 import ro.renovatorpro.domain.exception.InvalidRefreshTokenException;
@@ -90,6 +91,13 @@ public class GlobalExceptionHandler {
                 fieldErrors.put(fe.getField(), fe.getDefaultMessage()));
         problem.setProperty("fieldErrors", fieldErrors);
         return problem;
+    }
+
+    /** Sursa externă (BNR) indisponibilă și fără cache să servim în loc — 502, nu 500 (nu e o eroare a noastră). */
+    @ExceptionHandler(ExchangeRateFetchException.class)
+    public ProblemDetail handleExchangeRateFetchFailure(ExchangeRateFetchException ex) {
+        log.warn("Preluarea cursului valutar a eșuat fără cache disponibil", ex);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, "Cursul valutar automat nu e disponibil momentan — introdu-l manual.");
     }
 
     /**
