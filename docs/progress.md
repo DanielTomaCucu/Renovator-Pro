@@ -1936,3 +1936,44 @@ randată corect (fallback București, geolocația refuzată în mediul de test),
 reverse-geocode real completează numele + adresa, „Folosește acest magazin" completează corect câmpul.
 
 **Branch:** `050-harta-detectare-magazin` (nou, din `main`).
+
+## 2026-07-23 — PWA: aplicația se poate instala pe Android/iPhone (fără magazin de aplicații)
+
+User a întrebat cum poate face aplicația „nativă" pe Android/iPhone. Am explicat cele 3 opțiuni
+(PWA / Capacitor / rescriere nativă Flutter — deja notat ca plan separat în `CLAUDE.md`) și, la cerere,
+implementat PWA (cea mai rapidă, zero rescriere UI).
+
+**Ce înseamnă:** userul poate instala aplicația direct din browser (Chrome pe Android: prompt automat
+„Adaugă pe ecranul principal"; Safari pe iOS: Share → „Add to Home Screen") — apare cu icon propriu,
+pornește fără bara de adresă a browserului (mod `standalone`), fără să treacă prin App Store/Play Store.
+
+**Implementare (convenții native Next.js App Router, nu pachetul `next-pwa`, incompatibil cu Turbopack):**
+- `src/app/manifest.ts` — Web App Manifest (nume, icons, `theme_color` #000000, `background_color`,
+  `display: standalone`), servit automat la `/manifest.webmanifest` și legat automat în `<head>`.
+- `src/app/icon.png` + `src/app/apple-icon.png` — convenția specială Next.js (`app/icon.png`,
+  `app/apple-icon.png`) generează automat tag-urile `<link rel="icon">`/`<link rel="apple-touch-icon">`.
+- Iconițe generate cu `rsvg-convert` (deja instalat pe mașină) dintr-un SVG simplu în tema aplicației
+  (fundal negru #000000, simbol alb) — 512×512 (icon principal + manifest), 192×192 (manifest), 180×180
+  (apple-touch-icon), plus variantă „maskable" (fundal edge-to-edge, simbol în zona sigură centrală 60%,
+  pt. iconițe adaptive Android). Fișiere: `public/icon-192.png`, `public/icon-512.png`,
+  `public/icon-maskable-512.png` (referite de manifest).
+- `layout.tsx` — `viewport.themeColor` (export separat, NU în `metadata` — breaking change Next 14+) +
+  `metadata.appleWebApp` (`capable`, `title`, `statusBarStyle: "black-translucent"`) — Safari pe iOS nu
+  citește manifestul pt. comportamentul de „aplicație", are nevoie de meta tag-uri `apple-mobile-web-app-*`
+  separate.
+- `public/sw.js` + `PwaRegister.tsx` (înregistrează SW-ul la montare) — service worker minim, DOAR pt.
+  instalabilitate (Android/iOS cer un SW activ cu handler de `fetch`) + un shell offline de bază
+  (network-first cu fallback la cache pt. pagini/assets proprii same-origin). **NU cache-uiește
+  requesturile către backend** (alt origin, Render) — datele proiectului rămân mereu proaspete/
+  autentificate corect, fără riscul de a servi date vechi dintr-un cache local.
+
+**Verificat:** `tsc`, `lint`, `npm test` (265/265), `build` — curate; build-ul confirmă rutele noi
+(`/manifest.webmanifest`, `/icon.png`, `/apple-icon.png`). Confirmat în browser: manifest servit corect
+cu toate câmpurile, toate tag-urile din `<head>` prezente (`theme-color`, `manifest`,
+`apple-mobile-web-app-*`, `apple-touch-icon`), service worker înregistrat și activ.
+
+**Rămâne de testat manual (nu se poate simula complet în acest mediu):** promptul real de instalare pe
+un Android/iPhone fizic, după deploy pe Vercel (necesită HTTPS — funcționează doar pe `localhost` sau
+producție, nu pe alte medii de test fără certificat).
+
+**Branch:** `051-pwa` (nou, din `main`).
