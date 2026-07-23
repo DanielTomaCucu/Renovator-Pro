@@ -1898,3 +1898,41 @@ suport nativ timezone + fereastră orară, funcționează chiar dacă serviciul 
 la 10 min, fereastră 08:00–22:00 `Europe/Bucharest`, timeout ≥90s) — nu se poate automatiza din agent/CI.
 
 **Branch:** `049-keepalive-cron-extern` (nou, din `main`).
+
+## 2026-07-23 — Alegerea magazinului: hartă interactivă cu pin, nu doar detecție silențioasă
+
+User a raportat: butonul „Detectează magazinul din locație" (Comparator de Oferte) „nu prea merge" —
+implementarea veche făcea un singur apel silențios (geolocation → reverse-geocode Nominatim) și fie
+completa câmpul, fie arăta „Nu am putut detecta magazinul", fără nicio interacțiune vizuală. Cauza reală
+a eșecurilor: reverse-geocoding la zoom de stradă găsește rar exact numele unui magazin (de obicei
+întoarce doar adresa), plus geolocația poate fi refuzată — dar userul nu avea nicio cale să corecteze,
+doar textul liber din câmp.
+
+**Fix — hartă interactivă (`StoreLocationPicker.tsx`, Leaflet + tile-uri OpenStreetMap, gratuit, fără
+cheie API):** click pe iconița de locație deschide un modal cu hartă, centrată pe locația curentă a
+telefonului (fallback: București, dacă geolocația e refuzată/indisponibilă). Pin portocaliu (Material
+Symbol `location_on` ca `divIcon` — evită problema clasică Leaflet+bundler cu path-urile de imagini
+implicite care nu supraviețuiesc Turbopack). Userul poate trage pinul SAU atinge harta oriunde ca să-l
+mute; la fiecare mutare, reverse-geocode pe Nominatim sugerează un nume (afișat editabil într-un câmp de
+text) + adresa completă ca context. „Folosește acest magazin" completează câmpul Magazin din formular.
+
+**Refactor `detectStore.ts`:** din „un singur `detectStoreName()` silențios" în funcții pure reutilizabile:
+`getCurrentPosition()` (geolocation) + `reverseGeocode(lat, lon)` (apelabil de câte ori userul mută pinul).
+
+**Bug real găsit și reparat pe parcurs:** `getCurrentPosition` verifica `"geolocation" in navigator`, care
+e `true` chiar și când proprietatea există dar e `null`/`undefined` (unele medii/webview-uri) — ar fi
+aruncat o eroare necontrolată în loc să întoarcă `null` grațios. Schimbat la verificare directă de
+adevăr (`if (!navigator.geolocation)`).
+
+**Fișiere noi:** `StoreLocationPicker.tsx`, `__tests__/detectStore.test.ts` (9 teste),
+`__tests__/OfferFormDrawer.test.tsx` (3 teste, StoreLocationPicker mockuit — Leaflet cere DOM/rețea
+reală, netestabil util în jsdom/happy-dom). **Modificate:** `detectStore.ts` (refactor complet),
+`OfferFormDrawer.tsx` (buton deschide harta în loc de fetch silențios). **Dependință nouă:** `leaflet`
++ `@types/leaflet` (gratuit, fără cheie API, la fel ca restul integrărilor externe din proiect — BNR,
+Resend, Nominatim).
+
+**Verificat:** `npm test` 265/265, `tsc`, `lint`, `build` — curate. Testat end-to-end în browser: hartă
+randată corect (fallback București, geolocația refuzată în mediul de test), click pe hartă mută pinul,
+reverse-geocode real completează numele + adresa, „Folosește acest magazin" completează corect câmpul.
+
+**Branch:** `050-harta-detectare-magazin` (nou, din `main`).

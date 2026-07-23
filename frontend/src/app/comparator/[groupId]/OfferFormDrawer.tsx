@@ -9,7 +9,7 @@ import { useAsyncAction } from "@/shared/useAsyncAction";
 import { ACTION_ICONS, COMPARATOR_ICONS } from "@/shared/icons";
 import { compressImage } from "@/shared/functions";
 import { OfferDrawerState } from "./OfferDrawerState";
-import { detectStoreName } from "./detectStore";
+import StoreLocationPicker from "./StoreLocationPicker";
 
 const MAX_IMAGES = 8;
 
@@ -35,8 +35,7 @@ export default function OfferFormDrawer({
   const [images, setImages] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [compressing, setCompressing] = useState(false);
-  const [detecting, setDetecting] = useState(false);
-  const [detectHint, setDetectHint] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Resetează/populează formularul la fiecare deschidere — „adjusting state during render", nu useEffect.
   const [prevOpen, setPrevOpen] = useState(open);
@@ -51,7 +50,7 @@ export default function OfferFormDrawer({
       setNotes(offer?.notes ?? "");
       setImages(offer?.images ?? []);
       setImageUrlInput("");
-      setDetectHint(null);
+      setPickerOpen(false);
     }
   }
 
@@ -80,18 +79,6 @@ export default function OfferFormDrawer({
 
   function removeImage(index: number) {
     setImages((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  async function handleDetectStore() {
-    setDetecting(true);
-    setDetectHint(null);
-    try {
-      const detected = await detectStoreName();
-      if (detected) setStore(detected);
-      else setDetectHint("Nu am putut detecta magazinul");
-    } finally {
-      setDetecting(false);
-    }
   }
 
   const { run: submit, pending } = useAsyncAction(async (e: React.FormEvent) => {
@@ -212,15 +199,13 @@ export default function OfferFormDrawer({
             />
             <button
               type="button"
-              onClick={handleDetectStore}
-              disabled={detecting}
-              title="Detectează magazinul din locația curentă"
+              onClick={() => setPickerOpen(true)}
+              title="Alege magazinul pe hartă"
               className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2.5 text-xs font-bold text-muted hover:bg-surface-low disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {detecting ? <Spinner /> : <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.detectStore}</span>}
+              <span className="material-symbols-outlined icon-btn">{COMPARATOR_ICONS.detectStore}</span>
             </button>
           </div>
-          {detectHint && <p className="mt-1 text-[11px] text-muted">{detectHint}</p>}
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
@@ -250,6 +235,16 @@ export default function OfferFormDrawer({
           />
         </Field>
       </form>
+
+      {pickerOpen && (
+        <StoreLocationPicker
+          onConfirm={(name) => {
+            setStore(name);
+            setPickerOpen(false);
+          }}
+          onCancel={() => setPickerOpen(false)}
+        />
+      )}
     </Drawer>
   );
 }
