@@ -40,7 +40,7 @@ describe("Setări — curs valutar automat", () => {
     const SetariPage = (await import("../page")).default;
     render(<SetariPage />);
 
-    await waitFor(() => expect(screen.getByText(/curs automat \(bnr\)/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/automat \(bnr\)/i)).toBeInTheDocument());
     expect(screen.getByPlaceholderText("4.97")).toHaveValue("4.98");
   });
 
@@ -48,7 +48,7 @@ describe("Setări — curs valutar automat", () => {
     getExchangeRate.mockResolvedValue({ rate: 4.98, fetchedAt: "2026-07-23T06:00:00Z", source: "BNR" });
     const SetariPage = (await import("../page")).default;
     render(<SetariPage />);
-    await waitFor(() => expect(screen.getByText(/curs automat \(bnr\)/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/automat \(bnr\)/i)).toBeInTheDocument());
 
     await userEvent.setup().click(screen.getByRole("button", { name: /lei \(ron\)/i }));
 
@@ -60,7 +60,7 @@ describe("Setări — curs valutar automat", () => {
     const SetariPage = (await import("../page")).default;
     render(<SetariPage />);
 
-    await waitFor(() => expect(screen.getByText(/curs automat \(bnr\)/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/automat \(bnr\)/i)).toBeInTheDocument());
 
     // Lipire/autofill dintr-o singură scriere (consecvent cu testele similare din RoomTechnicalCard —
     // evită particularitățile tastării caracter-cu-caracter simulate în happy-dom pe câmpuri controlate).
@@ -76,7 +76,7 @@ describe("Setări — curs valutar automat", () => {
     const SetariPage = (await import("../page")).default;
     render(<SetariPage />);
 
-    await waitFor(() => expect(screen.getByText(/nu e disponibil/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/indisponibil/i)).toBeInTheDocument());
     expect(screen.getByPlaceholderText("4.97")).toHaveValue("4.97");
   });
 });
